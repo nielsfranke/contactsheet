@@ -85,14 +85,22 @@ export function useAdminDndActive() {
 
 // Prefer a drop zone under the pointer; for image drags fall back to the closest tile (reorder);
 // a gallery drag with no zone under the pointer resolves to nothing.
+const isGalleryZone = (id: string | number) => {
+  const s = String(id);
+  return s.startsWith(GALLERY_DROP_PREFIX) || s.startsWith(TOPLEVEL_DROP_PREFIX);
+};
 const collision: CollisionDetection = (args) => {
-  const zone = pointerWithin(args).find((h) => {
-    const s = String(h.id);
-    return s.startsWith(GALLERY_DROP_PREFIX) || s.startsWith(TOPLEVEL_DROP_PREFIX);
-  });
+  // A move onto a gallery only happens when the pointer is actually inside that zone (intentional
+  // drop onto a sub-gallery card / nav folder).
+  const zone = pointerWithin(args).find((h) => isGalleryZone(h.id));
   if (zone) return [zone];
   if (args.active.data.current?.reparent) return [];
-  return closestCenter(args);
+  // Image-drag fallback = reorder: resolve only to sibling image tiles, never a gallery zone.
+  // Otherwise closestCenter snaps a photo dropped in empty space to the nearest gallery folder/card
+  // and silently moves it out of the gallery (in non-manual sort, tiles aren't droppable, so the
+  // only droppables left are gallery zones).
+  const tiles = args.droppableContainers.filter((c) => !isGalleryZone(c.id));
+  return closestCenter({ ...args, droppableContainers: tiles });
 };
 
 export function AdminDndProvider({ children }: { children: ReactNode }) {
