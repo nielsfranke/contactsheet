@@ -1,0 +1,70 @@
+services:
+  backend:
+    # Pre-built image from the container registry (use `docker compose pull`).
+    # `build` is kept so `docker compose build` / `up --build` can still build from source.
+    # Switch registries by setting REGISTRY (e.g. ghcr.io/<user>) and TAG in .env.
+    image: ${REGISTRY:-ghcr.io/nielsfranke}/contactsheet-backend:${TAG:-latest}
+    build:
+      context: .
+      target: backend
+    volumes:
+      # Config volume: database, settings, branding, watermarks, exports
+      - ./data:/data
+      # Media volume: photos & videos (+ generated thumbnails / watermark cache)
+      - ./uploads:/data/uploads
+    environment:
+      # Forces the admin auth cookie to be flagged Secure. Usually unnecessary — the cookie is
+      # auto-flagged Secure whenever the request arrives over HTTPS (X-Forwarded-Proto). NOT
+      # settable in the web UI.
+      COOKIE_SECURE: "${COOKIE_SECURE:-false}"
+      # Number of trusted reverse-proxy hops in front of the app, used to derive the real client
+      # IP for rate limiting and the activity log. Default 1 = the bundled nginx. Set 2 when an
+      # extra proxy fronts the stack (e.g. Nginx Proxy Manager → bundled nginx). NOT settable in
+      # the web UI.
+      TRUSTED_PROXY_HOPS: "${TRUSTED_PROXY_HOPS:-1}"
+      # Optional — only needed for non-interactive first-run setup; otherwise the
+      # browser setup wizard handles these (SECRET_KEY is auto-generated & stored in the DB):
+      # SECRET_KEY: "${SECRET_KEY:-}"
+      # ADMIN_USERNAME: "${ADMIN_USERNAME:-admin}"
+      # ADMIN_PASSWORD: "${ADMIN_PASSWORD:-}"
+    restart: unless-stopped
+    healthcheck:
+      # curl is installed in the backend image; /api/health is a cheap liveness probe.
+      test: ["CMD", "curl", "-fsS", "http://localhost:8000/api/health"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 30s
+
+  frontend:
+    image: ${REGISTRY:-ghcr.io/nielsfranke}/contactsheet-frontend:${TAG:-latest}
+    build:
+      context: .
+      target: frontend
+    depends_on:
+      backend:
+        condition: service_healthy
+    restart: unless-stopped
+    healthcheck:
+      # node is always present in the standalone runner image (no curl/wget guarantee);
+      # treat any non-5xx response as healthy so redirects/login still pass.
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:3000/',r=>process.exit(r.statusCode<500?0:1)).on('error',()=>process.exit(1))"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 20s
+
+  nginx:
+    image: nginx:alpine
+    ports:
+      - "${PORT:-8765}:80"
+    volumes:
+      - ./nginx.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./uploads:/data/uploads:ro
+      - ./data/branding:/data/branding:ro
+    depends_on:
+      backend:
+        condition: service_healthy
+      frontend:
+        condition: service_healthy
+    restart: unless-stopped

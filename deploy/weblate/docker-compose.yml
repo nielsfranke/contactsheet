@@ -1,0 +1,63 @@
+# Weblate translation server for ContactSheet.
+#
+# Runs as its own stack, separate from Forgejo. Weblate reaches Forgejo over its public URL
+# (https://forgejo.nielsbox.cc) using a bot token, and Forgejo notifies Weblate via a webhook to
+# Weblate's public URL — so the two never need to share a Docker network.
+#
+# Setup walkthrough: see ./README.md
+# Min resources: ~2 GB RAM for the weblate container.
+services:
+  weblate:
+    image: weblate/weblate:5
+    container_name: weblate
+    restart: unless-stopped
+    depends_on:
+      database:
+        condition: service_healthy
+      cache:
+        condition: service_started
+    env_file:
+      - ./weblate.env
+    ports:
+      # Put this behind your reverse proxy (Nginx Proxy Manager) as translate.nielsbox.cc → :8080.
+      - "8080:8080"
+    tmpfs:
+      - /app/cache
+    volumes:
+      - weblate-data:/app/data
+    networks:
+      - weblate
+
+  database:
+    image: postgres:16-alpine
+    container_name: weblate-db
+    restart: unless-stopped
+    env_file:
+      - ./weblate.env
+    volumes:
+      - weblate-postgres:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - weblate
+
+  cache:
+    image: redis:7-alpine
+    container_name: weblate-cache
+    restart: unless-stopped
+    command: ["redis-server", "--save", "60", "1"]
+    volumes:
+      - weblate-redis:/data
+    networks:
+      - weblate
+
+volumes:
+  weblate-data:
+  weblate-postgres:
+  weblate-redis:
+
+networks:
+  weblate:

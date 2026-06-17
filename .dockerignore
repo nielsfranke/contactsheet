@@ -1,0 +1,12 @@
+data/
+uploads/
+backend/.venv/
+frontend/node_modules/
+frontend/.next/
+.git/
+*.md
+.env
+.env.*
+**/.env
+**/.env.*
+!**/.env.example
