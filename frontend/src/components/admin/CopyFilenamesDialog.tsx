@@ -25,6 +25,13 @@ const SEPARATORS: { value: Separator; labelKey: string; hint: string }[] = [
   { value: "comma", labelKey: "comma", hint: "Lightroom" },
 ];
 
+// Strip any directory components (e.g. "shoot/IMG_1234.jpg" → "IMG_1234.jpg").
+// Folder uploads can leave a relative path in original_filename on older rows.
+// Handles both POSIX and Windows separators.
+function baseName(name: string): string {
+  return name.replace(/\\/g, "/").split("/").pop() ?? name;
+}
+
 // Strip a single trailing extension (e.g. "IMG_1234.jpg" → "IMG_1234"). Leaves
 // dotless names and leading dots ("..cfg") untouched.
 function stripExtension(name: string): string {
@@ -48,7 +55,8 @@ export function CopyFilenamesDialog({ open, onOpenChange, filenames, filtered }:
   const [copied, setCopied] = useState(false);
 
   const text = useMemo(() => {
-    const names = excludeExt ? filenames.map(stripExtension) : filenames;
+    const bases = filenames.map(baseName);
+    const names = excludeExt ? bases.map(stripExtension) : bases;
     return names.join(separator === "space" ? " " : ", ");
   }, [filenames, separator, excludeExt]);
 

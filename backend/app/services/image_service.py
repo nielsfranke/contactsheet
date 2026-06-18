@@ -192,6 +192,11 @@ def upload_images(
         ext = _VIDEO_MIMES[mime] if is_video else _ALLOWED_MIMES[mime]
         size_cap = settings.max_video_bytes if is_video else image_cap
         stored_filename = f"{uuid.uuid4()}{ext}"
+
+        # Folder uploads send a relative path as the filename (e.g. "shoot/IMG_1.jpg").
+        # Keep only the base name so exports, ZIPs and copy-filenames never leak the path.
+        # Handle both POSIX and Windows separators regardless of host OS.
+        original_filename = (file.filename or stored_filename).replace("\\", "/").rsplit("/", 1)[-1]
         relative_path = f"{gallery_id}/original/{stored_filename}"
 
         _CHUNK = 1024 * 1024
@@ -232,7 +237,7 @@ def upload_images(
             db,
             id=str(uuid.uuid4()),
             gallery_id=gallery_id,
-            original_filename=file.filename or stored_filename,
+            original_filename=original_filename,
             stored_filename=stored_filename,
             file_size=file_size,
             mime_type=mime,

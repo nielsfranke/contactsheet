@@ -2,6 +2,7 @@
 # SPDX-License-Identifier: AGPL-3.0-or-later
 
 import json
+import os
 import re
 import secrets
 import string
@@ -535,8 +536,10 @@ def export_flagged(db: Session, gallery_id: str, flag: str | None = None, includ
     images = gallery_repo.get_flagged_images(db, gallery_id, flag=flag)
     lines = []
     for img in images:
+        # Older rows may carry a folder path in original_filename (folder uploads); keep only the base.
+        name = os.path.basename(img.original_filename)
         if include_flag:
-            lines.append(f"{img.color_flag},{img.original_filename}")
+            lines.append(f"{img.color_flag},{name}")
         else:
-            lines.append(img.original_filename)
+            lines.append(name)
     return "\n".join(lines)
