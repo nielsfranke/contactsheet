@@ -262,6 +262,7 @@ function PhotoTile({
               loading="lazy"
               draggable={false}
               onContextMenu={(e) => e.preventDefault()}
+              style={!aspectSquare && !fixedHeight ? { aspectRatio: imageAspect(img) } : undefined}
               className={`w-full select-none [-webkit-touch-callout:none] ${aspectSquare || fixedHeight ? "h-full object-cover" : "h-auto"}`}
             />
           )}

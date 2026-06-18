@@ -229,7 +229,7 @@ export function CommentPanel({
                     </div>
                   </div>
                 ) : (
-                  <p className={`${tones.body} mt-0.5 break-words`}>{c.text}</p>
+                  <p className={`${tones.body} mt-0.5 break-words leading-relaxed`}>{c.text}</p>
                 )}
               </div>
             );
