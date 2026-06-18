@@ -27,6 +27,9 @@ def setup_status(db: Session = Depends(get_db)):
         "admin_theme": s.admin_theme,
         "accent_color": s.accent_color,
         "accent_gradient": s.accent_gradient,
+        # Branding logo (served via the public /branding mount) so the login screen can show the
+        # instance's own logo when one is uploaded, falling back to the fixed product mark otherwise.
+        "logo_url": f"/branding/{s.logo_filename}" if s.logo_filename else None,
     }
 
 

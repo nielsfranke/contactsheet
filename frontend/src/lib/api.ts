@@ -89,6 +89,7 @@ export const api = {
         admin_theme: "light" | "dark";
         accent_color: string;
         accent_gradient: boolean;
+        logo_url: string | null;
       }>("/api/setup/status"),
     complete: (username: string, password: string) =>
       request<{ ok: boolean }>("/api/setup", {

@@ -22,11 +22,14 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [remember, setRemember] = useState(false);
   const [loading, setLoading] = useState(false);
+  // Instance's uploaded branding logo, if any — falls back to the fixed product mark below.
+  const [logoUrl, setLogoUrl] = useState<string | null>(null);
 
   useEffect(() => {
     api.setup.status().then((s) => {
       if (!s.setup_complete) router.replace("/setup");
       applyAdminTheme(s.admin_theme === "dark" ? "dark" : "light", s.accent_color, s.accent_gradient);
+      setLogoUrl(s.logo_url);
     }).catch(() => {});
   }, [router]);
 
@@ -48,6 +51,15 @@ export default function LoginPage() {
     <div className="min-h-screen flex flex-col items-center justify-center gap-4 bg-background">
       <Card className="w-full max-w-sm">
         <CardHeader>
+          {/* Instance branding logo when uploaded, else the fixed ContactSheet product mark. */}
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={logoUrl ?? "/contactsheet-logo.svg"}
+            alt="ContactSheet"
+            width={56}
+            height={56}
+            className="max-h-14 w-auto mx-auto mb-2"
+          />
           <CardTitle className="text-xl text-center">ContactSheet</CardTitle>
         </CardHeader>
         <CardContent>

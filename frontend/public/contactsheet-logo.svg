@@ -1,0 +1,14 @@
+<svg width="192" height="192" viewBox="0 0 192 192" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="ContactSheet">
+  <rect width="192" height="192" rx="42.24" fill="#0a0a0b"/>
+  <g>
+    <rect x="34.56" y="34.56" width="35.23" height="35.23" rx="5.64" fill="#f59e0b"/>
+    <rect x="78.39" y="34.56" width="35.23" height="35.23" rx="5.64" fill="#e7e5e4"/>
+    <rect x="122.21" y="34.56" width="35.23" height="35.23" rx="5.64" fill="#e7e5e4"/>
+    <rect x="34.56" y="78.39" width="35.23" height="35.23" rx="5.64" fill="#e7e5e4"/>
+    <rect x="78.39" y="78.39" width="35.23" height="35.23" rx="5.64" fill="#e7e5e4"/>
+    <rect x="122.21" y="78.39" width="35.23" height="35.23" rx="5.64" fill="#e7e5e4"/>
+    <rect x="34.56" y="122.21" width="35.23" height="35.23" rx="5.64" fill="#e7e5e4"/>
+    <rect x="78.39" y="122.21" width="35.23" height="35.23" rx="5.64" fill="#e7e5e4"/>
+    <rect x="122.21" y="122.21" width="35.23" height="35.23" rx="5.64" fill="#e7e5e4"/>
+  </g>
+</svg>

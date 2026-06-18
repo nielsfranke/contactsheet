@@ -681,7 +681,7 @@
       "remove": "Remove",
       "uploadLogo": "Upload logo",
       "uploading": "Uploading…",
-      "logoHint": "PNG, JPEG, or WebP. Shown in the admin sidebar and the client gallery header.",
+      "logoHint": "PNG, JPEG, or WebP. Shown in the admin sidebar, the client gallery header, and the login screen. Without a logo the login shows the ContactSheet mark.",
       "logoUploaded": "Logo uploaded",
       "logoRemoved": "Logo removed"
     },

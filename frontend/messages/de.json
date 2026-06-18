@@ -681,7 +681,7 @@
       "remove": "Entfernen",
       "uploadLogo": "Logo hochladen",
       "uploading": "Wird hochgeladen…",
-      "logoHint": "PNG, JPEG oder WebP. Wird in der Admin-Seitenleiste und im Galerie-Header des Kunden angezeigt.",
+      "logoHint": "PNG, JPEG oder WebP. Wird in der Admin-Seitenleiste, im Galerie-Header des Kunden und im Login angezeigt. Ohne Logo zeigt der Login die ContactSheet-Marke.",
       "logoUploaded": "Logo hochgeladen",
       "logoRemoved": "Logo entfernt"
     },
