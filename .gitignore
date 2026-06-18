@@ -9,3 +9,8 @@ __pycache__/
 *.pyc
 *.pyo
 .DS_Store
+
+# Demo screenshot toolchain — runtime only (committed: demo/*.py, demo/assets/<group>/, CREDITS.md)
+demo/.data/
+demo/.web/
+demo/assets/_pool/
