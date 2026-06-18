@@ -88,7 +88,7 @@ function SortableRow({
     <div
       ref={setNodeRef}
       style={{ transform: CSS.Transform.toString(transform), transition }}
-      className={`flex items-center gap-2 rounded-md border border-border bg-background px-2 py-1.5 ${
+      className={`flex items-center gap-2 rounded-md border border-border bg-background px-2 py-1.5 transition-shadow focus-within:border-ring focus-within:ring-3 focus-within:ring-ring/50 ${
         isDragging ? "opacity-60 shadow-sm" : ""
       }`}
     >

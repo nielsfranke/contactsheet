@@ -150,7 +150,7 @@ export function GalleryFooter({
               rel={l.href.startsWith("http") ? "noopener noreferrer" : undefined}
               aria-label={l.label}
               title={l.label}
-              className="flex h-9 w-9 items-center justify-center rounded-full text-white transition-transform hover:scale-110"
+              className="flex h-11 w-11 items-center justify-center rounded-full text-white transition-[opacity,filter] hover:brightness-110 hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-transparent"
               style={{ backgroundColor: accent }}
             >
               {l.icon}

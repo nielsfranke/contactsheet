@@ -403,7 +403,7 @@ export function AnnotationLayer({
               placeholder={t("notePlaceholder")}
               maxLength={2000}
               rows={3}
-              className={`w-full resize-none rounded-md border ${tones.field} text-sm p-2 focus:outline-none focus:ring-1 focus:ring-zinc-500`}
+              className={`w-full resize-none rounded-md border ${tones.field} text-sm p-2 focus:outline-none focus:ring-2 focus:ring-ring`}
               onKeyDown={(e) => {
                 if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) save();
                 if (e.key === "Escape") cancel();
