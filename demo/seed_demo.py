@@ -70,6 +70,13 @@ def _create_gallery(client: httpx.Client, spec: dict, state: dict, parent_id: st
         image_ids = [u["id"] for u in uploaded]
         _wait_for_processing(client, gid, len(files))
 
+    # Optional full-width hero banner: promote one uploaded photo to the gallery header.
+    if spec.get("header_image") is not None and image_ids:
+        client.post(
+            f"/api/galleries/{gid}/header-image/from-image",
+            json={"image_id": image_ids[spec["header_image"]]},
+        ).raise_for_status()
+
     state["galleries"][spec["key"]] = {
         "id": gid,
         "share_token": token,

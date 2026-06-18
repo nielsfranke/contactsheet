@@ -39,7 +39,7 @@ GALLERIES = [
         "name": "Travel — Iceland",
         "mode": "presentation",
         "assets": "iceland",
-        "headline": "Travel — Iceland",
+        "headline": "Ring Road, late summer",
     },
     {
         "key": "sessions",
@@ -77,7 +77,9 @@ GALLERIES = [
         "name": "Coastal Light",
         "mode": "presentation",
         "assets": "coastal",
-        "headline": "Coastal Light",
+        "headline": "Pacific coastline · winter light",
+        # Use this uploaded photo (index) as the full-width hero banner behind the title.
+        "header_image": 1,
     },
 ]
 
