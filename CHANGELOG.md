@@ -12,6 +12,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.0.2] - 2026-06-18
+
+### Added
+
+- Sub-galleries can be created directly in **Showcase** or **Review** mode — the create dialog now
+  has a mode selector, pre-filled with the parent gallery's mode.
+- Selected photos can be moved into another gallery in bulk: a **Move to gallery** action in the
+  selection bar, plus drag-and-drop of the whole selection onto sidebar galleries and sub-gallery
+  cards (with an undoable confirmation).
+
+### Changed
+
+- The **Capture Date** sort option now appears only when at least one photo in the gallery carries
+  EXIF capture metadata; without it the sort falls back to filename so the order stays meaningful.
+
+### Fixed
+
+- A Showcase sub-gallery of a Review gallery was stuck in the review (sidebar) layout regardless of
+  its own mode. Sub-galleries now follow their own mode.
+- Public gallery dialogs (save collection, reviewer name, client upload, download) used a fixed
+  dark or light surface instead of following the gallery's tone — they now adapt to the bright/dark
+  setting. The download dialog, which is shared with the admin, also tracks the admin theme.
+
 ## [1.0.1] - 2026-06-18
 
 ### Added
@@ -92,6 +115,7 @@ contract are considered stable as of this release.
   caps (stricter for public uploads).
 - Docker Compose deployment (backend + frontend + nginx); SQLite + local filesystem.
 
-[Unreleased]: https://github.com/nielsfranke/contactsheet/compare/v1.0.1...HEAD
+[Unreleased]: https://github.com/nielsfranke/contactsheet/compare/v1.0.2...HEAD
+[1.0.2]: https://github.com/nielsfranke/contactsheet/compare/v1.0.1...v1.0.2
 [1.0.1]: https://github.com/nielsfranke/contactsheet/compare/v1.0.0...v1.0.1
 [1.0.0]: https://github.com/nielsfranke/contactsheet/releases/tag/v1.0.0
