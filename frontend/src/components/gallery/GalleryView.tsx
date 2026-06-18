@@ -95,9 +95,17 @@ export function GalleryView({ gallery, shareToken, galleryToken }: Props) {
   }
 
   const photoGrid = isContainer ? null : filteredSorted.length === 0 ? (
-    <p className={`text-center py-16 ${bright ? "text-zinc-400" : "text-zinc-500"}`}>
-      {rawImages.length === 0 ? t("view.emptyGallery") : t("view.emptyFilter")}
-    </p>
+    <div className={`text-center py-16 ${bright ? "text-zinc-500" : "text-zinc-400"}`}>
+      <p>{rawImages.length === 0 ? t("view.emptyGallery") : t("view.emptyFilter")}</p>
+      {rawImages.length > 0 && (
+        <button
+          onClick={() => vm.setArrange({ ...vm.arrange, filterName: "", flagFilters: new Set(), commentsOnly: false })}
+          className="mt-3 inline-flex items-center gap-1 rounded-md px-3 py-1.5 text-sm font-medium text-foreground bg-secondary hover:bg-secondary/80 transition-colors outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        >
+          {t("toolbar.clearFilters")}
+        </button>
+      )}
+    </div>
   ) : groups ? (
     <div className="space-y-8">
       {groups.map((g) => (

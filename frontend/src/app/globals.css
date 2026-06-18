@@ -141,7 +141,9 @@
   --secondary: var(--color-zinc-100);
   --secondary-foreground: var(--color-zinc-900);
   --muted: var(--color-zinc-100);
-  --muted-foreground: var(--color-zinc-500);
+  /* zinc-600 (not -500): ~7:1 on the bright zinc-50 surface so muted text clears AA comfortably,
+     mirroring the darkened admin-light muted-foreground. */
+  --muted-foreground: var(--color-zinc-600);
   --accent: var(--color-zinc-100);
   --accent-foreground: var(--color-zinc-900);
   --border: var(--color-zinc-200);
@@ -160,7 +162,9 @@
   --secondary: var(--color-zinc-800);
   --secondary-foreground: var(--color-zinc-100);
   --muted: var(--color-zinc-800);
-  --muted-foreground: var(--color-zinc-500);
+  /* zinc-400 (not -500): lifts muted text to ~7:1 on the near-black zinc-950 surface, matching the
+     admin dark theme's muted-foreground lightness. */
+  --muted-foreground: var(--color-zinc-400);
   --accent: var(--color-zinc-800);
   --accent-foreground: var(--color-zinc-100);
   --border: var(--color-zinc-800);

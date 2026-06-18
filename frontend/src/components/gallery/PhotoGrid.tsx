@@ -309,7 +309,7 @@ function PhotoTile({
 
             {/* Top-right: flag picker */}
             {showToolbar && showFlags && (
-              <div className="absolute top-2 right-2 flex items-center gap-1 pointer-events-auto">
+              <div className="absolute top-2 right-2 flex items-center gap-1.5 sm:gap-1 pointer-events-auto">
                 {FLAG_COLORS.map((f) => (
                   <button
                     key={f.value}
@@ -318,7 +318,7 @@ function PhotoTile({
                     title={tf(f.value)}
                     aria-label={tf(f.value)}
                     aria-pressed={effectiveFlag === f.value}
-                    className={`w-5 h-5 rounded-full transition-all outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-1 focus-visible:ring-offset-black/40 ${f.bg} ${
+                    className={`w-7 h-7 sm:w-5 sm:h-5 rounded-full transition-all outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-1 focus-visible:ring-offset-black/40 ${f.bg} ${
                       effectiveFlag === f.value
                         ? "opacity-100 ring-2 ring-white/70 scale-110"
                         : "opacity-60 hover:opacity-100"
@@ -401,7 +401,7 @@ function PhotoTile({
 
       {/* Filename caption */}
       {showFilename && (
-        <p className={`text-[10px] truncate pt-0.5 px-0.5 ${bright ? "text-zinc-600" : "text-zinc-500"}`}>
+        <p className={`text-[11px] truncate pt-0.5 px-0.5 ${bright ? "text-zinc-600" : "text-zinc-400"}`}>
           {img.original_filename}
         </p>
       )}

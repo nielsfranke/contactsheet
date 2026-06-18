@@ -118,7 +118,7 @@ export function GalleryToolbar({
                 title={tf(c.value)}
                 aria-label={tf(c.value)}
                 aria-pressed={active}
-                className={`w-5 h-5 rounded-full flex items-center justify-center transition-all outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 focus-visible:ring-offset-background ${c.bg} ${
+                className={`w-6 h-6 sm:w-5 sm:h-5 rounded-full flex items-center justify-center transition-all outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 focus-visible:ring-offset-background ${c.bg} ${
                   active ? "ring-2 ring-foreground/50 scale-110" : "opacity-40 hover:opacity-80"
                 }`}
               >
@@ -132,7 +132,7 @@ export function GalleryToolbar({
               title={t("hasComments")}
               aria-label={t("hasComments")}
               aria-pressed={arrange.commentsOnly}
-              className={`ml-1 p-1 rounded transition-colors outline-none focus-visible:ring-2 focus-visible:ring-ring ${
+              className={`ml-1 p-1.5 sm:p-1 rounded transition-colors outline-none focus-visible:ring-2 focus-visible:ring-ring ${
                 arrange.commentsOnly ? "text-primary" : "text-muted-foreground hover:text-foreground"
               }`}
             >
