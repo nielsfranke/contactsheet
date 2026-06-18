@@ -172,6 +172,15 @@
   --ring: var(--color-zinc-500);
 }
 
+/* Z-index scale (Tailwind utilities — keep new stacking contexts on these rungs, don't invent
+   in-between values):
+     z-10  — in-content overlays: lightbox slides, nav chevrons, on-tile chrome
+     z-20  — sticky page toolbar (admin overview)
+     z-30  — sticky toolbar band inside the collab sidebar layout
+     z-40  — mobile drawer / dialog backdrops
+     z-50  — modal layer: dialogs, lightbox, the off-canvas sidebar drawer
+     z-[60] — above the modal layer: the gallery download dialog, which must sit over the lightbox */
+
 @layer base {
   * {
     @apply border-border outline-ring/50;
