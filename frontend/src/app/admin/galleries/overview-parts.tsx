@@ -150,10 +150,13 @@ export function GalleryTile({
             <MoreVertical size={15} />
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
-            <DropdownMenuItem onClick={onRename}>
+            {/* stopPropagation: the menu is portalled in the DOM but is still a React child of the
+                card's onClick={onOpen}, so item clicks bubble up the React tree and would navigate
+                into the gallery instead of opening rename/delete. */}
+            <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onRename(); }}>
               <Pencil size={14} /> {t("renameAction")}
             </DropdownMenuItem>
-            <DropdownMenuItem destructive onClick={onDelete}>
+            <DropdownMenuItem destructive onClick={(e) => { e.stopPropagation(); onDelete(); }}>
               <Trash2 size={14} /> {t("deleteAction")}
             </DropdownMenuItem>
           </DropdownMenuContent>
