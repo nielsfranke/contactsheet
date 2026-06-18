@@ -19,7 +19,7 @@ import { useSettingsAutosave } from "@/hooks/useSettingsAutosave";
  * AGPL-3.0 §13 requires offering the *running* source to users, so forks that
  * modify ContactSheet should point this at their own repository (Settings → General).
  */
-const DEFAULT_SOURCE_URL = "https://forgejo.nielsbox.cc/niels/ContactSheet";
+const DEFAULT_SOURCE_URL = "https://github.com/nielsfranke/contactsheet";
 
 export default function GeneralSettingsPage() {
   const t = useTranslations("settings.general");
