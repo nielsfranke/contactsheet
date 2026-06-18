@@ -21,7 +21,12 @@ import { OVERLAY_REST, OVERLAY_HOVER, BADGE_BG } from "@/lib/ui-tokens";
 const overlayPillVariants = cva("inline-flex items-center transition-colors", {
   variants: {
     variant: {
-      control: cn(OVERLAY_REST, OVERLAY_HOVER, "text-white"),
+      // White focus ring: pills sit on a dark scrim over photos, where the themed ring is invisible.
+      control: cn(
+        OVERLAY_REST,
+        OVERLAY_HOVER,
+        "text-white outline-none focus-visible:ring-2 focus-visible:ring-white/90",
+      ),
       badge: cn(BADGE_BG, "text-zinc-200 pointer-events-none"),
     },
     size: {

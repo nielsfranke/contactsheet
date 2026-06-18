@@ -175,23 +175,23 @@ export function GalleryDetailDialogs({
         preparing={adminZip.preparing}
         error={adminZip.error}
         extra={isCollab ? (
-          <div className="rounded-lg border border-zinc-200 bg-zinc-50 p-3 space-y-2">
-            <p className="text-sm font-medium text-zinc-900">{t("exportSelections")}</p>
-            <p className="text-xs text-zinc-500">
+          <div className="rounded-lg border border-border bg-muted/50 p-3 space-y-2">
+            <p className="text-sm font-medium text-foreground">{t("exportSelections")}</p>
+            <p className="text-xs text-muted-foreground">
               {t("exportHint", { count: flagged })}
             </p>
             <div className="flex gap-2">
               <button
                 disabled={flagged === 0}
                 onClick={() => downloadExport()}
-                className="inline-flex items-center gap-1 rounded-md border border-zinc-300 px-2.5 py-1.5 text-xs font-medium hover:bg-zinc-100 disabled:opacity-40"
+                className="inline-flex items-center gap-1 rounded-md border border-input px-2.5 py-1.5 text-xs font-medium transition-colors hover:bg-accent hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50 disabled:opacity-40"
               >
                 <Download size={13} /> {t("filenames")}
               </button>
               <button
                 disabled={flagged === 0}
                 onClick={() => downloadExport({ include_flag: true })}
-                className="inline-flex items-center gap-1 rounded-md border border-zinc-300 px-2.5 py-1.5 text-xs font-medium hover:bg-zinc-100 disabled:opacity-40"
+                className="inline-flex items-center gap-1 rounded-md border border-input px-2.5 py-1.5 text-xs font-medium transition-colors hover:bg-accent hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50 disabled:opacity-40"
               >
                 <Download size={13} /> {t("withFlags")}
               </button>

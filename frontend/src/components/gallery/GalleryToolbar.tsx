@@ -116,7 +116,9 @@ export function GalleryToolbar({
                 key={c.value}
                 onClick={() => toggleFlag(c.value)}
                 title={tf(c.value)}
-                className={`w-5 h-5 rounded-full flex items-center justify-center transition-all ${c.bg} ${
+                aria-label={tf(c.value)}
+                aria-pressed={active}
+                className={`w-5 h-5 rounded-full flex items-center justify-center transition-all outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 focus-visible:ring-offset-background ${c.bg} ${
                   active ? "ring-2 ring-foreground/50 scale-110" : "opacity-40 hover:opacity-80"
                 }`}
               >
@@ -128,7 +130,9 @@ export function GalleryToolbar({
             <button
               onClick={() => setArrange({ ...arrange, commentsOnly: !arrange.commentsOnly })}
               title={t("hasComments")}
-              className={`ml-1 p-1 rounded transition-colors ${
+              aria-label={t("hasComments")}
+              aria-pressed={arrange.commentsOnly}
+              className={`ml-1 p-1 rounded transition-colors outline-none focus-visible:ring-2 focus-visible:ring-ring ${
                 arrange.commentsOnly ? "text-primary" : "text-muted-foreground hover:text-foreground"
               }`}
             >
@@ -153,7 +157,8 @@ export function GalleryToolbar({
         <button
           onClick={() => setArrange({ ...arrange, sortAsc: !arrange.sortAsc })}
           title={arrange.sortAsc ? t("ascending") : t("descending")}
-          className="h-8 w-8 flex items-center justify-center rounded-lg border border-input text-muted-foreground hover:text-foreground"
+          aria-label={arrange.sortAsc ? t("ascending") : t("descending")}
+          className="h-8 w-8 flex items-center justify-center rounded-lg border border-input text-muted-foreground transition-colors hover:text-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring"
         >
           <ArrowDownUp size={14} />
         </button>
@@ -176,7 +181,7 @@ export function GalleryToolbar({
           <button
             onClick={clearFilters}
             title={t("clearFilters")}
-            className="inline-flex items-center gap-0.5 rounded px-1.5 py-0.5 hover:text-foreground hover:bg-accent"
+            className="inline-flex items-center gap-0.5 rounded px-1.5 py-0.5 transition-colors hover:text-foreground hover:bg-accent outline-none focus-visible:ring-2 focus-visible:ring-ring"
           >
             <X size={12} /> {t("clear")}
           </button>

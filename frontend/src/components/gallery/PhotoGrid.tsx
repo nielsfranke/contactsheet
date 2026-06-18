@@ -239,7 +239,8 @@ function PhotoTile({
         {/* Clickable image → lightbox, or toggle selection in selection mode */}
         <button
           onClick={(e) => (selectionMode ? onSelect?.(e.shiftKey) : onOpen())}
-          className={`block w-full h-full ${selectionMode || collabMode ? "cursor-pointer" : "cursor-zoom-in"}`}
+          aria-label={img.original_filename}
+          className={`block w-full h-full rounded-[inherit] outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-white ${selectionMode || collabMode ? "cursor-pointer" : "cursor-zoom-in"}`}
         >
           {img.is_video ? (
             // Browser-rendered poster: preload metadata and seek to the first frame.
@@ -315,7 +316,9 @@ function PhotoTile({
                     onClick={(e) => { e.stopPropagation(); handleFlag(f.value); }}
                     disabled={!teamVoting && flagMutation.isPending}
                     title={tf(f.value)}
-                    className={`w-5 h-5 rounded-full transition-all ${f.bg} ${
+                    aria-label={tf(f.value)}
+                    aria-pressed={effectiveFlag === f.value}
+                    className={`w-5 h-5 rounded-full transition-all outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-1 focus-visible:ring-offset-black/40 ${f.bg} ${
                       effectiveFlag === f.value
                         ? "opacity-100 ring-2 ring-white/70 scale-110"
                         : "opacity-60 hover:opacity-100"

@@ -702,6 +702,8 @@ export function Lightbox({
               className={`${muted} ${hoverStrong} ${showComments ? strong : ""}`}
               onClick={() => setShowComments((v) => !v)}
               title={t("comments")}
+              aria-label={t("comments")}
+              aria-pressed={showComments}
             >
               <MessageCircle size={16} />
               {plainCommentCount > 0 && <span className="ml-1 text-sm">{plainCommentCount}</span>}
@@ -714,6 +716,8 @@ export function Lightbox({
               className={`${muted} ${hoverStrong} ${showAnnotations ? strong : ""}`}
               onClick={() => setShowAnnotations((v) => !v)}
               title={showAnnotations ? ta("hideMarks") : ta("showMarks")}
+              aria-label={showAnnotations ? ta("hideMarks") : ta("showMarks")}
+              aria-pressed={showAnnotations}
             >
               {showAnnotations ? <Eye size={16} /> : <EyeOff size={16} />}
               <span className="ml-1 text-sm">{annotationCount}</span>
@@ -726,7 +730,9 @@ export function Lightbox({
                   key={sw.key}
                   onClick={() => setStrokeWidth(sw.px)}
                   title={ta(`thickness.${sw.key}`)}
-                  className={`flex items-center justify-center w-7 h-7 rounded ${hoverStrong} ${
+                  aria-label={ta(`thickness.${sw.key}`)}
+                  aria-pressed={strokeWidth === sw.px}
+                  className={`flex items-center justify-center w-7 h-7 rounded outline-none focus-visible:ring-2 ${light ? "focus-visible:ring-black/60" : "focus-visible:ring-white"} ${hoverStrong} ${
                     strokeWidth === sw.px ? strong : muted
                   }`}
                 >
@@ -742,6 +748,8 @@ export function Lightbox({
               className={`${muted} ${hoverStrong} ${annotating ? strong : ""}`}
               onClick={toggleAnnotate}
               title={annotating ? ta("done") : ta("annotate")}
+              aria-label={annotating ? ta("done") : ta("annotate")}
+              aria-pressed={annotating}
             >
               <PenLine size={16} />
             </Button>
@@ -753,6 +761,8 @@ export function Lightbox({
               className={`${muted} ${hoverStrong} ${showExif ? strong : ""}`}
               onClick={() => setShowExif((v) => !v)}
               title={t("exif")}
+              aria-label={t("exif")}
+              aria-pressed={showExif}
             >
               <Info size={16} />
             </Button>
@@ -764,6 +774,8 @@ export function Lightbox({
               className={`${muted} ${hoverStrong} ${showIptc ? strong : ""}`}
               onClick={() => setShowIptc((v) => !v)}
               title={t("iptc")}
+              aria-label={t("iptc")}
+              aria-pressed={showIptc}
             >
               <Tags size={16} />
             </Button>
@@ -772,7 +784,9 @@ export function Lightbox({
             <a
               href={(image.is_video ? image.video_url : image.original_url) ?? undefined}
               download={image.original_filename}
-              className={`inline-flex items-center justify-center h-8 w-8 rounded-md ${muted} ${hoverStrong} ${hoverBg} transition-colors`}
+              aria-label={t("download")}
+              title={t("download")}
+              className={`inline-flex items-center justify-center h-8 w-8 rounded-md ${muted} ${hoverStrong} ${hoverBg} transition-colors outline-none focus-visible:ring-2 ${light ? "focus-visible:ring-black/60" : "focus-visible:ring-white"}`}
             >
               <Download size={16} />
             </a>
@@ -783,6 +797,7 @@ export function Lightbox({
             className={`${muted} ${hoverStrong}`}
             onClick={toggleFullscreen}
             title={isFullscreen ? t("exitFullscreen") : t("enterFullscreen")}
+            aria-label={isFullscreen ? t("exitFullscreen") : t("enterFullscreen")}
           >
             {isFullscreen ? <Minimize size={16} /> : <Maximize size={16} />}
           </Button>
@@ -791,6 +806,8 @@ export function Lightbox({
             size="sm"
             className={`${muted} ${hoverStrong}`}
             onClick={close}
+            title={t("close")}
+            aria-label={t("close")}
           >
             <X size={18} />
           </Button>
@@ -810,7 +827,8 @@ export function Lightbox({
         {!compact && !immersive && (
           <button
             onClick={prev}
-            className={`absolute left-2 top-1/2 -translate-y-1/2 z-10 p-2 rounded-full ${muted} ${hoverStrong} ${hoverBg} transition-colors`}
+            aria-label={t("previous")}
+            className={`absolute left-2 top-1/2 -translate-y-1/2 z-10 p-2 rounded-full ${muted} ${hoverStrong} ${hoverBg} transition-colors outline-none focus-visible:ring-2 ${light ? "focus-visible:ring-black/60" : "focus-visible:ring-white"}`}
           >
             <ChevronLeft size={28} />
           </button>
@@ -900,7 +918,8 @@ export function Lightbox({
         {!compact && !immersive && (
           <button
             onClick={next}
-            className={`absolute right-2 top-1/2 -translate-y-1/2 z-10 p-2 rounded-full ${muted} ${hoverStrong} ${hoverBg} transition-colors`}
+            aria-label={t("next")}
+            className={`absolute right-2 top-1/2 -translate-y-1/2 z-10 p-2 rounded-full ${muted} ${hoverStrong} ${hoverBg} transition-colors outline-none focus-visible:ring-2 ${light ? "focus-visible:ring-black/60" : "focus-visible:ring-white"}`}
           >
             <ChevronRight size={28} />
           </button>
@@ -922,7 +941,9 @@ export function Lightbox({
                     onClick={() => handleFlag(f.value)}
                     disabled={!teamVoting && flagMutation.isPending}
                     title={t(`flagLabels.${f.value}`)}
-                    className={`h-9 w-9 sm:h-6 sm:w-6 rounded-full transition-all ${f.bg} ${
+                    aria-label={t(`flagLabels.${f.value}`)}
+                    aria-pressed={effectiveFlag === f.value}
+                    className={`h-9 w-9 sm:h-6 sm:w-6 rounded-full transition-all outline-none focus-visible:ring-2 focus-visible:ring-offset-1 ${light ? "focus-visible:ring-black/60 focus-visible:ring-offset-white" : "focus-visible:ring-white"} ${f.bg} ${
                       effectiveFlag === f.value
                         ? `opacity-100 ring-2 ${light ? "ring-black/50" : "ring-white/70"} scale-110`
                         : "opacity-60 hover:opacity-100"
@@ -937,7 +958,9 @@ export function Lightbox({
           {likesEnabled && (
             <button
               onClick={() => onToggleLike?.(image.id)}
-              className={`flex items-center gap-1 h-9 px-1.5 -mr-1.5 sm:h-auto sm:px-0 sm:mr-0 ${muted} hover:text-red-400 transition-colors`}
+              aria-label={t("like")}
+              aria-pressed={liked}
+              className={`flex items-center gap-1 h-9 px-1.5 -mr-1.5 sm:h-auto sm:px-0 sm:mr-0 rounded ${muted} hover:text-red-400 transition-colors outline-none focus-visible:ring-2 ${light ? "focus-visible:ring-black/60" : "focus-visible:ring-white"}`}
             >
               <Heart size={16} className={liked ? "fill-red-500 text-red-500" : ""} />
               <span className="text-sm">{image.likes > 0 ? image.likes : ""}</span>

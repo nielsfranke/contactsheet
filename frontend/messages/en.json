@@ -91,6 +91,11 @@
     },
     "lightbox": {
       "comments": "Comments",
+      "previous": "Previous photo",
+      "next": "Next photo",
+      "close": "Close",
+      "download": "Download",
+      "like": "Like",
       "enterFullscreen": "Full screen",
       "exitFullscreen": "Exit full screen",
       "exif": "Capture data",
