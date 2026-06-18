@@ -12,6 +12,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.0.4] - 2026-06-18
+
+### Changed
+
+- Loading states across the admin settings pages and the gallery detail view now show skeleton
+  placeholders instead of a bare "loading…" line, so the layout no longer jumps when content
+  arrives.
+- The empty filter result now offers a **clear filters** action.
+
+### Fixed
+
+- Accessibility: visible focus rings on controls that previously showed none (footer settings
+  inputs, the public footer's social links, the annotation editor), `aria-label`s on icon-only
+  buttons, and the OS "reduce motion" preference is now honored everywhere (lightbox swipe, drawers,
+  dialogs, spinners).
+- The public footer's social links now meet the 44px touch-target size and respond to tap/focus
+  rather than hover-only.
+- Lifted low-contrast muted text in the public gallery and admin to clear WCAG AA.
+- The photo grid no longer reflows as lazy-loaded images arrive in list view — each tile reserves
+  its height up front.
+
 ## [1.0.3] - 2026-06-18
 
 ### Fixed
@@ -123,7 +144,8 @@ contract are considered stable as of this release.
   caps (stricter for public uploads).
 - Docker Compose deployment (backend + frontend + nginx); SQLite + local filesystem.
 
-[Unreleased]: https://github.com/nielsfranke/contactsheet/compare/v1.0.3...HEAD
+[Unreleased]: https://github.com/nielsfranke/contactsheet/compare/v1.0.4...HEAD
+[1.0.4]: https://github.com/nielsfranke/contactsheet/compare/v1.0.3...v1.0.4
 [1.0.3]: https://github.com/nielsfranke/contactsheet/compare/v1.0.2...v1.0.3
 [1.0.2]: https://github.com/nielsfranke/contactsheet/compare/v1.0.1...v1.0.2
 [1.0.1]: https://github.com/nielsfranke/contactsheet/compare/v1.0.0...v1.0.1
