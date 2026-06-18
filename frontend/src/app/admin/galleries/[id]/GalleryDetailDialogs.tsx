@@ -236,7 +236,7 @@ export function GalleryDetailDialogs({
       </Dialog>
 
       {/* Create sub-gallery dialog */}
-      <CreateSubGalleryDialog key={createSubOpen ? "open" : "closed"} open={createSubOpen} onOpenChange={setCreateSubOpen} parentId={id} parentMode={gallery.mode} />
+      <CreateSubGalleryDialog key={createSubOpen ? "createsub-open" : "createsub-closed"} open={createSubOpen} onOpenChange={setCreateSubOpen} parentId={id} parentMode={gallery.mode} />
 
       {/* Sub-gallery share dialog */}
       {sharingSubId && (() => {
@@ -488,7 +488,7 @@ export function GalleryDetailDialogs({
 
       {/* Create / copy / move a set of images into a new or existing gallery */}
       <CreateGalleryFromImagesDialog
-        key={deriveState?.nonce ?? "closed"}
+        key={deriveState?.nonce ?? "derive-closed"}
         open={!!deriveState}
         onOpenChange={(o) => { if (!o) setDeriveState(null); }}
         sourceGalleryId={id}
