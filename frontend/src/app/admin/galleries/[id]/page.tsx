@@ -72,6 +72,7 @@ export default function GalleryDetailPage() {
     setRenameImageValue,
     setRenameImageTarget,
     setMoveImageTarget,
+    setMoveSelectionOpen,
     setRenameCollectionTarget,
     setRenameCollectionValue,
     addSelectionToCollection,
@@ -126,6 +127,7 @@ export default function GalleryDetailPage() {
           onDeleteCollection={(c) => setDeleteCollectionTarget(c)}
           onRenameCollection={(c) => { setRenameCollectionValue(c.name); setRenameCollectionTarget(c); }}
           onAddSelectionToCollection={addSelectionToCollection}
+          onMoveSelection={() => setMoveSelectionOpen(true)}
           onCreateGalleryFromCollection={d.startGalleryFromCollection}
           onCreateGalleryFromFilter={d.startGalleryFromFilter}
           onCreateGalleryFromSelection={d.startGalleryFromSelection}
@@ -210,7 +212,7 @@ export default function GalleryDetailPage() {
           onRenameImage={(img) => { setRenameImageValue(img.original_filename); setRenameImageTarget(img); }}
           onMoveImage={(img) => setMoveImageTarget(img)}
           onRemoveFromCollection={activeCollection ? (img) => removeFromCollection(img.id) : undefined}
-          dragEnabled={!selection.mode}
+          dragEnabled
           activeId={activeDragId}
           layout={adminGrid?.layout ?? gallery.layout}
           presentation={adminGrid?.presentation ?? {

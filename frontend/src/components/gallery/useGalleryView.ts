@@ -235,8 +235,11 @@ export function useGalleryView(
     else if (gallery.subgalleries.length > 0) setDownloadOpen(true);
     else zip.start([]);
   }
-  // Show the sidebar for collaboration galleries and any sub-gallery of one.
-  const showSidebar = collabMode || gallery.parent_mode === "collaboration";
+  // Show the sidebar (review experience) based on the gallery's own mode. A sub-gallery inherits
+  // its parent's mode on creation, but an explicit Showcase override must win — so we follow this
+  // gallery's mode, not the parent's, otherwise a Showcase sub-gallery of a Review parent would be
+  // stuck in the review layout.
+  const showSidebar = collabMode;
 
   return {
     // inputs

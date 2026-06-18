@@ -110,9 +110,13 @@ export function GalleryDetailDialogs({
     renameImageMutation,
     moveImageTarget,
     setMoveImageTarget,
+    moveSelectionOpen,
+    setMoveSelectionOpen,
     moveFilter,
     setMoveFilter,
     moveImageMutation,
+    moveSelectionMutation,
+    selection,
     deriveState,
     setDeriveState,
   } = d;
@@ -232,7 +236,7 @@ export function GalleryDetailDialogs({
       </Dialog>
 
       {/* Create sub-gallery dialog */}
-      <CreateSubGalleryDialog open={createSubOpen} onOpenChange={setCreateSubOpen} parentId={id} />
+      <CreateSubGalleryDialog key={createSubOpen ? "open" : "closed"} open={createSubOpen} onOpenChange={setCreateSubOpen} parentId={id} parentMode={gallery.mode} />
 
       {/* Sub-gallery share dialog */}
       {sharingSubId && (() => {
@@ -413,11 +417,16 @@ export function GalleryDetailDialogs({
         </DialogContent>
       </Dialog>
 
-      {/* Move image dialog */}
-      <Dialog open={!!moveImageTarget} onOpenChange={(o) => { if (!o) { setMoveImageTarget(null); setMoveFilter(""); } }}>
+      {/* Move dialog — relocates a single image (moveImageTarget) or the whole selection (moveSelectionOpen) */}
+      <Dialog
+        open={!!moveImageTarget || moveSelectionOpen}
+        onOpenChange={(o) => { if (!o) { setMoveImageTarget(null); setMoveSelectionOpen(false); setMoveFilter(""); } }}
+      >
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>{t("moveTitle")}</DialogTitle>
+            <DialogTitle>
+              {moveImageTarget ? t("moveTitle") : t("moveSelectionTitle", { count: selection.count })}
+            </DialogTitle>
           </DialogHeader>
           <div className="relative">
             <Input
@@ -430,6 +439,7 @@ export function GalleryDetailDialogs({
             {moveFilter && <InputClearButton onClick={() => setMoveFilter("")} label={tc("clear")} />}
           </div>
           {(() => {
+            const moveBusy = moveImageMutation.isPending || moveSelectionMutation.isPending;
             const fq = moveFilter.trim().toLowerCase();
             const list = fq ? moveTargets.filter(({ g }) => g.name.toLowerCase().includes(fq)) : moveTargets;
             if (list.length === 0) {
@@ -442,8 +452,12 @@ export function GalleryDetailDialogs({
                   return (
                     <button
                       key={g.id}
-                      onClick={() => !isCurrent && moveImageTarget && moveImageMutation.mutate({ imgId: moveImageTarget.id, targetId: g.id })}
-                      disabled={isCurrent || moveImageMutation.isPending}
+                      onClick={() => {
+                        if (isCurrent) return;
+                        if (moveImageTarget) moveImageMutation.mutate({ imgId: moveImageTarget.id, targetId: g.id });
+                        else moveSelectionMutation.mutate(g.id);
+                      }}
+                      disabled={isCurrent || moveBusy}
                       className={cn(
                         "w-full flex items-center justify-between gap-3 px-3 py-2.5 rounded-md border text-sm transition-colors",
                         isCurrent ? "border-border bg-muted/40 cursor-default" : "border-border hover:bg-accent disabled:opacity-50",
@@ -467,7 +481,7 @@ export function GalleryDetailDialogs({
             );
           })()}
           <div className="flex justify-end pt-2">
-            <Button variant="outline" size="sm" onClick={() => { setMoveImageTarget(null); setMoveFilter(""); }}>{tc("cancel")}</Button>
+            <Button variant="outline" size="sm" onClick={() => { setMoveImageTarget(null); setMoveSelectionOpen(false); setMoveFilter(""); }}>{tc("cancel")}</Button>
           </div>
         </DialogContent>
       </Dialog>

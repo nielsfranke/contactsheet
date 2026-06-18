@@ -125,9 +125,11 @@ export function GalleryTree({ galleries }: Props) {
       />
 
       <CreateSubGalleryDialog
+        key={createParentId ?? "closed"}
         open={typeof createParentId === "string"}
         onOpenChange={(open) => { if (!open) setCreateParentId(undefined); }}
         parentId={typeof createParentId === "string" ? createParentId : ""}
+        parentMode={galleryPath(galleries, createParentId).at(-1)?.mode ?? "presentation"}
       />
     </>
   );

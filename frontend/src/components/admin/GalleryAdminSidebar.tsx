@@ -19,7 +19,7 @@ import { cn } from "@/lib/utils";
 import {
   Settings, Eye, Send, UploadCloud, Download, MoreVertical,
   Plus, CheckSquare, Trash2, Activity, Vote,
-  Folder, FolderOpen, Pencil, Eraser, Image as ImageIcon, Frame, Layers, X, Copy, FolderPlus,
+  Folder, FolderOpen, Pencil, Eraser, Image as ImageIcon, Frame, Layers, X, Copy, FolderPlus, FolderInput,
 } from "lucide-react";
 
 export type SortKey = "manual" | "filename" | "date" | "captured";
@@ -69,6 +69,7 @@ interface Props {
   onDeleteCollection?: (c: Collection) => void;
   onRenameCollection?: (c: Collection) => void;
   onAddSelectionToCollection?: () => void;
+  onMoveSelection?: () => void;
   // Create / copy / move images into a gallery (collection / filter / selection sources)
   onCreateGalleryFromCollection?: (c: Collection) => void;
   onCreateGalleryFromFilter?: () => void;
@@ -83,7 +84,7 @@ export function GalleryAdminSidebar({
   collections = [], selectionMode = false, selectedCount = 0,
   onToggleSelectionMode, onSelectAll, onClearSelection, onSaveSelection, onSaveFilter,
   activeCollectionId = null, onFilterCollection, onDownloadCollection, onDeleteCollection,
-  onRenameCollection, onAddSelectionToCollection,
+  onRenameCollection, onAddSelectionToCollection, onMoveSelection,
   onCreateGalleryFromCollection, onCreateGalleryFromFilter, onCreateGalleryFromSelection,
 }: Props) {
   const t = useTranslations("admin.sidebar");
@@ -272,6 +273,17 @@ export function GalleryAdminSidebar({
                 disabled={!selectedCount}
               >
                 <FolderPlus size={14} className="mr-1.5" /> {t("galleryFromSelection")}
+              </Button>
+            )}
+            {onMoveSelection && (
+              <Button
+                size="sm"
+                variant="outline"
+                className="w-full text-xs"
+                onClick={onMoveSelection}
+                disabled={!selectedCount}
+              >
+                <FolderInput size={14} className="mr-1.5" /> {t("moveToGallery")}
               </Button>
             )}
           </div>

@@ -118,12 +118,15 @@ export function AdminTile({
         style={fixedHeight ? { height: fixedHeight } : undefined}
       >
         {selectionMode ? (
-          <button
+          // Selectable AND draggable: a tap (no movement) toggles selection; a drag past the
+          // sensor's threshold picks the photo(s) up to move into another gallery.
+          <div
+            {...(draggable ? dragProps : {})}
             onClick={(e) => (e.shiftKey ? onRangeSelect : onToggleSelect)?.(img.id)}
-            className="block w-full h-full cursor-pointer"
+            className={cn("block w-full h-full", draggable ? "cursor-grab active:cursor-grabbing" : "cursor-pointer")}
           >
             {media}
-          </button>
+          </div>
         ) : draggable ? (
           <div {...dragProps} onClick={() => onOpen?.(img)} className="block w-full h-full cursor-grab active:cursor-grabbing">{media}</div>
         ) : (

@@ -46,6 +46,7 @@ export function useGalleryDetail(id: string) {
   const [renameImageTarget, setRenameImageTarget] = useState<import("@/lib/types").ImageResponse | null>(null);
   const [renameImageValue, setRenameImageValue] = useState("");
   const [moveImageTarget, setMoveImageTarget] = useState<import("@/lib/types").ImageResponse | null>(null);
+  const [moveSelectionOpen, setMoveSelectionOpen] = useState(false);
   const [moveFilter, setMoveFilter] = useState("");
   const [downloadOpen, setDownloadOpen] = useState(false);
   const [copyNamesOpen, setCopyNamesOpen] = useState(false);
@@ -273,6 +274,26 @@ export function useGalleryDetail(id: string) {
     onError: (err: Error) => toast.error(err.message),
   });
 
+  // Bulk move: relocate every currently selected image into the chosen gallery, then exit
+  // select mode. Sequential so a failure stops cleanly and surfaces one error.
+  const moveSelectionMutation = useMutation({
+    mutationFn: async (targetId: string) => {
+      const ids = [...selection.selected];
+      for (const imgId of ids) await api.images.move(imgId, targetId);
+      return ids.length;
+    },
+    onSuccess: (count) => {
+      qc.invalidateQueries({ queryKey: ["gallery-images"] });
+      qc.invalidateQueries({ queryKey: ["galleries"] });
+      setMoveSelectionOpen(false);
+      setMoveFilter("");
+      selection.clear();
+      selection.setMode(false);
+      toast.success(t("toast.imagesMoved", { count }));
+    },
+    onError: (err: Error) => toast.error(err.message),
+  });
+
   const setHeaderFromImageMutation = useMutation({
     mutationFn: (imageId: string) => api.galleries.setHeaderImageFromGalleryImage(id, imageId),
     onSuccess: () => {
@@ -401,18 +422,24 @@ export function useGalleryDetail(id: string) {
     onError: (err: Error) => toast.error(err.message),
   });
 
-  const dndMoveImage = useMutation({
-    mutationFn: ({ imgId, targetId }: { imgId: string; targetId: string }) => api.images.move(imgId, targetId),
-    onSuccess: (_data, { imgId }) => {
-      // Refresh every gallery's image list — the source AND the destination (so the photo shows
+  // Move one or many photos into another gallery via drag-and-drop. Sequential so a failure
+  // surfaces cleanly; a single toast + undo covers the whole batch.
+  const dndMoveImages = useMutation({
+    mutationFn: async ({ imgIds, targetId }: { imgIds: string[]; targetId: string }) => {
+      for (const imgId of imgIds) await api.images.move(imgId, targetId);
+      return imgIds;
+    },
+    onSuccess: (imgIds) => {
+      // Refresh every gallery's image list — the source AND the destination (so the photos show
       // up there without a manual refresh).
       qc.invalidateQueries({ queryKey: ["gallery-images"] });
       qc.invalidateQueries({ queryKey: ["galleries"] });
-      toast.success(t("toast.photoMoved"), {
+      const count = imgIds.length;
+      toast.success(count > 1 ? t("toast.photosMoved", { count }) : t("toast.photoMoved"), {
         action: {
           label: t("undo"),
           onClick: () =>
-            api.images.move(imgId, id).then(() => {
+            Promise.all(imgIds.map((iid) => api.images.move(iid, id))).then(() => {
               qc.invalidateQueries({ queryKey: ["gallery-images"] });
               qc.invalidateQueries({ queryKey: ["galleries"] });
             }),
@@ -427,7 +454,14 @@ export function useGalleryDetail(id: string) {
     if (!e.over) return;
     const targetId = e.over.data.current?.galleryId as string | undefined;
     if (targetId) {
-      if (targetId !== id) dndMoveImage.mutate({ imgId: activeId, targetId });
+      if (targetId !== id) {
+        // Dragging one of the selected photos moves the whole selection; dragging any other photo
+        // (or when not selecting) moves just that one.
+        const dragSelection = selection.mode && selection.selected.has(activeId);
+        const imgIds = dragSelection ? [...selection.selected] : [activeId];
+        dndMoveImages.mutate({ imgIds, targetId });
+        if (dragSelection) { selection.clear(); selection.setMode(false); }
+      }
       return;
     }
     const overId = String(e.over.id);
@@ -455,12 +489,29 @@ export function useGalleryDetail(id: string) {
     dragEndRef.current = handleDragEnd;
     overlayRef.current = (activeId: string) => {
       const img = images.find((i) => i.id === activeId);
-      return img?.thumb_url ? (
-        <div className="w-40 overflow-hidden rounded-sm shadow-2xl opacity-90">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={img.thumb_url} alt="" className="w-full h-auto" />
+      if (!img?.thumb_url) return null;
+      // Dragging a selected photo carries the whole selection — show how many travel along.
+      const count = selection.mode && selection.selected.has(activeId) ? selection.count : 1;
+      return (
+        <div className="relative w-40">
+          {count > 1 && (
+            <>
+              {/* Stacked-cards hint behind the thumb */}
+              <div className="absolute inset-0 translate-x-1.5 translate-y-1.5 rounded-sm bg-muted shadow-xl" />
+              <div className="absolute inset-0 translate-x-0.5 translate-y-0.5 rounded-sm bg-muted shadow-xl" />
+            </>
+          )}
+          <div className="relative overflow-hidden rounded-sm shadow-2xl opacity-90">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={img.thumb_url} alt="" className="w-full h-auto" />
+          </div>
+          {count > 1 && (
+            <span className="absolute -top-2 -right-2 min-w-6 h-6 px-1.5 rounded-full bg-primary text-primary-foreground text-xs font-semibold flex items-center justify-center shadow-lg">
+              {count}
+            </span>
+          )}
         </div>
-      ) : null;
+      );
     };
   });
   useEffect(() => {
@@ -521,6 +572,8 @@ export function useGalleryDetail(id: string) {
     setRenameImageValue,
     moveImageTarget,
     setMoveImageTarget,
+    moveSelectionOpen,
+    setMoveSelectionOpen,
     moveFilter,
     setMoveFilter,
     downloadOpen,
@@ -578,6 +631,7 @@ export function useGalleryDetail(id: string) {
     coverMutation,
     renameImageMutation,
     moveImageMutation,
+    moveSelectionMutation,
     setHeaderFromImageMutation,
   };
 }

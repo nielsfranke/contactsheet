@@ -331,6 +331,7 @@
       "galleryFromCollection": "Galerie aus Sammlung erstellen",
       "galleryFromFilter": "Galerie aus Filter erstellen",
       "galleryFromSelection": "Galerie aus Auswahl erstellen",
+      "moveToGallery": "In Galerie verschieben…",
       "preview": "Vorschau"
     },
     "detail": {
@@ -367,6 +368,7 @@
       "filenamePlaceholder": "Dateiname",
       "renameCollectionTitle": "Sammlung umbenennen",
       "moveTitle": "Bild verschieben",
+      "moveSelectionTitle": "{count, plural, one {# Bild} other {# Bilder}} verschieben",
       "filterGalleriesPlaceholder": "Galerien filtern…",
       "noGalleriesMatch": "Keine Galerien gefunden.",
       "current": "Aktuell",
@@ -409,8 +411,10 @@
         "coverUpdated": "Cover-Bild aktualisiert",
         "fileRenamed": "Datei umbenannt",
         "imageMoved": "Bild verschoben",
+        "imagesMoved": "{count, plural, one {# Bild} other {# Bilder}} verschoben",
         "headerUpdated": "Header-Bild aktualisiert — legen Sie Ihren Fokuspunkt fest",
-        "photoMoved": "Foto verschoben"
+        "photoMoved": "Foto verschoben",
+        "photosMoved": "{count, plural, one {# Foto} other {# Fotos}} verschoben"
       }
     },
     "share": {

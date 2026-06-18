@@ -331,6 +331,7 @@
       "galleryFromCollection": "Create gallery from collection",
       "galleryFromFilter": "Create gallery from filter",
       "galleryFromSelection": "Create gallery from selection",
+      "moveToGallery": "Move to gallery…",
       "preview": "Preview"
     },
     "detail": {
@@ -367,6 +368,7 @@
       "filenamePlaceholder": "Filename",
       "renameCollectionTitle": "Rename Collection",
       "moveTitle": "Move Image",
+      "moveSelectionTitle": "Move {count, plural, one {# image} other {# images}}",
       "filterGalleriesPlaceholder": "Filter galleries…",
       "noGalleriesMatch": "No galleries match.",
       "current": "Current",
@@ -409,8 +411,10 @@
         "coverUpdated": "Cover image updated",
         "fileRenamed": "File renamed",
         "imageMoved": "Image moved",
+        "imagesMoved": "{count, plural, one {# image} other {# images}} moved",
         "headerUpdated": "Header image updated — set your focus point",
-        "photoMoved": "Photo moved"
+        "photoMoved": "Photo moved",
+        "photosMoved": "{count, plural, one {# photo} other {# photos}} moved"
       }
     },
     "share": {
