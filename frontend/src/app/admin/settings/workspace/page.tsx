@@ -8,6 +8,7 @@ import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
+import { SettingsPageSkeleton } from "@/components/admin/SettingsPageSkeleton";
 import { SUPPORTED_LOCALES, LOCALE_LABELS, LOCALE_COOKIE, type Locale } from "@/i18n/locales";
 import type {
   AdminGridMode,
@@ -37,7 +38,6 @@ export default function WorkspaceSettingsPage() {
   const qc = useQueryClient();
   const router = useRouter();
   const t = useTranslations("settings.workspace");
-  const tc = useTranslations("common");
   const { save, status } = useSettingsAutosave();
 
   const { data: settings, isLoading } = useQuery({
@@ -54,7 +54,7 @@ export default function WorkspaceSettingsPage() {
   }, [qc]);
 
   if (isLoading || !settings) {
-    return <div className="p-6 text-muted-foreground">{tc("loading")}</div>;
+    return <SettingsPageSkeleton />;
   }
 
   const effTheme = settings.admin_theme;

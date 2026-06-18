@@ -22,6 +22,7 @@ import {
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { api } from "@/lib/api";
+import { SettingsPageSkeleton } from "@/components/admin/SettingsPageSkeleton";
 import type { FooterSettings } from "@/lib/types";
 import { FOOTER_ICON_META, SOCIAL_META, socialHandle } from "@/components/gallery/GalleryFooter";
 import { Toggle } from "@/components/admin/gallery-settings-fields";
@@ -122,7 +123,6 @@ function SortableRow({
 
 export default function FooterSettingsPage() {
   const t = useTranslations("settings.footer");
-  const tc = useTranslations("common");
   const { save, status } = useSettingsAutosave();
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 4 } }));
 
@@ -156,7 +156,7 @@ export default function FooterSettingsPage() {
   }
 
   if (isLoading || !settings) {
-    return <div className="p-6 text-muted-foreground">{tc("loading")}</div>;
+    return <SettingsPageSkeleton />;
   }
 
   return (

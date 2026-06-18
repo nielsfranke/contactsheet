@@ -19,6 +19,7 @@ import { GalleryViewToolbar } from "@/components/admin/GalleryViewToolbar";
 import { GalleryFooter } from "@/components/gallery/GalleryFooter";
 import { GalleryUpNav } from "@/components/gallery/GalleryUpNav";
 import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Image as ImageIcon, Plus } from "lucide-react";
 
 export default function GalleryDetailPage() {
@@ -81,7 +82,19 @@ export default function GalleryDetailPage() {
   } = d;
 
   if (isLoading || !gallery) {
-    return <div className="p-6 text-muted-foreground">{t("loading")}</div>;
+    return (
+      <div className="p-6 space-y-6" aria-hidden="true">
+        <div className="flex items-center justify-between gap-4">
+          <Skeleton className="h-7 w-56" />
+          <Skeleton className="h-8 w-24" />
+        </div>
+        <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4">
+          {Array.from({ length: 12 }).map((_, i) => (
+            <Skeleton key={i} className="aspect-square w-full" />
+          ))}
+        </div>
+      </div>
+    );
   }
 
   const galleryWithChildren: GalleryResponse = { ...gallery, children };

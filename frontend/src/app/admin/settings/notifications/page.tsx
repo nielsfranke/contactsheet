@@ -7,6 +7,7 @@ import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
 import { api } from "@/lib/api";
+import { SettingsPageSkeleton } from "@/components/admin/SettingsPageSkeleton";
 import type {
   NotificationSettings,
   NotificationEventKey,
@@ -46,7 +47,6 @@ const SELECT_CLASS =
 
 export default function NotificationsSettingsPage() {
   const t = useTranslations("settings.notifications");
-  const tc = useTranslations("common");
   const { save, status } = useSettingsAutosave();
 
   const { data: settings, isLoading } = useQuery({
@@ -117,7 +117,7 @@ export default function NotificationsSettingsPage() {
   }
 
   if (isLoading || !settings) {
-    return <div className="p-6 text-muted-foreground">{tc("loading")}</div>;
+    return <SettingsPageSkeleton />;
   }
 
   return (

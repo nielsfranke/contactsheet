@@ -7,6 +7,7 @@ import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
 import { api } from "@/lib/api";
+import { SettingsPageSkeleton } from "@/components/admin/SettingsPageSkeleton";
 import { MODE_LABELS, type LightboxBackdrop, type ModeType } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -30,7 +31,6 @@ const BACKDROP_OPTIONS: { value: LightboxBackdrop; labelKey: string; swatch: str
 
 export default function GalleryDefaultsPage() {
   const t = useTranslations("settings.galleryDefaults");
-  const tc = useTranslations("common");
   const { save, status } = useSettingsAutosave();
   const [editMode, setEditMode] = useState<ModeType | null>(null);
 
@@ -40,7 +40,7 @@ export default function GalleryDefaultsPage() {
   });
 
   if (isLoading || !settings) {
-    return <div className="p-6 text-muted-foreground">{tc("loading")}</div>;
+    return <SettingsPageSkeleton />;
   }
 
   const effHighRes = settings.high_res_previews;

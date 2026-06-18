@@ -7,6 +7,7 @@ import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
 import { api } from "@/lib/api";
+import { SettingsPageSkeleton } from "@/components/admin/SettingsPageSkeleton";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Toggle } from "@/components/admin/gallery-settings-fields";
@@ -23,7 +24,6 @@ const DEFAULT_SOURCE_URL = "https://github.com/nielsfranke/contactsheet";
 
 export default function GeneralSettingsPage() {
   const t = useTranslations("settings.general");
-  const tc = useTranslations("common");
   const { save, status } = useSettingsAutosave();
 
   const { data: settings, isLoading } = useQuery({
@@ -42,7 +42,7 @@ export default function GeneralSettingsPage() {
   const effectiveRetention = retention ?? settings?.activity_ip_retention_days ?? 90;
 
   if (isLoading) {
-    return <div className="p-6 text-muted-foreground">{tc("loading")}</div>;
+    return <SettingsPageSkeleton />;
   }
 
   return (

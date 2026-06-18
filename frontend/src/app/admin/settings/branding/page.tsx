@@ -7,6 +7,7 @@ import { useEffect, useRef, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
 import { api } from "@/lib/api";
+import { SettingsPageSkeleton } from "@/components/admin/SettingsPageSkeleton";
 import type { AppSettings, BrandDisplay } from "@/lib/types";
 import { applyAdminTheme } from "@/lib/theme";
 import { Button } from "@/components/ui/button";
@@ -25,7 +26,6 @@ const HEX = /^#[0-9a-fA-F]{3,8}$/;
 export default function BrandingSettingsPage() {
   const qc = useQueryClient();
   const t = useTranslations("settings.branding");
-  const tc = useTranslations("common");
   const { save, status } = useSettingsAutosave();
 
   const { data: settings, isLoading } = useQuery({
@@ -119,7 +119,7 @@ export default function BrandingSettingsPage() {
   }
 
   if (isLoading) {
-    return <div className="p-6 text-muted-foreground">{tc("loading")}</div>;
+    return <SettingsPageSkeleton />;
   }
 
   return (
