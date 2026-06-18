@@ -99,3 +99,92 @@ jobs:
           provenance: false
           cache-from: type=gha,scope=${{ matrix.image }}
           cache-to: type=gha,mode=max,scope=${{ matrix.image }}
+
+  # Publishes the GitHub release (always) and the Forgejo release (when FORGEJO_API_TOKEN is set)
+  # from the hand-written CHANGELOG entry. Tag-pushes only — never on the workflow_dispatch test run.
+  release:
+    needs: images
+    if: ${{ github.server_url == 'https://github.com' && startsWith(github.ref, 'refs/tags/v') }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    env:
+      REPO: ${{ github.repository }}
+      FORGEJO_API_TOKEN: ${{ secrets.FORGEJO_API_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Assemble release notes
+        id: notes
+        run: |
+          set -euo pipefail
+          TAG="$GITHUB_REF_NAME"
+          VERSION="${TAG#v}"
+          # Title from the annotated tag subject ("ContactSheet vX.Y.Z — …" → "vX.Y.Z — …").
+          SUBJECT="$(git tag -l "$TAG" --format='%(contents:subject)')"
+          TITLE="${SUBJECT#ContactSheet }"
+          [ -n "$TITLE" ] || TITLE="$TAG"
+          PREV="$(git describe --tags --abbrev=0 "$TAG^" 2>/dev/null || true)"
+          {
+            python3 scripts/changelog-extract.py "$VERSION"
+            if [ -n "$PREV" ]; then
+              echo
+              echo "**Full changelog:** https://github.com/$REPO/compare/$PREV...$TAG"
+            fi
+          } > notes.md
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+          echo "title=$TITLE" >> "$GITHUB_OUTPUT"
+
+      - name: Publish the GitHub release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ steps.notes.outputs.tag }}
+          TITLE: ${{ steps.notes.outputs.title }}
+        run: |
+          set -euo pipefail
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            gh release edit "$TAG" --title "$TITLE" --notes-file notes.md
+          else
+            gh release create "$TAG" --title "$TITLE" --notes-file notes.md --verify-tag
+          fi
+
+      - name: Publish the Forgejo release
+        if: ${{ env.FORGEJO_API_TOKEN != '' }}
+        env:
+          TAG: ${{ steps.notes.outputs.tag }}
+          TITLE: ${{ steps.notes.outputs.title }}
+        run: |
+          set -euo pipefail
+          python3 - <<'PYEOF'
+          import json, os, urllib.request, urllib.error
+          tag, title = os.environ["TAG"], os.environ["TITLE"]
+          body = open("notes.md", encoding="utf-8").read()
+          base = "https://forgejo.nielsbox.cc/api/v1/repos/niels/ContactSheet/releases"
+          hdr = {"Authorization": f"token {os.environ['FORGEJO_API_TOKEN']}",
+                 "Content-Type": "application/json"}
+          payload = {"tag_name": tag, "name": title, "body": body,
+                     "draft": False, "prerelease": False}
+
+          def call(method, url, data=None):
+              req = urllib.request.Request(
+                  url, data=json.dumps(data).encode() if data else None,
+                  headers=hdr, method=method)
+              try:
+                  with urllib.request.urlopen(req) as r:
+                      return r.status, json.load(r)
+              except urllib.error.HTTPError as e:
+                  return e.code, e.read().decode()
+
+          st, res = call("POST", base, payload)
+          if st == 201:
+              print("Forgejo release created")
+          else:
+              st2, rel = call("GET", f"{base}/tags/{tag}")
+              if st2 == 200 and isinstance(rel, dict) and "id" in rel:
+                  st3, _ = call("PATCH", f"{base}/{rel['id']}", payload)
+                  print(f"Forgejo release updated (HTTP {st3})")
+              else:
+                  raise SystemExit(f"Forgejo release failed: POST {st} {res} / GET {st2}")
+          PYEOF

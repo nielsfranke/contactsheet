@@ -31,8 +31,12 @@ The tag reaches GitHub via the push-mirror, which fires the workflow. It builds 
 `:latest` only moves for final releases; a prerelease tag like `vX.Y.Z-rc1` publishes the version
 tag only. Watch the run under the repo's **Actions** tab on GitHub.
 
-Release notes (the GitHub/Forgejo *Release* objects) are still written by hand — CI only builds
-images.
+After the images push, the `release` job publishes the **GitHub release** automatically — the body
+is the `## [X.Y.Z]` section from `CHANGELOG.md` (extracted by `scripts/changelog-extract.py`) plus a
+compare link, and the title is the annotated tag's subject (`ContactSheet vX.Y.Z — …` → `vX.Y.Z —
+…`). The **Forgejo release** is published the same way when `FORGEJO_API_TOKEN` is set (see below).
+So the only hand-written input is the changelog entry and the tag message — no more clicking
+"new release". Re-running a tag updates the existing releases in place.
 
 ## One-time setup
 
@@ -50,6 +54,14 @@ GitHub (Settings → Secrets and variables → Actions):
 
 When `FORGEJO_REGISTRY_TOKEN` is unset the workflow simply skips the Forgejo registry and pushes to
 GHCR only.
+
+**Forgejo release notes (optional).** To also publish the *Forgejo* release object automatically,
+add one more secret:
+
+- `FORGEJO_API_TOKEN` — a Forgejo token with `write:repository` scope (the release API needs repo
+  write, not just package write — so this is separate from `FORGEJO_REGISTRY_TOKEN`).
+
+When unset, CI publishes only the GitHub release and the Forgejo release stays manual.
 
 ## Manual fallback
 
