@@ -7,7 +7,7 @@
 # it never touches a developer's live instance on :8000/:3000.
 #
 # Usage:  bash demo/run.sh            (assumes demo/assets/ already populated)
-#         bash demo/run.sh --fetch    (also re-download the CC0 photo pool first)
+#         bash demo/run.sh --fetch    (also re-download the photo pool first)
 set -euo pipefail
 cd "$(dirname "$0")/.."
 PY="backend/.venv/bin/python"

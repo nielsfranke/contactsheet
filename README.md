@@ -35,7 +35,7 @@ ContactSheet is the digital version.
     <img src="docs/screenshots/05-public-gallery.jpg" alt="A client gallery in Showcase mode" width="820">
   </a>
 </p>
-<p align="center"><sub>A client gallery in Showcase mode · <a href="https://github.com/nielsfranke/contactsheet/wiki/Screenshots">more screenshots →</a> · CC0 placeholder photos via <a href="https://openverse.org/">Openverse</a> (see <a href="demo/assets/CREDITS.md">credits</a>)</sub></p>
+<p align="center"><sub>A client gallery in Showcase mode · <a href="https://github.com/nielsfranke/contactsheet/wiki/Screenshots">more screenshots →</a> · placeholder photos via <a href="https://picsum.photos/">Lorem Picsum</a> (Unsplash; see <a href="demo/assets/CREDITS.md">credits</a>)</sub></p>
 
 ## About
 

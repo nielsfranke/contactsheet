@@ -4,8 +4,8 @@ This folder regenerates the screenshots in `docs/screenshots/` from a **reproduc
 instance, so a screenshot refresh is one command instead of hand-curation.
 
 The demo is the fictional **Aperture Studio** — professional landscape / portrait / architecture
-work. Placeholder photos are **CC0** (sourced via [Openverse](https://openverse.org/); see
-`assets/CREDITS.md`).
+work. Placeholder photos come from [Lorem Picsum](https://picsum.photos/) (Unsplash photos under
+the [Unsplash License](https://unsplash.com/license)); see `assets/CREDITS.md`.
 
 ## Isolation
 
@@ -17,7 +17,7 @@ reads or writes the developer's real instance on `:8000`/`:3000` or `frontend/.n
 
 ```bash
 bash demo/run.sh            # seed + capture (uses the committed demo/assets/)
-bash demo/run.sh --fetch    # also re-download & re-select the CC0 photo pool first
+bash demo/run.sh --fetch    # also re-download & re-select the photo pool first
 ```
 
 Output overwrites `docs/screenshots/*.jpg` (desktop 2880×1800, mobile 1170×2532).
@@ -27,7 +27,7 @@ Output overwrites `docs/screenshots/*.jpg` (desktop 2880×1800, mobile 1170×253
 | File | Role |
 |---|---|
 | `manifest.py` | Single source of truth: branding, footer, galleries → photos, modes, collaboration content, and which gallery drives each screenshot scene. |
-| `fetch_assets.py` | Download a CC0 candidate pool from Openverse into `assets/_pool/` (+ review montages). |
+| `fetch_assets.py` | Download a candidate photo pool from Lorem Picsum into `assets/_pool/` (+ review montage). |
 | `select_assets.py` | Promote the hand-picked candidates into `assets/<group>/` and regenerate `assets/CREDITS.md`. |
 | `seed_demo.py` | Wipe `demo/.data`, migrate, launch the demo backend, and build the instance via the REST API. Writes `demo/.data/state.json`. |
 | `capture_screenshots.py` | Launch the demo backend + an isolated frontend, then drive Playwright (chromium) through the 12 scenes. |
