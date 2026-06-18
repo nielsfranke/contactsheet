@@ -1,0 +1,64 @@
+<!--
+SPDX-FileCopyrightText: 2026 Niels Franke
+SPDX-License-Identifier: AGPL-3.0-or-later
+-->
+
+# Releasing
+
+Images are built by CI (`.github/workflows/release.yml`) — you only cut the tag.
+
+## Cutting a release
+
+1. Bump the version in **both** `backend/app/version.py` and `frontend/package.json`.
+2. Move the `[Unreleased]` notes into a new `## [X.Y.Z]` section in `CHANGELOG.md` and update the
+   compare links at the bottom.
+3. Commit, then tag and push:
+
+   ```bash
+   git commit -am "Release vX.Y.Z"
+   git tag -a vX.Y.Z -m "ContactSheet vX.Y.Z — <short title>"
+   git push origin main
+   git push origin vX.Y.Z
+   ```
+
+The tag reaches GitHub via the push-mirror, which fires the workflow. It builds the multi-arch
+(`linux/amd64` + `linux/arm64`) **backend** and **frontend** images and pushes:
+
+- `ghcr.io/nielsfranke/contactsheet-{backend,frontend}:X.Y.Z` (+ `:latest`)
+- `forgejo.nielsbox.cc/niels/contactsheet-{backend,frontend}:X.Y.Z` (+ `:latest`) — only when the
+  Forgejo registry secrets are configured (see below)
+
+`:latest` only moves for final releases; a prerelease tag like `vX.Y.Z-rc1` publishes the version
+tag only. Watch the run under the repo's **Actions** tab on GitHub.
+
+Release notes (the GitHub/Forgejo *Release* objects) are still written by hand — CI only builds
+images.
+
+## One-time setup
+
+**GHCR (required).** The workflow pushes with the built-in `GITHUB_TOKEN`. Because the two GHCR
+packages were first created from a local push, grant the repo write access once:
+GitHub → each package (`contactsheet-backend`, `contactsheet-frontend`) → **Package settings** →
+*Manage Actions access* → add `nielsfranke/contactsheet` with the **Write** role. Without this the
+first CI push fails with `denied: permission_denied`.
+
+**Forgejo registry (optional).** To also push to `forgejo.nielsbox.cc`, add two repo secrets on
+GitHub (Settings → Secrets and variables → Actions):
+
+- `FORGEJO_REGISTRY_USER` — your Forgejo username (`niels`)
+- `FORGEJO_REGISTRY_TOKEN` — a Forgejo token with `write:package` + `read:package` scope
+
+When `FORGEJO_REGISTRY_TOKEN` is unset the workflow simply skips the Forgejo registry and pushes to
+GHCR only.
+
+## Manual fallback
+
+If CI is unavailable, build and push locally with the `cs-builder` buildx builder:
+
+```bash
+docker buildx build --builder cs-builder --platform linux/amd64,linux/arm64 --target backend \
+  -t ghcr.io/nielsfranke/contactsheet-backend:X.Y.Z -t ghcr.io/nielsfranke/contactsheet-backend:latest \
+  -t forgejo.nielsbox.cc/niels/contactsheet-backend:X.Y.Z -t forgejo.nielsbox.cc/niels/contactsheet-backend:latest \
+  --push .
+# repeat with --target frontend
+```
