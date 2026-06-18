@@ -67,24 +67,24 @@ export function DownloadGalleryDialog({
       onClick={() => !preparing && onOpenChange(false)}
     >
       <div
-        className="w-full max-w-lg rounded-2xl bg-white text-zinc-900 shadow-xl p-6 space-y-4"
+        className="w-full max-w-lg rounded-2xl bg-popover text-popover-foreground shadow-xl p-6 space-y-4"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-start justify-between">
           <h2 className="text-xl font-semibold">{t("title")}</h2>
-          <button onClick={() => !preparing && onOpenChange(false)} className="text-zinc-400 hover:text-zinc-700">
+          <button onClick={() => !preparing && onOpenChange(false)} className="text-muted-foreground hover:text-foreground">
             <X size={20} />
           </button>
         </div>
 
-        <p className="text-sm text-zinc-600">
+        <p className="text-sm text-muted-foreground">
           {subs.length > 0 ? t("bodyWithSubs") : t("bodyNoSubs")}
         </p>
 
         {subs.length > 0 && (
           <label className="flex items-center gap-2 text-sm font-medium cursor-pointer select-none">
-            <span className={`flex h-5 w-5 items-center justify-center rounded border ${allSelected ? "bg-zinc-900 border-zinc-900" : "border-zinc-300"}`}>
-              {allSelected && <Check size={13} className="text-white" />}
+            <span className={`flex h-5 w-5 items-center justify-center rounded border ${allSelected ? "bg-primary border-primary" : "border-input"}`}>
+              {allSelected && <Check size={13} className="text-primary-foreground" />}
             </span>
             <input type="checkbox" className="sr-only" checked={allSelected} onChange={toggleAll} />
             {t("includeAll")}
@@ -92,12 +92,12 @@ export function DownloadGalleryDialog({
         )}
 
         {/* Folder tree */}
-        <div className="rounded-lg border border-zinc-200 divide-y divide-zinc-100 overflow-hidden">
-          {/* Root gallery (always included) */}
-          <div className="flex items-center gap-2 px-3 py-2.5 bg-zinc-900 text-white">
+        <div className="rounded-lg border border-border divide-y divide-border overflow-hidden">
+          {/* Root gallery (always included) — emphasized with the inverted-accent (primary) pair */}
+          <div className="flex items-center gap-2 px-3 py-2.5 bg-primary text-primary-foreground">
             <FolderOpen size={16} className="shrink-0" />
             <span className="flex-1 truncate text-sm font-medium">{galleryName}</span>
-            <span className="text-xs text-white/70">
+            <span className="text-xs text-primary-foreground/70">
               {rootCount > 0 ? t("filesCount", { count: rootCount }) : t("empty")}
             </span>
           </div>
@@ -108,14 +108,14 @@ export function DownloadGalleryDialog({
               <button
                 key={s.id}
                 onClick={() => toggle(s.id)}
-                className="w-full flex items-center gap-2 pl-8 pr-3 py-2.5 text-left hover:bg-zinc-50 transition-colors"
+                className="w-full flex items-center gap-2 pl-8 pr-3 py-2.5 text-left hover:bg-accent transition-colors"
               >
-                <span className={`flex h-4 w-4 items-center justify-center rounded border shrink-0 ${on ? "bg-zinc-900 border-zinc-900" : "border-zinc-300"}`}>
-                  {on && <Check size={11} className="text-white" />}
+                <span className={`flex h-4 w-4 items-center justify-center rounded border shrink-0 ${on ? "bg-primary border-primary" : "border-input"}`}>
+                  {on && <Check size={11} className="text-primary-foreground" />}
                 </span>
-                <Folder size={16} className="shrink-0 text-zinc-500" />
+                <Folder size={16} className="shrink-0 text-muted-foreground" />
                 <span className="flex-1 truncate text-sm">{s.name}</span>
-                <span className="text-xs text-zinc-500">{s.count}</span>
+                <span className="text-xs text-muted-foreground">{s.count}</span>
               </button>
             );
           })}
@@ -124,26 +124,26 @@ export function DownloadGalleryDialog({
         {extra}
 
         {totalFiles === 0 && (
-          <div className="flex items-start gap-2 rounded-lg bg-amber-50 border border-amber-200 p-3 text-sm text-amber-800">
+          <div className="flex items-start gap-2 rounded-lg bg-amber-500/10 border border-amber-500/30 p-3 text-sm text-amber-700 dark:text-amber-300">
             <AlertTriangle size={16} className="mt-0.5 shrink-0" />
             <span>{t("noFilesWarning")}</span>
           </div>
         )}
 
-        {error && <p className="text-sm text-red-600">{error}</p>}
+        {error && <p className="text-sm text-destructive">{error}</p>}
 
         <div className="flex items-center justify-end gap-2 pt-1">
           <button
             onClick={() => onOpenChange(false)}
             disabled={preparing}
-            className="rounded-lg border border-zinc-300 px-4 py-2 text-sm font-medium hover:bg-zinc-50 disabled:opacity-50"
+            className="rounded-lg border border-border px-4 py-2 text-sm font-medium text-foreground hover:bg-accent disabled:opacity-50"
           >
             {tc("cancel")}
           </button>
           <button
             onClick={() => onStart([...selected])}
             disabled={totalFiles === 0 || preparing}
-            className="inline-flex items-center gap-2 rounded-lg bg-zinc-900 text-white px-4 py-2 text-sm font-medium hover:bg-zinc-800 disabled:opacity-40"
+            className="inline-flex items-center gap-2 rounded-lg bg-primary text-primary-foreground px-4 py-2 text-sm font-medium hover:bg-primary/90 disabled:opacity-40"
           >
             {preparing && <Loader2 size={14} className="animate-spin" />}
             {preparing ? t("preparing") : t("start")}

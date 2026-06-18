@@ -143,14 +143,14 @@ export function ClientUploadButton({ shareToken, galleryToken, moderation, class
 
       {needName && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-6 backdrop-blur-sm">
-          <div className="w-full max-w-sm space-y-5 rounded-xl border border-zinc-700 bg-zinc-900 p-8 shadow-2xl">
+          <div className="w-full max-w-sm space-y-5 rounded-xl border border-border bg-popover text-popover-foreground p-8 shadow-2xl">
             <div className="flex flex-col items-center gap-3 text-center">
-              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-blue-900/50">
-                <UploadCloud size={22} className="text-blue-400" />
+              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-blue-500/15">
+                <UploadCloud size={22} className="text-blue-500" />
               </div>
               <div>
-                <h2 className="text-lg font-semibold text-zinc-100">{t("promptTitle")}</h2>
-                <p className="mt-1 text-sm text-zinc-400">{t("promptBody")}</p>
+                <h2 className="text-lg font-semibold text-foreground">{t("promptTitle")}</h2>
+                <p className="mt-1 text-sm text-muted-foreground">{t("promptBody")}</p>
               </div>
             </div>
             <form onSubmit={confirmName} className="space-y-3">
@@ -159,7 +159,7 @@ export function ClientUploadButton({ shareToken, galleryToken, moderation, class
                 value={nameValue}
                 onChange={(e) => setNameValue(e.target.value)}
                 placeholder={t("yourName")}
-                className="bg-zinc-800 border-zinc-700 text-center text-zinc-100"
+                className="text-center"
                 maxLength={100}
               />
               <div className="flex gap-2">

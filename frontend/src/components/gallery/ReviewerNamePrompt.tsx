@@ -33,14 +33,14 @@ export function ReviewerNamePrompt({ onConfirmed, title, body, submitLabel }: Pr
 
   return (
     <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-6">
-      <div className="bg-zinc-900 border border-zinc-700 rounded-xl p-8 w-full max-w-sm space-y-5 shadow-2xl">
+      <div className="bg-popover text-popover-foreground border border-border rounded-xl p-8 w-full max-w-sm space-y-5 shadow-2xl">
         <div className="flex flex-col items-center gap-3 text-center">
-          <div className="w-12 h-12 rounded-full bg-blue-900/50 flex items-center justify-center">
-            <Users size={22} className="text-blue-400" />
+          <div className="w-12 h-12 rounded-full bg-blue-500/15 flex items-center justify-center">
+            <Users size={22} className="text-blue-500" />
           </div>
           <div>
-            <h2 className="text-lg font-semibold text-zinc-100">{title ?? t("title")}</h2>
-            <p className="text-sm text-zinc-400 mt-1">{body ?? t("body")}</p>
+            <h2 className="text-lg font-semibold text-foreground">{title ?? t("title")}</h2>
+            <p className="text-sm text-muted-foreground mt-1">{body ?? t("body")}</p>
           </div>
         </div>
         <form onSubmit={handleSubmit} className="space-y-3">
@@ -49,7 +49,7 @@ export function ReviewerNamePrompt({ onConfirmed, title, body, submitLabel }: Pr
             value={value}
             onChange={(e) => setValue(e.target.value)}
             placeholder={t("placeholder")}
-            className="bg-zinc-800 border-zinc-700 text-zinc-100 text-center"
+            className="text-center"
             maxLength={255}
           />
           <Button type="submit" className="w-full" disabled={!value.trim()}>
