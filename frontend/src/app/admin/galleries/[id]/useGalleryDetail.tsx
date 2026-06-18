@@ -12,7 +12,7 @@ import { api } from "@/lib/api";
 import { useAdminDndRegister, useAdminDndActive } from "@/components/admin/AdminDnd";
 import { findChildren, findParent, FLAG_GROUP_ORDER } from "./parts";
 import type { ColorFlag, Collection, ImageResponse } from "@/lib/types";
-import { compareCaptureDate } from "@/lib/image-sort";
+import { compareCaptureDate, hasCaptureDate } from "@/lib/image-sort";
 import { flattenTree } from "@/lib/gallery-sort";
 import { useImageSelection } from "@/hooks/useImageSelection";
 import { useImageUpload } from "@/hooks/useImageUpload";
@@ -319,6 +319,10 @@ export function useGalleryDetail(id: string) {
 
   // Filter → sort → (group)
   const flagged = images.filter((img) => img.color_flag !== "none").length;
+  // "Capture Date" sort is only offered when at least one photo carries EXIF capture metadata;
+  // without it the sort falls back to filename so the order is still meaningful.
+  const captureSortAvailable = useMemo(() => images.some(hasCaptureDate), [images]);
+
   const filteredSorted = useMemo(() => {
     let list = images;
     const q = arrange.filterName.trim().toLowerCase();
@@ -331,8 +335,9 @@ export function useGalleryDetail(id: string) {
     }
 
     const dir = arrange.sortAsc ? 1 : -1;
+    const sortKey = arrange.sortKey === "captured" && !captureSortAvailable ? "filename" : arrange.sortKey;
     const sorted = [...list].sort((a, b) => {
-      switch (arrange.sortKey) {
+      switch (sortKey) {
         case "filename": return a.original_filename.localeCompare(b.original_filename) * dir;
         case "date": return (a.created_at < b.created_at ? -1 : 1) * dir;
         case "captured": return compareCaptureDate(a, b, dir);
@@ -340,7 +345,7 @@ export function useGalleryDetail(id: string) {
       }
     });
     return sorted;
-  }, [images, arrange, activeCollection, collections]);
+  }, [images, arrange, activeCollection, collections, captureSortAvailable]);
 
   const visibleIds = useMemo(() => filteredSorted.map((img) => img.id), [filteredSorted]);
   const selection = useImageSelection(visibleIds);
@@ -540,6 +545,7 @@ export function useGalleryDetail(id: string) {
     // derived
     flagged,
     filteredSorted,
+    captureSortAvailable,
     visibleIds,
     selection,
     groups,

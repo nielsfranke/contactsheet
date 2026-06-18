@@ -9,6 +9,7 @@ import { GalleryToolbar } from "@/components/gallery/GalleryToolbar";
 interface Props {
   arrange: ArrangeState;
   setArrange: (next: ArrangeState) => void;
+  captureSortAvailable: boolean;
   shownCount: number;
   totalCount: number;
 }
@@ -22,11 +23,12 @@ interface Props {
  * On mobile it sticks below the page's `GalleryUpNav` bar (`top-10`, ≈ that bar's height); at md+
  * the up-nav is hidden so it returns to `top-0`.
  */
-export function GalleryViewToolbar({ arrange, setArrange, shownCount, totalCount }: Props) {
+export function GalleryViewToolbar({ arrange, setArrange, captureSortAvailable, shownCount, totalCount }: Props) {
   return (
     <GalleryToolbar
       arrange={arrange}
       setArrange={setArrange}
+      captureSortAvailable={captureSortAvailable}
       shownCount={shownCount}
       totalCount={totalCount}
       className="sticky top-10 md:top-0 z-20 -mx-6 -mt-6 px-6 py-2.5"

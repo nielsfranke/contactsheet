@@ -11,7 +11,7 @@ import { api, getErrorCode } from "@/lib/api";
 import type { ColorFlag, GalleryPublicResponse, ImageResponse } from "@/lib/types";
 import { type ToolbarArrange as ArrangeState } from "./GalleryToolbar";
 import { resolveOpenerFont } from "@/lib/gallery-fonts";
-import { compareCaptureDate } from "@/lib/image-sort";
+import { compareCaptureDate, hasCaptureDate } from "@/lib/image-sort";
 import { useGalleryZip } from "@/hooks/useGalleryZip";
 import { useGalleryRealtime } from "@/hooks/useGalleryRealtime";
 import { useImageSelection } from "@/hooks/useImageSelection";
@@ -168,6 +168,10 @@ export function useGalleryView(
     [teamVoting, votesByImageId],
   );
 
+  // "Capture Date" sort is only offered when at least one photo carries EXIF capture metadata;
+  // without it the sort falls back to filename so the order is still meaningful.
+  const captureSortAvailable = useMemo(() => rawImages.some(hasCaptureDate), [rawImages]);
+
   // Filter → sort.
   const filteredSorted = useMemo(() => {
     let list = rawImages;
@@ -181,15 +185,16 @@ export function useGalleryView(
     }
 
     const dir = arrange.sortAsc ? 1 : -1;
+    const sortKey = arrange.sortKey === "captured" && !captureSortAvailable ? "filename" : arrange.sortKey;
     return [...list].sort((a, b) => {
-      switch (arrange.sortKey) {
+      switch (sortKey) {
         case "filename": return a.original_filename.localeCompare(b.original_filename) * dir;
         case "date": return (a.created_at < b.created_at ? -1 : 1) * dir;
         case "captured": return compareCaptureDate(a, b, dir);
         default: return (a.sort_order - b.sort_order) * dir;
       }
     });
-  }, [rawImages, arrange, flagOf, activeCollection, collections]);
+  }, [rawImages, arrange, flagOf, activeCollection, collections, captureSortAvailable]);
 
   const visibleIds = useMemo(() => filteredSorted.map((img) => img.id), [filteredSorted]);
   const selection = useImageSelection(visibleIds);
@@ -282,6 +287,7 @@ export function useGalleryView(
     votesByImageId,
     likedSet,
     filteredSorted,
+    captureSortAvailable,
     visibleIds,
     selection,
     groups,

@@ -38,6 +38,7 @@ export default function GalleryDetailPage() {
     upload,
     collections,
     filteredSorted,
+    captureSortAvailable,
     lightboxList,
     visibleIds,
     selection,
@@ -175,6 +176,7 @@ export default function GalleryDetailPage() {
         <GalleryViewToolbar
           arrange={arrange}
           setArrange={setArrange}
+          captureSortAvailable={captureSortAvailable}
           shownCount={filteredSorted.length}
           totalCount={images.length}
         />

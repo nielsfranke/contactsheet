@@ -3,7 +3,7 @@
 
 import { describe, it, expect } from "vitest";
 
-import { compareCaptureDate } from "./image-sort";
+import { compareCaptureDate, hasCaptureDate } from "./image-sort";
 import type { ImageResponse } from "./types";
 
 function img(dto: string | null): ImageResponse {
@@ -49,5 +49,19 @@ describe("compareCaptureDate", () => {
     const list = [B, img(null), A];
     const sorted = [...list].sort((x, y) => compareCaptureDate(x, y, 1));
     expect(sorted).toEqual([A, B, list[1]]); // dated ascending, undated last
+  });
+});
+
+describe("hasCaptureDate", () => {
+  it("is true when an EXIF capture timestamp is present", () => {
+    expect(hasCaptureDate(img("2024:01:01 10:00:00"))).toBe(true);
+  });
+
+  it("is false when the capture date is missing", () => {
+    expect(hasCaptureDate(img(null))).toBe(false);
+  });
+
+  it("is false for a blank/whitespace capture string", () => {
+    expect(hasCaptureDate(img("   "))).toBe(false);
   });
 });

@@ -43,6 +43,7 @@ export function GalleryCollabLayout({
     setArrange,
     rawImages,
     filteredSorted,
+    captureSortAvailable,
     collections,
     zip,
     selection,
@@ -133,6 +134,7 @@ export function GalleryCollabLayout({
             arrange={arrange}
             setArrange={setArrange}
             features={features}
+            captureSortAvailable={captureSortAvailable}
             shownCount={filteredSorted.length}
             totalCount={rawImages.length}
             className="px-4 py-2.5"

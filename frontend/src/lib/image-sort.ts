@@ -13,6 +13,11 @@ function captureKey(img: ImageResponse): string | null {
   return typeof v === "string" && v.trim() ? v : null;
 }
 
+/** True when the photo carries an EXIF capture timestamp (used to gate the "Capture Date" sort). */
+export function hasCaptureDate(img: ImageResponse): boolean {
+  return captureKey(img) !== null;
+}
+
 /**
  * Comparator for the "Capture Date" sort. Photos with an EXIF capture date order by it (respecting
  * `dir`: +1 ascending / -1 descending); photos without one always sort to the end, regardless of

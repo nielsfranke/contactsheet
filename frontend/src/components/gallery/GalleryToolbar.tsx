@@ -47,6 +47,9 @@ interface Props {
   totalCount: number;
   /** Collaboration controls to show. Defaults to all (admin). */
   features?: ToolbarFeatures;
+  /** Whether to offer the "Capture Date" sort — only when at least one photo has EXIF capture
+   *  metadata. Defaults to true. */
+  captureSortAvailable?: boolean;
   /** Positioning + padding for the bar; differs by host layout (admin bleeds into page padding,
    *  the client sits inside its own sticky container). Colors/geometry live here. */
   className?: string;
@@ -60,7 +63,7 @@ interface Props {
  */
 export function GalleryToolbar({
   arrange, setArrange, shownCount, totalCount,
-  features = { colorFlags: true, comments: true }, className,
+  features = { colorFlags: true, comments: true }, captureSortAvailable = true, className,
 }: Props) {
   const t = useTranslations("gallery.toolbar");
   const tf = useTranslations("gallery.flags");
@@ -79,6 +82,11 @@ export function GalleryToolbar({
   }
 
   const selectCls = "h-8 max-w-full text-sm bg-background border border-input text-foreground rounded-lg px-2";
+
+  // Drop "Capture Date" when no photo carries the metadata. If it was the active sort, fall back
+  // to filename in the select (the grid does the same), so the control never renders blank.
+  const sortKeys = captureSortAvailable ? SORT_KEYS : SORT_KEYS.filter((k) => k !== "captured");
+  const sortValue = sortKeys.includes(arrange.sortKey) ? arrange.sortKey : "filename";
 
   return (
     <ToolbarBand className={className}>
@@ -135,12 +143,12 @@ export function GalleryToolbar({
           from spilling past a phone's right edge. */}
       <div className="flex flex-wrap items-center gap-2 sm:ml-auto">
         <select
-          value={arrange.sortKey}
+          value={sortValue}
           onChange={(e) => setArrange({ ...arrange, sortKey: e.target.value as ToolbarSortKey })}
           className={selectCls}
           aria-label={t("sortBy")}
         >
-          {SORT_KEYS.map((k) => <option key={k} value={k}>{t(`sort.${k}`)}</option>)}
+          {sortKeys.map((k) => <option key={k} value={k}>{t(`sort.${k}`)}</option>)}
         </select>
         <button
           onClick={() => setArrange({ ...arrange, sortAsc: !arrange.sortAsc })}
