@@ -38,7 +38,7 @@ layouts:
 
 ```
 ┌──────────────────────────────┐
-│  ‹  Wedding 2026             │  ← tap = /g/{parent_share_token}
+│  ‹  Portraits 2026           │  ← tap = /g/{parent_share_token}
 └──────────────────────────────┘
 ```
 

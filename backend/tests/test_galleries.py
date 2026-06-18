@@ -10,8 +10,8 @@ from .helpers import make_gallery, add_image
 
 
 def test_create_and_get_gallery(admin_client):
-    g = make_gallery(admin_client, "Wedding")
-    assert g["name"] == "Wedding"
+    g = make_gallery(admin_client, "Portraits")
+    assert g["name"] == "Portraits"
     assert g["share_token"]
     assert g["has_password"] is False
     got = admin_client.get(f"/api/galleries/{g['id']}")

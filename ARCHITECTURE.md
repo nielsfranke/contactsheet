@@ -504,10 +504,10 @@ Response: `LoginResponse` + sets httpOnly `access_token` cookie.
 ```json
 [
   {
-    "id": "...", "name": "Wedding 2025", "image_count": 42,
+    "id": "...", "name": "Portraits 2025", "image_count": 42,
     "share_url": "/g/abc123", "layout": "grid",
     "children": [
-      { "id": "...", "name": "Ceremony", "image_count": 18, "children": [] }
+      { "id": "...", "name": "Headshots", "image_count": 18, "children": [] }
     ]
   }
 ]
