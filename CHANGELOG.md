@@ -14,11 +14,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [1.0.1] - 2026-06-18
 
+### Added
+
+- The login screen now shows the instance's branding logo, falling back to the ContactSheet
+  default mark.
+
 ### Fixed
 
 - Copy filenames, the flagged-selection text export, and ZIP downloads no longer leak the folder
   path for photos added via a folder (drag-and-drop) upload. Uploads now store only the base
   filename, and the existing consumers strip any leftover path from older rows.
+- Dragging a photo while a non-manual sort (by date, name, etc.) was active could silently move it
+  out into the parent gallery. Reparenting now only happens on a deliberate drop onto a gallery
+  card or nav folder; an image dropped in empty space simply stays put.
+
+### Changed
+
+- The default source-code URL (the AGPL §13 "source" link) now points at the public GitHub
+  repository.
+- Neutral, professional example text across admin UI placeholders and the documentation.
+
+### Demo & documentation
+
+- Added a reproducible demo instance (seed scripts + asset manifest) and refreshed all
+  documentation screenshots.
+- Demo photos now use Lorem Picsum imagery, and the showcase demo gallery gained a full-width
+  hero banner.
 
 ## [1.0.0] - 2026-06-17
 
