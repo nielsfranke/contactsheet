@@ -4,8 +4,8 @@ This folder regenerates the screenshots in `docs/screenshots/` from a **reproduc
 instance, so a screenshot refresh is one command instead of hand-curation.
 
 The demo is the fictional **Aperture Studio** — professional landscape / portrait / architecture
-work, intentionally free of any "wedding" theming. Placeholder photos are **CC0** (sourced via
-[Openverse](https://openverse.org/); see `assets/CREDITS.md`).
+work. Placeholder photos are **CC0** (sourced via [Openverse](https://openverse.org/); see
+`assets/CREDITS.md`).
 
 ## Isolation
 

@@ -5,8 +5,6 @@
 Single source of truth shared by `seed_demo.py` (which builds the instance via the REST API)
 and `capture_screenshots.py` (which knows, by gallery key, what to photograph). Nothing here
 touches the real instance — `seed_demo.py` runs it all against an isolated demo backend.
-
-Wedding-free by design: the gallery formerly shown as "Coastal Wedding" is now "Coastal Light".
 """
 
 from __future__ import annotations

@@ -24,7 +24,7 @@ POOL = HERE / "assets" / "_pool"
 UA = "ContactSheet-demo-fetch/1.0 (https://github.com/nielsfranke/contactsheet)"
 MAX_EDGE = 1600
 
-# category -> search terms. Professional, wedding-free: landscape / travel / architecture / studio.
+# category -> search terms. Professional categories: landscape / travel / architecture / studio.
 QUERIES: dict[str, list[str]] = {
     "coastal": ["coast cliff sea", "mountain fog landscape", "fjord nordic landscape"],
     "iceland": ["iceland landscape", "waterfall nature", "glacier mountain"],
