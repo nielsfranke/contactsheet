@@ -397,6 +397,19 @@ export function Lightbox({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentIndex, images, highRes, compact]);
 
+  // Lock the page behind the lightbox while it's open. The overlay is fixed + (often) translucent,
+  // so a stray scroll of the document underneath would slide the gallery grid into view beneath it.
+  // The lightbox is conditionally mounted (`isOpen && <Lightbox>`), so this mount/unmount maps 1:1
+  // to open/close — restore the previous value on close.
+  useEffect(() => {
+    const root = document.documentElement;
+    const prev = root.style.overflow;
+    root.style.overflow = "hidden";
+    return () => {
+      root.style.overflow = prev;
+    };
+  }, []);
+
   // Track browser fullscreen so the toggle reflects the real state (incl. Esc-to-exit).
   useEffect(() => {
     function onFsChange() {
@@ -852,6 +865,14 @@ export function Lightbox({
               overflowX: annotating ? "hidden" : "auto",
               scrollSnapType: annotating ? "none" : "x mandatory",
               WebkitOverflowScrolling: "touch",
+              // Horizontal-only panning: the browser owns the left/right scroll, while a vertical
+              // swipe is left entirely to JS (swipe-down dismiss). Without this, an *upward* swipe —
+              // which the dismiss handler ignores and the container can't scroll (overflow-y hidden)
+              // — chains to the document and scrolls the gallery page behind the translucent backdrop,
+              // revealing the grid thumbnails underneath. `pan-x` stops that scroll-chaining at the
+              // source; `overscroll-contain` is a belt-and-suspenders against any residual chaining.
+              touchAction: annotating ? "auto" : "pan-x",
+              overscrollBehavior: "contain",
             }}
           >
             {images.map((im, idx) => {
