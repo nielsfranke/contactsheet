@@ -12,6 +12,7 @@ import { isAuthenticated, clearAuthenticated } from "@/lib/auth";
 import { GalleryTree } from "@/components/admin/GalleryTree";
 import { AdminThemeProvider } from "@/components/admin/AdminThemeProvider";
 import { AdminDndProvider } from "@/components/admin/AdminDnd";
+import { useAdminMobileHeader } from "@/store/adminMobileHeader";
 import { resolveOpenerFont } from "@/lib/gallery-fonts";
 import { Button } from "@/components/ui/button";
 import {
@@ -75,6 +76,9 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const [signOutOpen, setSignOutOpen] = useState(false);
   const [signingOut, setSigningOut] = useState(false);
   const closeDrawer = useCallback(() => setDrawerOpen(false), []);
+  // Per-route override for the mobile top bar — the gallery detail page sets a "go up" context here
+  // so the bar shows that instead of a second stacked up-nav row (see useAdminMobileHeader).
+  const mobileHeaderNav = useAdminMobileHeader((s) => s.nav);
 
   // Verify session is still valid against the server
   useEffect(() => {
@@ -300,10 +304,18 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           <Button variant="ghost" size="icon" aria-label="Open menu" onClick={() => setDrawerOpen(true)}>
             <Menu size={20} />
           </Button>
-          <Link href="/admin/galleries" className="flex items-center gap-2 min-w-0">
-            {logo}
-            <span className="font-semibold truncate">{instanceName}</span>
-          </Link>
+          {mobileHeaderNav ? (
+            // Gallery detail context: back-to-parent in place of the global brand (one row, not two).
+            <Link href={mobileHeaderNav.href} className="flex items-center gap-1 min-w-0">
+              <ChevronLeft size={20} className="shrink-0 text-muted-foreground" />
+              <span className="font-semibold truncate">{mobileHeaderNav.label}</span>
+            </Link>
+          ) : (
+            <Link href="/admin/galleries" className="flex items-center gap-2 min-w-0">
+              {logo}
+              <span className="font-semibold truncate">{instanceName}</span>
+            </Link>
+          )}
         </header>
         <main className="flex-1 overflow-y-auto overscroll-contain min-w-0">
           {children}

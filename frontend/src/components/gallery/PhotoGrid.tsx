@@ -292,20 +292,22 @@ function PhotoTile({
           <div className={`absolute top-2 right-2 w-3.5 h-3.5 rounded-full ring-2 ring-white shadow-[0_0_3px_rgba(0,0,0,0.6)] ${activeFlagColor?.bg ?? ""} sm:group-hover:opacity-0 transition-opacity pointer-events-none`} />
         )}
 
-        {/* Persistent comment/annotation indicator so flagged photos are spottable without hovering.
-            Desktop only (on touch the overlay's buttons are always visible); hidden on hover where
-            those buttons take over. */}
+        {/* Persistent comment/annotation indicator so flagged photos are spottable without opening.
+            On touch it's the only comment cue (the hover overlay is desktop-only); on desktop it
+            rests visible and hides on hover where those buttons take over. */}
         {showToolbar && (showComments || showAnnotate) && (
           <MediaBadge
             img={img}
-            className="absolute bottom-2 right-2 hidden sm:flex pointer-events-none sm:group-hover:opacity-0 transition-opacity"
+            className="absolute bottom-2 right-2 flex pointer-events-none sm:group-hover:opacity-0 transition-opacity"
           />
         )}
 
-        {/* Hover overlay with corner controls (always visible on touch, hover-reveal on desktop).
+        {/* Hover overlay with corner controls — desktop only (hover-reveal). On touch there is no
+            hover, so per-photo controls would otherwise sit permanently over every image; instead
+            the resting indicators above stay and all flagging/commenting happens in the lightbox.
             Shown for the collab toolbar OR a standalone download button (presentation mode). */}
         {(showToolbar || showDownload) && !selectionMode && (
-          <div className="absolute inset-0 pointer-events-none opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
+          <div className="absolute inset-0 pointer-events-none hidden sm:block opacity-0 sm:group-hover:opacity-100 transition-opacity">
             <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-black/30" />
 
             {/* Top-right: flag picker */}

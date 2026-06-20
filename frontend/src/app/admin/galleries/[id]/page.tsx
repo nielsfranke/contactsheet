@@ -3,6 +3,7 @@
 
 "use client";
 
+import { useEffect } from "react";
 import { useParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { SidebarPortal, SubGalleryCard } from "./parts";
@@ -17,7 +18,7 @@ import { GalleryAdminSidebar } from "@/components/admin/GalleryAdminSidebar";
 import { PendingReviewBanner } from "@/components/admin/PendingReviewBanner";
 import { GalleryViewToolbar } from "@/components/admin/GalleryViewToolbar";
 import { GalleryFooter } from "@/components/gallery/GalleryFooter";
-import { GalleryUpNav } from "@/components/gallery/GalleryUpNav";
+import { useAdminMobileHeader } from "@/store/adminMobileHeader";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Image as ImageIcon, Plus } from "lucide-react";
@@ -80,6 +81,19 @@ export default function GalleryDetailPage() {
     addSelectionToCollection,
     removeFromCollection,
   } = d;
+
+  // Drive the admin shell's mobile top bar with a "go up" context (parent gallery, or the galleries
+  // overview for a top-level one), so the bar replaces the global brand instead of stacking a
+  // second up-nav row below it. Cleared on unmount so other admin pages keep the brand.
+  const setMobileHeaderNav = useAdminMobileHeader((s) => s.setNav);
+  const upLabel = parentGallery ? parentGallery.name : tShell("allGalleries");
+  const upHref = parentGallery ? `/admin/galleries/${parentGallery.id}` : "/admin/galleries";
+  useEffect(() => {
+    if (!gallery) return;
+    setMobileHeaderNav({ label: upLabel, href: upHref });
+    return () => setMobileHeaderNav(null);
+    // Primitive deps (not the translator/objects) so this only re-runs on a real context change.
+  }, [gallery, upLabel, upHref, setMobileHeaderNav]);
 
   if (isLoading || !gallery) {
     return (
@@ -148,13 +162,8 @@ export default function GalleryDetailPage() {
         />
       </SidebarPortal>
 
-      {/* Mobile-only sticky "go up" bar — the parent link otherwise lives in the off-canvas sidebar
-          drawer. Up = the parent gallery's detail page, or the galleries overview for a top-level
-          gallery. The view toolbar below offsets its mobile sticky top by this bar's height. */}
-      <GalleryUpNav
-        label={parentGallery ? parentGallery.name : tShell("allGalleries")}
-        href={parentGallery ? `/admin/galleries/${parentGallery.id}` : "/admin/galleries"}
-      />
+      {/* The mobile "go up" affordance lives in the shell's top bar (see the useEffect above), not
+          a separate in-page bar, so the parent context shares one row with the menu button. */}
 
       {/* Full-width header strip — sits above the padded canvas */}
       {gallery.header_image_url ? (
@@ -194,19 +203,22 @@ export default function GalleryDetailPage() {
           totalCount={images.length}
         />
 
-        {/* Header / cover image buttons (same dialogs as the sidebar kebab). "Set Cover Image" opens
-            the unified cover dialog — upload a custom card image or pick a photo — handy especially
-            for an empty gallery that has no photo to use. */}
-        <div className="flex flex-wrap justify-center gap-2">
-          {!gallery.header_image_url && (
-            <Button variant="outline" size="sm" onClick={() => setHeaderImageOpen(true)}>
-              <ImageIcon size={14} className="mr-1.5" /> {t("setHeaderImage")}
+        {/* Header / cover image buttons — only for an empty gallery, where there's no photo grid and
+            this is the sole visible CTA (and no photo to pick a cover from). Once the gallery has
+            photos these actions live solely in the sidebar/kebab, keeping the top of the canvas for
+            the grid instead of a redundant button block. */}
+        {images.length === 0 && (
+          <div className="flex flex-wrap justify-center gap-2">
+            {!gallery.header_image_url && (
+              <Button variant="outline" size="sm" onClick={() => setHeaderImageOpen(true)}>
+                <ImageIcon size={14} className="mr-1.5" /> {t("setHeaderImage")}
+              </Button>
+            )}
+            <Button variant="outline" size="sm" onClick={() => setCoverImageOpen(true)}>
+              <ImageIcon size={14} className="mr-1.5" /> {t("setCoverImage")}
             </Button>
-          )}
-          <Button variant="outline" size="sm" onClick={() => setCoverImageOpen(true)}>
-            <ImageIcon size={14} className="mr-1.5" /> {t("setCoverImage")}
-          </Button>
-        </div>
+          </div>
+        )}
 
         {/* Photo grid — mirrors the gallery's client look by default, or an instance-wide
             admin-view override (Settings → Admin View) when set to custom. */}
