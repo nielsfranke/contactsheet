@@ -12,6 +12,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.0.5] - 2026-06-20
+
+### Changed
+
+- The mobile filter/sort/group toolbar in the review and admin gallery views no longer occupies
+  three sticky rows. It now stays a single row — filename search plus a **Filter & sort** button
+  that opens a bottom sheet holding the flag/comment filters, sort and grouping.
+- On a phone, the admin gallery detail page merges the "go up" link into the top bar (in place of
+  the global brand) instead of stacking a second navigation row below it.
+- The header/cover image buttons on the admin gallery page now appear only for an empty gallery;
+  once it has photos, those actions live in the sidebar menu so the canvas opens straight to the
+  grid.
+
+### Fixed
+
+- On touch devices the per-photo collaboration controls (flag picker, like, download, comment) were
+  rendered permanently over every thumbnail (no hover to reveal them), obscuring the photo. The grid
+  now shows only resting indicators — the active flag dot and comment badge — and flagging or
+  commenting happens in the lightbox.
+
 ## [1.0.4] - 2026-06-18
 
 ### Changed
@@ -144,7 +164,8 @@ contract are considered stable as of this release.
   caps (stricter for public uploads).
 - Docker Compose deployment (backend + frontend + nginx); SQLite + local filesystem.
 
-[Unreleased]: https://github.com/nielsfranke/contactsheet/compare/v1.0.4...HEAD
+[Unreleased]: https://github.com/nielsfranke/contactsheet/compare/v1.0.5...HEAD
+[1.0.5]: https://github.com/nielsfranke/contactsheet/compare/v1.0.4...v1.0.5
 [1.0.4]: https://github.com/nielsfranke/contactsheet/compare/v1.0.3...v1.0.4
 [1.0.3]: https://github.com/nielsfranke/contactsheet/compare/v1.0.2...v1.0.3
 [1.0.2]: https://github.com/nielsfranke/contactsheet/compare/v1.0.1...v1.0.2
