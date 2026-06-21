@@ -3,8 +3,7 @@
 #
 # Builds and pushes the multi-arch backend + frontend images on a version tag.
 # Tags are cut on Forgejo and reach GitHub via the push-mirror, which fires this
-# workflow. GHCR is pushed with the built-in GITHUB_TOKEN (no secret needed); the
-# Forgejo registry is pushed too when FORGEJO_REGISTRY_USER/TOKEN secrets are set.
+# workflow. GHCR is pushed with the built-in GITHUB_TOKEN (no secret needed).
 
 name: Release images
 
@@ -42,8 +41,6 @@ jobs:
 
       - name: Resolve version and tags
         id: meta
-        env:
-          FORGEJO_TOKEN: ${{ secrets.FORGEJO_REGISTRY_TOKEN }}
         run: |
           set -euo pipefail
           VERSION="${{ inputs.version }}"
@@ -57,11 +54,6 @@ jobs:
 
           TAGS="ghcr.io/nielsfranke/${IMG}:${VERSION}"
           $is_final && TAGS="${TAGS}"$'\n'"ghcr.io/nielsfranke/${IMG}:latest"
-          if [ -n "${FORGEJO_TOKEN}" ]; then
-            TAGS="${TAGS}"$'\n'"forgejo.nielsbox.cc/niels/${IMG}:${VERSION}"
-            $is_final && TAGS="${TAGS}"$'\n'"forgejo.nielsbox.cc/niels/${IMG}:latest"
-            echo "forgejo=true" >> "$GITHUB_OUTPUT"
-          fi
 
           {
             echo "tags<<EOF"
@@ -79,14 +71,6 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Log in to the Forgejo registry
-        if: ${{ steps.meta.outputs.forgejo == 'true' }}
-        uses: docker/login-action@v3
-        with:
-          registry: forgejo.nielsbox.cc
-          username: ${{ secrets.FORGEJO_REGISTRY_USER }}
-          password: ${{ secrets.FORGEJO_REGISTRY_TOKEN }}
-
       - name: Build and push ${{ matrix.image }}
         uses: docker/build-push-action@v6
         with:
@@ -100,8 +84,8 @@ jobs:
           cache-from: type=gha,scope=${{ matrix.image }}
           cache-to: type=gha,mode=max,scope=${{ matrix.image }}
 
-  # Publishes the GitHub release (always) and the Forgejo release (when FORGEJO_API_TOKEN is set)
-  # from the hand-written CHANGELOG entry. Tag-pushes only — never on the workflow_dispatch test run.
+  # Publishes the GitHub release from the hand-written CHANGELOG entry.
+  # Tag-pushes only — never on the workflow_dispatch test run.
   release:
     needs: images
     if: ${{ github.server_url == 'https://github.com' && startsWith(github.ref, 'refs/tags/v') }}
@@ -110,7 +94,6 @@ jobs:
       contents: write
     env:
       REPO: ${{ github.repository }}
-      FORGEJO_API_TOKEN: ${{ secrets.FORGEJO_API_TOKEN }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -149,42 +132,3 @@ jobs:
           else
             gh release create "$TAG" --title "$TITLE" --notes-file notes.md --verify-tag
           fi
-
-      - name: Publish the Forgejo release
-        if: ${{ env.FORGEJO_API_TOKEN != '' }}
-        env:
-          TAG: ${{ steps.notes.outputs.tag }}
-          TITLE: ${{ steps.notes.outputs.title }}
-        run: |
-          set -euo pipefail
-          python3 - <<'PYEOF'
-          import json, os, urllib.request, urllib.error
-          tag, title = os.environ["TAG"], os.environ["TITLE"]
-          body = open("notes.md", encoding="utf-8").read()
-          base = "https://forgejo.nielsbox.cc/api/v1/repos/niels/ContactSheet/releases"
-          hdr = {"Authorization": f"token {os.environ['FORGEJO_API_TOKEN']}",
-                 "Content-Type": "application/json"}
-          payload = {"tag_name": tag, "name": title, "body": body,
-                     "draft": False, "prerelease": False}
-
-          def call(method, url, data=None):
-              req = urllib.request.Request(
-                  url, data=json.dumps(data).encode() if data else None,
-                  headers=hdr, method=method)
-              try:
-                  with urllib.request.urlopen(req) as r:
-                      return r.status, json.load(r)
-              except urllib.error.HTTPError as e:
-                  return e.code, e.read().decode()
-
-          st, res = call("POST", base, payload)
-          if st == 201:
-              print("Forgejo release created")
-          else:
-              st2, rel = call("GET", f"{base}/tags/{tag}")
-              if st2 == 200 and isinstance(rel, dict) and "id" in rel:
-                  st3, _ = call("PATCH", f"{base}/{rel['id']}", payload)
-                  print(f"Forgejo release updated (HTTP {st3})")
-              else:
-                  raise SystemExit(f"Forgejo release failed: POST {st} {res} / GET {st2}")
-          PYEOF

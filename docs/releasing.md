@@ -22,11 +22,8 @@ Images are built by CI (`.github/workflows/release.yml`) — you only cut the ta
    ```
 
 The tag reaches GitHub via the push-mirror, which fires the workflow. It builds the multi-arch
-(`linux/amd64` + `linux/arm64`) **backend** and **frontend** images and pushes:
-
-- `ghcr.io/nielsfranke/contactsheet-{backend,frontend}:X.Y.Z` (+ `:latest`)
-- `forgejo.nielsbox.cc/niels/contactsheet-{backend,frontend}:X.Y.Z` (+ `:latest`) — only when the
-  Forgejo registry secrets are configured (see below)
+(`linux/amd64` + `linux/arm64`) **backend** and **frontend** images and pushes
+`ghcr.io/nielsfranke/contactsheet-{backend,frontend}:X.Y.Z` (+ `:latest`).
 
 `:latest` only moves for final releases; a prerelease tag like `vX.Y.Z-rc1` publishes the version
 tag only. Watch the run under the repo's **Actions** tab on GitHub.
@@ -34,9 +31,8 @@ tag only. Watch the run under the repo's **Actions** tab on GitHub.
 After the images push, the `release` job publishes the **GitHub release** automatically — the body
 is the `## [X.Y.Z]` section from `CHANGELOG.md` (extracted by `scripts/changelog-extract.py`) plus a
 compare link, and the title is the annotated tag's subject (`ContactSheet vX.Y.Z — …` → `vX.Y.Z —
-…`). The **Forgejo release** is published the same way when `FORGEJO_API_TOKEN` is set (see below).
-So the only hand-written input is the changelog entry and the tag message — no more clicking
-"new release". Re-running a tag updates the existing releases in place.
+…`). So the only hand-written input is the changelog entry and the tag message — no more clicking
+"new release". Re-running a tag updates the existing release in place.
 
 ## One-time setup
 
@@ -46,23 +42,6 @@ GitHub → each package (`contactsheet-backend`, `contactsheet-frontend`) → **
 *Manage Actions access* → add `nielsfranke/contactsheet` with the **Write** role. Without this the
 first CI push fails with `denied: permission_denied`.
 
-**Forgejo registry (optional).** To also push to `forgejo.nielsbox.cc`, add two repo secrets on
-GitHub (Settings → Secrets and variables → Actions):
-
-- `FORGEJO_REGISTRY_USER` — your Forgejo username (`niels`)
-- `FORGEJO_REGISTRY_TOKEN` — a Forgejo token with `write:package` + `read:package` scope
-
-When `FORGEJO_REGISTRY_TOKEN` is unset the workflow simply skips the Forgejo registry and pushes to
-GHCR only.
-
-**Forgejo release notes (optional).** To also publish the *Forgejo* release object automatically,
-add one more secret:
-
-- `FORGEJO_API_TOKEN` — a Forgejo token with `write:repository` scope (the release API needs repo
-  write, not just package write — so this is separate from `FORGEJO_REGISTRY_TOKEN`).
-
-When unset, CI publishes only the GitHub release and the Forgejo release stays manual.
-
 ## Manual fallback
 
 If CI is unavailable, build and push locally with the `cs-builder` buildx builder:
@@ -70,7 +49,6 @@ If CI is unavailable, build and push locally with the `cs-builder` buildx builde
 ```bash
 docker buildx build --builder cs-builder --platform linux/amd64,linux/arm64 --target backend \
   -t ghcr.io/nielsfranke/contactsheet-backend:X.Y.Z -t ghcr.io/nielsfranke/contactsheet-backend:latest \
-  -t forgejo.nielsbox.cc/niels/contactsheet-backend:X.Y.Z -t forgejo.nielsbox.cc/niels/contactsheet-backend:latest \
   --push .
 # repeat with --target frontend
 ```
