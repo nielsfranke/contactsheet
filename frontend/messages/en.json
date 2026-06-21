@@ -353,6 +353,8 @@
       "subGalleries": "Sub-Galleries",
       "createSubGallery": "Create Sub-Gallery",
       "noSubGalleries": "No sub-galleries inside this gallery yet. Click <b>Create Sub-Gallery</b> to add one.",
+      "containerHint": "This gallery holds sub-galleries. Open one below, or add photos to this gallery itself.",
+      "addPhotosHeading": "Add photos to this gallery",
       "imagesCount": "{count, plural, one {# image} other {# images}}",
       "saveCollectionTitle": "Save collection",
       "collectionNamePlaceholder": "Collection name",

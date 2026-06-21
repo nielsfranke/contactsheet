@@ -353,6 +353,8 @@
       "subGalleries": "Untergalerien",
       "createSubGallery": "Untergalerie erstellen",
       "noSubGalleries": "Noch keine Untergalerien in dieser Galerie. Klicken Sie auf <b>Untergalerie erstellen</b>, um eine hinzuzufügen.",
+      "containerHint": "Diese Galerie enthält Untergalerien. Öffnen Sie unten eine oder fügen Sie dieser Galerie direkt Fotos hinzu.",
+      "addPhotosHeading": "Fotos zu dieser Galerie hinzufügen",
       "imagesCount": "{count, plural, one {# Bild} other {# Bilder}}",
       "saveCollectionTitle": "Sammlung speichern",
       "collectionNamePlaceholder": "Sammlungsname",

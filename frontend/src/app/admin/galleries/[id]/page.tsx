@@ -114,6 +114,33 @@ export default function GalleryDetailPage() {
 
   const galleryWithChildren: GalleryResponse = { ...gallery, children };
   const isCollab = gallery.mode === "collaboration";
+  // A pure container = sub-galleries but no own photos. Model B emphasis: such a gallery leads with
+  // its sub-galleries and lets the photo tooling recede (an empty grid + sort toolbar over zero
+  // photos is noise). A leaf or a mixed gallery (has photos) stays photo-first.
+  const isContainer = images.length === 0 && children.length > 0;
+
+  // The sub-galleries block — rendered at the top for a container, at the bottom otherwise.
+  const subGalleriesSection = (
+    <section className="pt-2">
+      <div className="flex items-center justify-between mb-3">
+        <h2 className="text-lg font-semibold text-foreground">{t("subGalleries")}</h2>
+        <Button variant="outline" size="sm" onClick={() => setCreateSubOpen(true)}>
+          <Plus size={14} className="mr-1.5" /> {t("createSubGallery")}
+        </Button>
+      </div>
+      {children.length === 0 ? (
+        <p className="text-sm text-muted-foreground">
+          {t.rich("noSubGalleries", { b: (c) => <span className="text-foreground font-medium">{c}</span> })}
+        </p>
+      ) : (
+        <div className={cn("grid", GRID_COLS[adminGrid?.presentation.previewSize ?? "medium"], GAP[adminGrid?.presentation.previewSpacing ?? "medium"])}>
+          {children.map((child) => (
+            <SubGalleryCard key={child.id} child={child} parentId={id} onShare={() => setSharingSubId(child.id)} />
+          ))}
+        </div>
+      )}
+    </section>
+  );
 
   return (
     <>
@@ -196,90 +223,103 @@ export default function GalleryDetailPage() {
         {/* Client uploads awaiting approval (only when this gallery moderates uploads) */}
         <PendingReviewBanner galleryId={gallery.id} images={images} />
 
-        {/* View controls (filter / sort / group) — sticky toolbar over the grid */}
-        <GalleryViewToolbar
-          arrange={arrange}
-          setArrange={setArrange}
-          captureSortAvailable={captureSortAvailable}
-          shownCount={filteredSorted.length}
-          totalCount={images.length}
-        />
+        {isContainer ? (
+          <>
+            {/* Container emphasis (Model B): sub-galleries lead, photo tooling recedes. */}
+            <p className="text-sm text-muted-foreground">{t("containerHint")}</p>
+            {subGalleriesSection}
 
-        {/* Header / cover image buttons — only for an empty gallery, where there's no photo grid and
-            this is the sole visible CTA (and no photo to pick a cover from). Once the gallery has
-            photos these actions live solely in the sidebar/kebab, keeping the top of the canvas for
-            the grid instead of a redundant button block. */}
-        {images.length === 0 && (
-          <div className="flex flex-wrap justify-center gap-2">
-            {!gallery.header_image_url && (
-              <Button variant="outline" size="sm" onClick={() => setHeaderImageOpen(true)}>
-                <ImageIcon size={14} className="mr-1.5" /> {t("setHeaderImage")}
-              </Button>
+            {/* Recessed "add photos" area — kept reachable (uploading turns this into a mixed
+                gallery), but below the sub-galleries and visually quiet. */}
+            <section className="space-y-4 border-t border-border/60 pt-5">
+              <h2 className="text-sm font-medium text-muted-foreground">{t("addPhotosHeading")}</h2>
+              <div className="flex flex-wrap gap-2">
+                {!gallery.header_image_url && (
+                  <Button variant="outline" size="sm" onClick={() => setHeaderImageOpen(true)}>
+                    <ImageIcon size={14} className="mr-1.5" /> {t("setHeaderImage")}
+                  </Button>
+                )}
+                <Button variant="outline" size="sm" onClick={() => setCoverImageOpen(true)}>
+                  <ImageIcon size={14} className="mr-1.5" /> {t("setCoverImage")}
+                </Button>
+              </div>
+              <UploadZone
+                uploading={upload.uploading}
+                progress={upload.progress}
+                onFiles={upload.uploadFiles}
+                onClick={upload.openPicker}
+                onCancel={upload.cancelUpload}
+              />
+            </section>
+          </>
+        ) : (
+          <>
+            {/* Photo-first (leaf or mixed): view controls, grid, upload — then sub-galleries below. */}
+            <GalleryViewToolbar
+              arrange={arrange}
+              setArrange={setArrange}
+              captureSortAvailable={captureSortAvailable}
+              shownCount={filteredSorted.length}
+              totalCount={images.length}
+            />
+
+            {/* Header / cover image buttons — only for an empty gallery, where there's no photo grid
+                and this is the sole visible CTA (and no photo to pick a cover from). Once the gallery
+                has photos these actions live solely in the sidebar/kebab. */}
+            {images.length === 0 && (
+              <div className="flex flex-wrap justify-center gap-2">
+                {!gallery.header_image_url && (
+                  <Button variant="outline" size="sm" onClick={() => setHeaderImageOpen(true)}>
+                    <ImageIcon size={14} className="mr-1.5" /> {t("setHeaderImage")}
+                  </Button>
+                )}
+                <Button variant="outline" size="sm" onClick={() => setCoverImageOpen(true)}>
+                  <ImageIcon size={14} className="mr-1.5" /> {t("setCoverImage")}
+                </Button>
+              </div>
             )}
-            <Button variant="outline" size="sm" onClick={() => setCoverImageOpen(true)}>
-              <ImageIcon size={14} className="mr-1.5" /> {t("setCoverImage")}
-            </Button>
-          </div>
+
+            {/* Photo grid — mirrors the gallery's client look by default, or an instance-wide
+                admin-view override (Settings → Admin View) when set to custom. */}
+            <AdminImageGrid
+              images={filteredSorted}
+              groups={groups}
+              galleryId={id}
+              onRefetch={refetchImages}
+              emptyMessage={images.length === 0 ? t("emptyNoImages") : t("emptyFiltered")}
+              draggable={arrange.sortKey === "manual" && !groups && !selection.mode}
+              onOpen={d.openPreview}
+              selectionMode={selection.mode}
+              isSelected={selection.isSelected}
+              onToggleSelect={selection.toggle}
+              onRangeSelect={selection.selectRange}
+              onSetHeaderImage={(img) => setHeaderFromImageMutation.mutate(img.id)}
+              onSetCoverImage={(img) => coverMutation.mutate(img.id)}
+              onRenameImage={(img) => { setRenameImageValue(img.original_filename); setRenameImageTarget(img); }}
+              onMoveImage={(img) => setMoveImageTarget(img)}
+              onRemoveFromCollection={activeCollection ? (img) => removeFromCollection(img.id) : undefined}
+              dragEnabled
+              activeId={activeDragId}
+              layout={adminGrid?.layout ?? gallery.layout}
+              presentation={adminGrid?.presentation ?? {
+                previewSize: gallery.preview_size,
+                previewSpacing: gallery.preview_spacing,
+                previewCorners: gallery.preview_corners,
+              }}
+            />
+
+            {/* Upload drop zone */}
+            <UploadZone
+              uploading={upload.uploading}
+              progress={upload.progress}
+              onFiles={upload.uploadFiles}
+              onClick={upload.openPicker}
+              onCancel={upload.cancelUpload}
+            />
+
+            {subGalleriesSection}
+          </>
         )}
-
-        {/* Photo grid — mirrors the gallery's client look by default, or an instance-wide
-            admin-view override (Settings → Admin View) when set to custom. */}
-        <AdminImageGrid
-          images={filteredSorted}
-          groups={groups}
-          galleryId={id}
-          onRefetch={refetchImages}
-          emptyMessage={images.length === 0 ? t("emptyNoImages") : t("emptyFiltered")}
-          draggable={arrange.sortKey === "manual" && !groups && !selection.mode}
-          onOpen={d.openPreview}
-          selectionMode={selection.mode}
-          isSelected={selection.isSelected}
-          onToggleSelect={selection.toggle}
-          onRangeSelect={selection.selectRange}
-          onSetHeaderImage={(img) => setHeaderFromImageMutation.mutate(img.id)}
-          onSetCoverImage={(img) => coverMutation.mutate(img.id)}
-          onRenameImage={(img) => { setRenameImageValue(img.original_filename); setRenameImageTarget(img); }}
-          onMoveImage={(img) => setMoveImageTarget(img)}
-          onRemoveFromCollection={activeCollection ? (img) => removeFromCollection(img.id) : undefined}
-          dragEnabled
-          activeId={activeDragId}
-          layout={adminGrid?.layout ?? gallery.layout}
-          presentation={adminGrid?.presentation ?? {
-            previewSize: gallery.preview_size,
-            previewSpacing: gallery.preview_spacing,
-            previewCorners: gallery.preview_corners,
-          }}
-        />
-
-        {/* Upload drop zone */}
-        <UploadZone
-          uploading={upload.uploading}
-          progress={upload.progress}
-          onFiles={upload.uploadFiles}
-          onClick={upload.openPicker}
-          onCancel={upload.cancelUpload}
-        />
-
-        {/* Sub-galleries */}
-        <section className="pt-2">
-          <div className="flex items-center justify-between mb-3">
-            <h2 className="text-lg font-semibold text-foreground">{t("subGalleries")}</h2>
-            <Button variant="outline" size="sm" onClick={() => setCreateSubOpen(true)}>
-              <Plus size={14} className="mr-1.5" /> {t("createSubGallery")}
-            </Button>
-          </div>
-          {children.length === 0 ? (
-            <p className="text-sm text-muted-foreground">
-              {t.rich("noSubGalleries", { b: (c) => <span className="text-foreground font-medium">{c}</span> })}
-            </p>
-          ) : (
-            <div className={cn("grid", GRID_COLS[adminGrid?.presentation.previewSize ?? "medium"], GAP[adminGrid?.presentation.previewSpacing ?? "medium"])}>
-              {children.map((child) => (
-                <SubGalleryCard key={child.id} child={child} parentId={id} onShare={() => setSharingSubId(child.id)} />
-              ))}
-            </div>
-          )}
-        </section>
 
         {/* Branding footer preview — mirrors what clients see (when enabled instance-wide) */}
         {adminSettings?.footer_enabled && adminSettings.footer && (

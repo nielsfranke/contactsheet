@@ -1,6 +1,20 @@
 # Admin Galleries — Contextual Navigator
 
-Status: **approved & implemented** (2026-06-13)
+Status: **superseded** (2026-06-21) — not adopted. See
+[admin-gallery-detail-container-emphasis.md](admin-gallery-detail-container-emphasis.md).
+
+> **Why superseded.** This doc was long marked "approved & implemented" but only *part* had shipped
+> (the photo-first `GalleryTile`, i18n strings, `galleryPath()`, the tree's `?folder=` read). The
+> actual `?folder=` *browsing* — has-children click routing, breadcrumb, `OwnPhotosCard` — was never
+> wired. In 2026-06 it was completed and evaluated against the simpler **Model B** (every click opens
+> the gallery's detail page; the detail page distinguishes container vs leaf). Model B won on
+> **intuitiveness**: A makes visually-similar tiles behave differently (container *browses*, leaf
+> *opens*), which is only predictable if the folder affordance is unmistakable; B has one rule and no
+> surprise click. We kept B and dropped A. The design below is preserved for the record — revisit it
+> only if the library grows deep enough that in-place column browsing clearly beats per-gallery pages
+> *and* the folder-vs-leaf tile distinction is made unmistakable.
+
+---
 
 Rework the admin galleries overview (`/admin/galleries`) so the left rail and the main canvas stop
 showing the same top-level list twice. Today both surfaces render the same root galleries — the rail
