@@ -12,6 +12,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.0.6] - 2026-06-21
+
+### Added
+
+- **Move gallery** — relocate a whole gallery, with its sub-galleries, to another parent or to the
+  top level. A picker in the gallery's menu (⋯ → Move gallery) mirrors the move-images dialog, marks
+  the current parent, and excludes the gallery's own subtree to prevent cycles.
+
+### Changed
+
+- The admin gallery detail page now adapts to what's inside: a **container** (sub-galleries, no own
+  photos) leads with its sub-galleries and lets the photo tools recede, instead of opening to an
+  empty grid; leaf and mixed galleries stay photo-first.
+- Reorganising galleries by drag is **always on** — the "Organize" toggle is gone. Drag a gallery
+  onto another to nest it, or onto the permanent "move to top level" strip above the grid to pull it
+  out. A reparent shows an Undo. Drag is disabled on touch (where the Move gallery dialog is the
+  reliable path).
+
 ## [1.0.5] - 2026-06-20
 
 ### Changed
@@ -164,7 +182,8 @@ contract are considered stable as of this release.
   caps (stricter for public uploads).
 - Docker Compose deployment (backend + frontend + nginx); SQLite + local filesystem.
 
-[Unreleased]: https://github.com/nielsfranke/contactsheet/compare/v1.0.5...HEAD
+[Unreleased]: https://github.com/nielsfranke/contactsheet/compare/v1.0.6...HEAD
+[1.0.6]: https://github.com/nielsfranke/contactsheet/compare/v1.0.5...v1.0.6
 [1.0.5]: https://github.com/nielsfranke/contactsheet/compare/v1.0.4...v1.0.5
 [1.0.4]: https://github.com/nielsfranke/contactsheet/compare/v1.0.3...v1.0.4
 [1.0.3]: https://github.com/nielsfranke/contactsheet/compare/v1.0.2...v1.0.3
