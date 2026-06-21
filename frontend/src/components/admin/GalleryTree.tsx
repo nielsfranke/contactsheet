@@ -22,6 +22,7 @@ import {
 } from "./AdminDnd";
 import { ChevronDown, ChevronRight, Folder, FolderOpen, FolderPlus, Plus, Search } from "lucide-react";
 import { InputClearButton } from "@/components/chrome/InputClearButton";
+import { useCoarsePointer } from "@/hooks/useCoarsePointer";
 import { cn } from "@/lib/utils";
 
 interface Props {
@@ -184,6 +185,7 @@ function TreeNode({
 }) {
   const t = useTranslations("admin.tree");
   const router = useRouter();
+  const isTouch = useCoarsePointer();
   // When filtering, only show children on the match path and keep their branch open.
   const childNodes = sortGalleries(visibleIds ? g.children.filter((c) => visibleIds.has(c.id)) : g.children, sort, dir);
   const hasChildren = childNodes.length > 0;
@@ -191,7 +193,7 @@ function TreeNode({
   const isActive = g.id === currentId;
   const dimmed = activeGalleryId === g.id;
 
-  const drag = useDraggable({ id: `${g.id}:tree`, data: { reparent: true, galleryId: g.id, parentId: g.parent_id, name: g.name } });
+  const drag = useDraggable({ id: `${g.id}:tree`, data: { reparent: true, galleryId: g.id, parentId: g.parent_id, name: g.name }, disabled: isTouch });
   const drop = useDroppable({ id: `${GALLERY_DROP_PREFIX}${g.id}:tree`, data: { galleryId: g.id } });
   const setRef = (el: HTMLElement | null) => { drag.setNodeRef(el); drop.setNodeRef(el); };
 

@@ -224,6 +224,12 @@
       "signOutThisDevice": "This device",
       "signOutAllDevices": "All devices"
     },
+    "dnd": {
+      "movedInto": "Moved {name}",
+      "movedToTop": "Moved {name} to top level",
+      "undo": "Undo",
+      "fallbackName": "gallery"
+    },
     "galleries": {
       "sortDate": "Date",
       "sortName": "Name",
@@ -234,13 +240,12 @@
       "filterFolder": "Filter this folder",
       "filterGalleries": "Filter galleries",
       "newGallery": "New Gallery",
-      "organizeTitle": "Drag galleries to reorganize the hierarchy",
       "done": "Done",
-      "organize": "Organize",
       "sort": "Sort",
       "clickToReverse": "Click to reverse",
       "sortByField": "Sort by {field}",
       "pinnedShelf": "Pinned",
+      "dropTopLevel": "Drop here to move to top level",
       "organizeHint": "Drag a gallery onto another to nest it, onto a folder in the left tree, or onto “Drop here to move to top level” to pull it out.",
       "emptyFilter": "No galleries match the filter.",
       "emptyFolder": "No sub-galleries here. Open this gallery to add photos.",
@@ -250,7 +255,6 @@
       "openThisGallery": "Open this gallery",
       "viewPhotos": "View photos →",
       "inThisGallery": "in this gallery",
-      "dropTopLevel": "Drop here to move to top level",
       "photoCount": "{count, plural, one {# photo} other {# photos}}",
       "galleryCount": "{count, plural, one {# gallery} other {# galleries}}",
       "subGalleryCount": "{count, plural, one {# sub-gallery} other {# sub-galleries}}",

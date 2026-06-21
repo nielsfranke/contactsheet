@@ -27,8 +27,6 @@ export function useGalleriesBrowser() {
   const dimId = active?.kind === "gallery" ? active.galleryId : null;
   const [filter, setFilter] = useState("");
   const [createOpen, setCreateOpen] = useState(false);
-  // Organize mode enables drag-to-reparent; off keeps the home clean.
-  const [organize, setOrganize] = useState(false);
   // Rename / delete dialogs (per-card actions; the target is the listed gallery).
   const [renameTarget, setRenameTarget] = useState<GalleryResponse | null>(null);
   const [renameValue, setRenameValue] = useState("");
@@ -138,8 +136,6 @@ export function useGalleriesBrowser() {
     setFilter,
     createOpen,
     setCreateOpen,
-    organize,
-    setOrganize,
     // sort
     sort,
     dir,

@@ -6,7 +6,7 @@
 import { Suspense } from "react";
 import { useTranslations } from "next-intl";
 import type { OverviewSort } from "@/lib/types";
-import { Search, Plus, FolderTree, ArrowUp, ArrowDown, Pin } from "lucide-react";
+import { Search, Plus, ArrowUp, ArrowDown, Pin } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -16,7 +16,7 @@ import { ToolbarBand } from "@/components/gallery/ToolbarBand";
 import { GRID_COLS, GAP } from "@/lib/gridLayout";
 import { cn } from "@/lib/utils";
 import { useGalleriesBrowser } from "./useGalleriesBrowser";
-import { TopLevelZone, GalleryTile } from "./overview-parts";
+import { GalleryTile, TopLevelZone } from "./overview-parts";
 
 const SORT_OPTIONS: { value: OverviewSort; labelKey: string }[] = [
   { value: "created", labelKey: "sortDate" },
@@ -40,7 +40,7 @@ function GalleriesBrowser() {
   const {
     dimId, openGallery,
     visible, pinned, q,
-    filter, setFilter, createOpen, setCreateOpen, organize, setOrganize,
+    filter, setFilter, createOpen, setCreateOpen,
     sort, dir, pickSort, togglePin, openRename, setDeleteTarget,
     renameTarget, setRenameTarget, renameValue, setRenameValue, submitRename, renameMutation,
     deleteTarget, deleteMutation,
@@ -67,14 +67,6 @@ function GalleriesBrowser() {
           </div>
           <Button size="sm" onClick={() => setCreateOpen(true)}>
             <Plus size={15} className="mr-1.5" /> {t("newGallery")}
-          </Button>
-          <Button
-            size="sm"
-            variant={organize ? "default" : "outline"}
-            onClick={() => setOrganize((v) => !v)}
-            title={t("organizeTitle")}
-          >
-            <FolderTree size={15} className="mr-1.5" /> {organize ? t("done") : t("organize")}
           </Button>
           <div className="flex items-center gap-2">
             <span className="text-xs text-muted-foreground">{t("sort")}</span>
@@ -105,6 +97,14 @@ function GalleriesBrowser() {
         </div>
       </ToolbarBand>
 
+      {/* Permanent reparent affordance: a "move to top level" drop target + how-to. Always shown so
+          it's discoverable and reachable even with a full grid, and never reflows the grid (it
+          doesn't appear/vanish on drag). */}
+      <div className="mb-4 flex flex-wrap items-center gap-3">
+        <TopLevelZone />
+        <p className="text-xs text-muted-foreground">{t("organizeHint")}</p>
+      </div>
+
       {/* Favorites shelf: every pinned gallery tree-wide, one click from the home view (hidden
           while filtering). */}
       {!q && pinned.length > 0 && (
@@ -117,7 +117,6 @@ function GalleriesBrowser() {
               <GalleryTile
                 key={g.id}
                 g={g}
-                organize={false}
                 tileShape={tileShape}
                 tileCorners={tileCorners}
                 dimmed={false}
@@ -131,15 +130,6 @@ function GalleriesBrowser() {
         </section>
       )}
 
-      {organize && (
-        <div className="mb-4 flex flex-wrap items-center gap-3">
-          <TopLevelZone />
-          <p className="text-xs text-muted-foreground">
-            {t("organizeHint")}
-          </p>
-        </div>
-      )}
-
       {visible.length === 0 ? (
         <p className="text-muted-foreground text-sm">
           {q ? t("emptyFilter") : t("emptyRoot")}
@@ -150,7 +140,6 @@ function GalleriesBrowser() {
             <GalleryTile
               key={g.id}
               g={g}
-              organize={organize}
               tileShape={tileShape}
               tileCorners={tileCorners}
               dimmed={g.id === dimId}

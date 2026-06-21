@@ -224,6 +224,12 @@
       "signOutThisDevice": "Dieses Gerät",
       "signOutAllDevices": "Alle Geräte"
     },
+    "dnd": {
+      "movedInto": "{name} verschoben",
+      "movedToTop": "{name} auf oberste Ebene verschoben",
+      "undo": "Rückgängig",
+      "fallbackName": "Galerie"
+    },
     "galleries": {
       "sortDate": "Datum",
       "sortName": "Name",
@@ -234,13 +240,12 @@
       "filterFolder": "Diesen Ordner filtern",
       "filterGalleries": "Galerien filtern",
       "newGallery": "Neue Galerie",
-      "organizeTitle": "Galerien ziehen, um die Hierarchie neu zu ordnen",
       "done": "Fertig",
-      "organize": "Organisieren",
       "sort": "Sortieren",
       "clickToReverse": "Klicken zum Umkehren",
       "sortByField": "Nach {field} sortieren",
       "pinnedShelf": "Angeheftet",
+      "dropTopLevel": "Hierher ziehen, um auf die oberste Ebene zu verschieben",
       "organizeHint": "Ziehen Sie eine Galerie auf eine andere, um sie zu verschachteln, auf einen Ordner im linken Baum oder auf „Hierher ziehen, um auf die oberste Ebene zu verschieben“, um sie herauszulösen.",
       "emptyFilter": "Keine Galerien entsprechen dem Filter.",
       "emptyFolder": "Keine Untergalerien hier. Öffnen Sie diese Galerie, um Fotos hinzuzufügen.",
@@ -250,7 +255,6 @@
       "openThisGallery": "Diese Galerie öffnen",
       "viewPhotos": "Fotos ansehen →",
       "inThisGallery": "in dieser Galerie",
-      "dropTopLevel": "Hierher ziehen, um auf die oberste Ebene zu verschieben",
       "photoCount": "{count, plural, one {# Foto} other {# Fotos}}",
       "galleryCount": "{count, plural, one {# Galerie} other {# Galerien}}",
       "subGalleryCount": "{count, plural, one {# Untergalerie} other {# Untergalerien}}",

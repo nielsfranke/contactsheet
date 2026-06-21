@@ -21,6 +21,7 @@ import {
   type Modifier,
 } from "@dnd-kit/core";
 import { getEventCoordinates } from "@dnd-kit/utilities";
+import { useTranslations } from "next-intl";
 import { Folder } from "lucide-react";
 import { api } from "@/lib/api";
 import { toast } from "sonner";
@@ -91,9 +92,12 @@ const isGalleryZone = (id: string | number) => {
 };
 const collision: CollisionDetection = (args) => {
   // A move onto a gallery only happens when the pointer is actually inside that zone (intentional
-  // drop onto a sub-gallery card / nav folder).
-  const zone = pointerWithin(args).find((h) => isGalleryZone(h.id));
-  if (zone) return [zone];
+  // drop onto a sub-gallery card / nav folder). A specific gallery card wins over the page-wide
+  // "top level" zone, so dropping onto a card nests and dropping on empty canvas un-nests.
+  const hits = pointerWithin(args).filter((h) => isGalleryZone(h.id));
+  const card = hits.find((h) => String(h.id).startsWith(GALLERY_DROP_PREFIX));
+  if (card) return [card];
+  if (hits.length) return [hits[0]];
   if (args.active.data.current?.reparent) return [];
   // Image-drag fallback = reorder: resolve only to sibling image tiles, never a gallery zone.
   // Otherwise closestCenter snaps a photo dropped in empty space to the nearest gallery folder/card
@@ -105,6 +109,7 @@ const collision: CollisionDetection = (args) => {
 
 export function AdminDndProvider({ children }: { children: ReactNode }) {
   const qc = useQueryClient();
+  const t = useTranslations("admin.dnd");
   const [active, setActive] = useState<ActiveDrag | null>(null);
   const [cfg, setCfg] = useState<AdminDndConfig | null>(null);
   // Mouse drags start after an 8px move (instant feel). Touch drags require a 250ms press-and-hold
@@ -131,8 +136,13 @@ export function AdminDndProvider({ children }: { children: ReactNode }) {
       {
         onSuccess: () => {
           refresh();
-          toast.success(target ? `Moved ${name ?? "gallery"}` : `${name ?? "Gallery"} moved to top level`, {
-            action: { label: "Undo", onClick: () => api.galleries.move(galleryId, origParentId).then(refresh) },
+          const display = name ?? t("fallbackName");
+          // Neutral toast (matches the pin/undo toast), top-center + longer life so the Undo is
+          // noticed near where the drag happened — not the green "success" style, not bottom-right.
+          toast(target ? t("movedInto", { name: display }) : t("movedToTop", { name: display }), {
+            position: "top-center",
+            duration: 8000,
+            action: { label: t("undo"), onClick: () => api.galleries.move(galleryId, origParentId).then(refresh) },
           });
         },
       },
@@ -178,7 +188,7 @@ export function AdminDndProvider({ children }: { children: ReactNode }) {
           {active?.kind === "gallery" ? (
             <div className="inline-flex items-center gap-2 rounded-md border border-border bg-popover px-3 py-1.5 text-sm font-medium text-foreground shadow-2xl cursor-grabbing">
               <Folder size={15} className="text-muted-foreground" />
-              {active.name ?? "Gallery"}
+              <span className="truncate max-w-[12rem]">{active.name ?? t("fallbackName")}</span>
             </div>
           ) : active ? (
             cfg?.renderOverlay?.(active.id) ?? null

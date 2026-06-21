@@ -3,12 +3,36 @@
 Status: **implemented** (2026-06-12) — Phase 1 (photo moves) + Phase 2 overview gallery
 reparenting done.
 
+Update (2026-06-21) — **Organize mode removed.** Gallery reparent drag is now **always on** in both
+the overview grid and the left tree, no toggle:
+- The `MouseSensor` 8px activation distance already keeps clicks (open/browse) distinct from drags,
+  and every reparent shows an **Undo** toast (`AdminDndProvider.reparent`, now localized via
+  `admin.dnd.*`), so a stray move is one tap to revert — the mode's safety role is covered.
+- **Disabled on touch** (`useCoarsePointer`, `@media (pointer: coarse)`): long-press-drag fights
+  scrolling and is undiscoverable; the **Move gallery** dialog (⋯ menu) is the touch path.
+- **Un-nest via a permanent drop strip.** A `TopLevelZone` ("Drop here to move to top level", dashed
+  pill) + a one-line how-to sit **permanently** above the grid (`organizeHint`). Always-on is the
+  point: discoverable, reachable even when the grid is full, and zero reflow (it never appears/
+  vanishes on drag). Drop a sub-gallery on it to un-nest; it highlights on `isOver`. Collision gives
+  gallery **cards priority**, so dropping on a card still nests. The tree's "Galleries" header is
+  also a drop-to-unnest target, and the **Move gallery** dialog is the non-DnD path. (Earlier
+  attempts — a drag-only strip, an empty-canvas veil, and the sticky header as target — were dropped
+  for reflow / full-grid / discoverability reasons respectively.)
+- Drag guidance is **in-situ, not instructional**: no header/strip hint. The cursor `DragOverlay`
+  chip shows just the dragged gallery's name (`<Folder/> {name}`), and the **drop target rings**
+  `ring-primary` on hover — the target itself signals the drop. (An earlier transient header hint was
+  removed: wrong locus, the eye is on the cursor, not the title.)
+- The reparent **Undo** toast is a **neutral** toast (matches the pin/undo toast — not the green
+  "success" style), shown **top-center** with an 8s duration so it isn't missed in the bottom-right.
+- Note: the 2-level constraint below is historical — galleries now nest to any depth
+  (`gallery_service.move_gallery`).
+
 Refinements (2026-06-12):
 - Photo move now invalidates **all** `["gallery-images"]` queries (source + destination) so a moved
   photo shows up in the target gallery without a manual refresh.
-- The overview defaults to a clean root-only grid; an **"Organize"** toggle reveals sub-gallery
-  chips, enables drag-to-reparent, and shows a persistent "move to top level" drop zone (the obvious
-  way to pull a nested gallery back out).
+- The overview defaulted to a clean root-only grid; an **"Organize"** toggle revealed sub-gallery
+  chips, enabled drag-to-reparent, and showed a persistent "move to top level" drop zone. *(Toggle
+  removed 2026-06-21 — see the update note above.)*
 
 Still deferred: reparenting from the far-left `GalleryTree` nav (would need the reparent handler
 centralised in `AdminDndProvider` so it works on every page) — the overview Organize mode already

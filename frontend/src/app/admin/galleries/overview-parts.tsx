@@ -9,6 +9,7 @@ import type { GalleryResponse } from "@/lib/types";
 import { MODE_LABELS } from "@/lib/types";
 import { GALLERY_DROP_PREFIX, TOPLEVEL_DROP_PREFIX } from "@/components/admin/AdminDnd";
 import { CornerDownRight, MoreVertical, Pencil, Trash2 } from "lucide-react";
+import { useCoarsePointer } from "@/hooks/useCoarsePointer";
 import { Icons } from "@/lib/ui-icons";
 import { OverlayPill, overlayPillVariants } from "@/components/chrome/OverlayPill";
 import { CoverPlaceholder } from "@/components/chrome/CoverPlaceholder";
@@ -20,7 +21,11 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
 
-/** Drop strip that un-nests a gallery to the top level. */
+/**
+ * Permanent "move to top level" drop target shown above the overview grid. Always visible (so it's
+ * discoverable and reachable even when the grid is full — no reflow, since it never appears/vanishes
+ * on drag). Drop a sub-gallery here to un-nest it; highlights on `isOver`.
+ */
 export function TopLevelZone() {
   const t = useTranslations("admin.galleries");
   const { setNodeRef, isOver } = useDroppable({ id: `${TOPLEVEL_DROP_PREFIX}:overview`, data: { topLevel: true } });
@@ -29,7 +34,7 @@ export function TopLevelZone() {
       ref={setNodeRef}
       className={cn(
         "flex items-center gap-1.5 rounded-md border border-dashed px-3 py-1.5 text-xs transition-colors",
-        isOver ? "border-primary bg-primary/10 text-foreground" : "border-border text-muted-foreground",
+        isOver ? "border-primary bg-accent text-foreground" : "border-border text-muted-foreground",
       )}
     >
       <CornerDownRight size={13} /> {t("dropTopLevel")}
@@ -39,15 +44,15 @@ export function TopLevelZone() {
 
 /**
  * A photo-first gallery card: full-bleed cover with the title + count on a clean line below.
- * Clicking the card opens the gallery's detail page (its sub-galleries + photos) — one consistent
- * action for every gallery. A sub-gallery count badge marks containers. In organize mode it's a
- * gallery drag source and a nest drop target.
+ * Clicking opens the gallery's detail page. Drag-to-reparent is always on (no Organize mode): the
+ * 8px mouse activation distance keeps clicks clicks, and a stray move is one-tap reversible via the
+ * reparent Undo toast. Disabled on touch — long-press-drag there is fiddly and the "Move gallery"
+ * dialog covers reparenting. A sub-gallery count badge marks containers; it's also a nest drop target.
  */
 export function GalleryTile({
-  g, organize, tileShape, tileCorners, dimmed, onOpen, onTogglePin, onRename, onDelete,
+  g, tileShape, tileCorners, dimmed, onOpen, onTogglePin, onRename, onDelete,
 }: {
   g: GalleryResponse;
-  organize: boolean;
   tileShape: string;
   tileCorners: string;
   dimmed: boolean;
@@ -57,14 +62,13 @@ export function GalleryTile({
   onDelete: () => void;
 }) {
   const t = useTranslations("admin.galleries");
-  // A folder = a gallery that contains sub-galleries → clicking browses in. A leaf (no children)
-  // opens directly. We make folders look like a stack so the click is predictable from the card.
+  const isTouch = useCoarsePointer();
   const isFolder = g.children.length > 0;
   const countParts: string[] = [];
   if (isFolder) countParts.push(t("galleryCount", { count: g.children.length }));
   if (g.image_count > 0 || countParts.length === 0) countParts.push(t("photoCount", { count: g.image_count }));
-  const drag = useDraggable({ id: `${g.id}:tile`, data: { reparent: true, galleryId: g.id, parentId: g.parent_id, name: g.name }, disabled: !organize });
-  const drop = useDroppable({ id: `${GALLERY_DROP_PREFIX}${g.id}:tile`, data: { galleryId: g.id }, disabled: !organize });
+  const drag = useDraggable({ id: `${g.id}:tile`, data: { reparent: true, galleryId: g.id, parentId: g.parent_id, name: g.name }, disabled: isTouch });
+  const drop = useDroppable({ id: `${GALLERY_DROP_PREFIX}${g.id}:tile`, data: { galleryId: g.id }, disabled: isTouch });
   const setRef = (el: HTMLElement | null) => {
     drag.setNodeRef(el);
     drop.setNodeRef(el);
@@ -72,12 +76,12 @@ export function GalleryTile({
   return (
     <div
       ref={setRef}
-      {...(organize ? drag.listeners : {})}
-      {...(organize ? drag.attributes : {})}
+      {...(isTouch ? {} : drag.listeners)}
+      {...(isTouch ? {} : drag.attributes)}
       onClick={onOpen}
       className={cn(
-        "group text-left",
-        organize ? "cursor-grab active:cursor-grabbing" : "cursor-pointer",
+        "group text-left cursor-pointer",
+        !isTouch && "active:cursor-grabbing",
         dimmed && "opacity-30",
       )}
     >
