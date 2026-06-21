@@ -12,6 +12,7 @@ import { VotingSummary } from "@/components/admin/VotingSummary";
 import { ShareDialog } from "@/components/admin/ShareDialog";
 import { CreateSubGalleryDialog } from "@/components/admin/CreateSubGalleryDialog";
 import { CreateGalleryFromImagesDialog } from "@/components/admin/CreateGalleryFromImagesDialog";
+import { MoveGalleryDialog } from "@/components/admin/MoveGalleryDialog";
 import { Lightbox } from "@/components/gallery/Lightbox";
 import { DownloadGalleryDialog } from "@/components/gallery/DownloadGalleryDialog";
 import { CopyFilenamesDialog } from "@/components/admin/CopyFilenamesDialog";
@@ -54,6 +55,7 @@ export function GalleryDetailDialogs({
     adminSettings,
     adminZip,
     moveTargets,
+    moveExcludedIds,
     downloadExport,
     settingsOpen,
     setSettingsOpen,
@@ -116,6 +118,9 @@ export function GalleryDetailDialogs({
     setMoveFilter,
     moveImageMutation,
     moveSelectionMutation,
+    moveGalleryOpen,
+    setMoveGalleryOpen,
+    moveGalleryMutation,
     selection,
     deriveState,
     setDeriveState,
@@ -485,6 +490,17 @@ export function GalleryDetailDialogs({
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Reparent this whole gallery (with its sub-galleries) — nest it elsewhere or send it to top level */}
+      <MoveGalleryDialog
+        open={moveGalleryOpen}
+        onOpenChange={setMoveGalleryOpen}
+        gallery={gallery}
+        moveTargets={moveTargets}
+        excludedIds={moveExcludedIds}
+        onMove={(targetParentId) => moveGalleryMutation.mutate(targetParentId)}
+        busy={moveGalleryMutation.isPending}
+      />
 
       {/* Create / copy / move a set of images into a new or existing gallery */}
       <CreateGalleryFromImagesDialog

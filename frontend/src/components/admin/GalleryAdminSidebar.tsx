@@ -46,6 +46,7 @@ interface Props {
   onDownload: () => void;
   onCopyFilenames: () => void;
   onRename: () => void;
+  onMoveGallery: () => void;
   onEmpty: () => void;
   onSetHeaderImage: () => void;
   onSetCoverImage: () => void;
@@ -79,7 +80,7 @@ interface Props {
 export function GalleryAdminSidebar({
   gallery, parentGallery, subGalleries = [], downloadCount,
   onSettings, onPreview, onShare, onUpload, onDownload, onCopyFilenames,
-  onRename, onEmpty, onSetHeaderImage, onSetCoverImage,
+  onRename, onMoveGallery, onEmpty, onSetHeaderImage, onSetCoverImage,
   onActivity, onVoting, onDelete, onCreateSub, arrange,
   collections = [], selectionMode = false, selectedCount = 0,
   onToggleSelectionMode, onSelectAll, onClearSelection, onSaveSelection, onSaveFilter,
@@ -140,6 +141,9 @@ export function GalleryAdminSidebar({
                   <DropdownMenuSeparator />
                   <DropdownMenuItem onClick={onRename}>
                     <Pencil size={14} /> {t("renameGallery")}
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={onMoveGallery}>
+                    <FolderInput size={14} /> {t("moveGallery")}
                   </DropdownMenuItem>
                   <DropdownMenuItem onClick={onSetHeaderImage}>
                     <Frame size={14} /> {t("setHeaderImage")}

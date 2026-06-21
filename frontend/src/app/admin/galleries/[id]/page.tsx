@@ -55,6 +55,7 @@ export default function GalleryDetailPage() {
     setCopyNamesOpen,
     setRenameValue,
     setRenameOpen,
+    setMoveGalleryOpen,
     setEmptyConfirm,
     setHeaderImageOpen,
     setCoverImageOpen,
@@ -133,6 +134,7 @@ export default function GalleryDetailPage() {
           onDownload={handleDownload}
           onCopyFilenames={() => setCopyNamesOpen(true)}
           onRename={() => { setRenameValue(gallery.name); setRenameOpen(true); }}
+          onMoveGallery={() => setMoveGalleryOpen(true)}
           onEmpty={() => setEmptyConfirm(true)}
           onSetHeaderImage={() => setHeaderImageOpen(true)}
           onSetCoverImage={() => setCoverImageOpen(true)}

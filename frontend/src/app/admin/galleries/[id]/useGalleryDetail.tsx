@@ -11,7 +11,7 @@ import { useTranslations } from "next-intl";
 import { api } from "@/lib/api";
 import { useAdminDndRegister, useAdminDndActive } from "@/components/admin/AdminDnd";
 import { findChildren, findParent, FLAG_GROUP_ORDER } from "./parts";
-import type { ColorFlag, Collection, ImageResponse } from "@/lib/types";
+import type { ColorFlag, Collection, GalleryResponse, ImageResponse } from "@/lib/types";
 import { compareCaptureDate, hasCaptureDate } from "@/lib/image-sort";
 import { flattenTree } from "@/lib/gallery-sort";
 import { useImageSelection } from "@/hooks/useImageSelection";
@@ -48,6 +48,7 @@ export function useGalleryDetail(id: string) {
   const [moveImageTarget, setMoveImageTarget] = useState<import("@/lib/types").ImageResponse | null>(null);
   const [moveSelectionOpen, setMoveSelectionOpen] = useState(false);
   const [moveFilter, setMoveFilter] = useState("");
+  const [moveGalleryOpen, setMoveGalleryOpen] = useState(false);
   const [downloadOpen, setDownloadOpen] = useState(false);
   const [copyNamesOpen, setCopyNamesOpen] = useState(false);
   const [activityOpen, setActivityOpen] = useState(false);
@@ -125,6 +126,15 @@ export function useGalleryDetail(id: string) {
   const children = useMemo(() => findChildren(galleries, id) ?? [], [galleries, id]);
   // The whole gallery tree (depth-tagged) for the "Move Image" picker; the current one is flagged.
   const moveTargets = useMemo(() => flattenTree(galleries), [galleries]);
+  // Destinations the "Move gallery" picker must hide: the gallery itself and every descendant —
+  // reparenting into one would create a cycle (the backend rejects it too).
+  const moveExcludedIds = useMemo(() => {
+    const ids = new Set<string>([id]);
+    const self = moveTargets.find(({ g }) => g.id === id)?.g;
+    const collect = (g: GalleryResponse) => g.children.forEach((c) => { ids.add(c.id); collect(c); });
+    if (self) collect(self);
+    return ids;
+  }, [moveTargets, id]);
   const parentGallery = useMemo(() => findParent(galleries, id) ?? null, [galleries, id]);
   const siblings = useMemo(() => parentGallery?.children ?? [], [parentGallery]);
 
@@ -290,6 +300,18 @@ export function useGalleryDetail(id: string) {
       selection.clear();
       selection.setMode(false);
       toast.success(t("toast.imagesMoved", { count }));
+    },
+    onError: (err: Error) => toast.error(err.message),
+  });
+
+  // Reparent this whole gallery (with its sub-galleries). targetParentId === null → top level.
+  const moveGalleryMutation = useMutation({
+    mutationFn: (targetParentId: string | null) => api.galleries.move(id, targetParentId),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["gallery", id] });
+      qc.invalidateQueries({ queryKey: ["galleries"] });
+      setMoveGalleryOpen(false);
+      toast.success(t("toast.galleryMoved"));
     },
     onError: (err: Error) => toast.error(err.message),
   });
@@ -536,6 +558,7 @@ export function useGalleryDetail(id: string) {
     adminSettings,
     children,
     moveTargets,
+    moveExcludedIds,
     parentGallery,
     siblings,
     images,
@@ -582,6 +605,8 @@ export function useGalleryDetail(id: string) {
     setMoveSelectionOpen,
     moveFilter,
     setMoveFilter,
+    moveGalleryOpen,
+    setMoveGalleryOpen,
     downloadOpen,
     setDownloadOpen,
     copyNamesOpen,
@@ -638,6 +663,7 @@ export function useGalleryDetail(id: string) {
     renameImageMutation,
     moveImageMutation,
     moveSelectionMutation,
+    moveGalleryMutation,
     setHeaderFromImageMutation,
   };
 }
