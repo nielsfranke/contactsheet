@@ -10,6 +10,9 @@ __pycache__/
 *.pyo
 .DS_Store
 
+# Editor / agent tooling — local only, tool-neutral repo
+.claude/
+
 # Demo screenshot toolchain — runtime only (committed: demo/*.py, demo/assets/<group>/, CREDITS.md)
 demo/.data/
 demo/.web/
