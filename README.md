@@ -66,6 +66,24 @@ are very welcome.
 
 See the **[User guide](https://github.com/nielsfranke/contactsheet/wiki)** for the full tour.
 
+## Supported formats
+
+**Photos:** JPEG, PNG, WebP, **TIFF**, **PSD**, and **camera RAW** (CR2, CR3, NEF, ARW, RAF, ORF, RW2, DNG, and more).
+**Video:** MP4, MOV, WebM.
+
+Your **original files are always stored and downloaded untouched** — the gallery, lightbox, and ZIP
+exports use fast JPEG previews generated on upload. A few deliberate limits keep the app lean and
+quick on a modest self-hosted box:
+
+- **RAW** is previewed from the **camera's embedded JPEG** — no slow demosaic and no heavyweight RAW
+  engine baked into the image. Modern cameras embed a full-resolution preview; some older compacts
+  embed only a small one, so their preview is lower-res. The original RAW always downloads in full.
+- **PSD** shows its flattened composite (save with *Maximize Compatibility*); layers aren't read.
+  **PSB** (Photoshop large-document) isn't supported.
+- **Video is never transcoded**, so it must be a browser-playable container/codec (H.264/VP9/AV1);
+  HEVC/ProRes upload but may not play in-browser.
+- Uploads default to a **300 MB** per-file limit (configurable via `MAX_UPLOAD_BYTES`).
+
 ## Quick start
 
 ```bash

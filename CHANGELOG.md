@@ -12,6 +12,37 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.1.1] - 2026-06-22
+
+### Added
+
+- **Broad file-format support.** Upload **TIFF, PSD, and camera RAW** (CR2, CR3, NEF, ARW, RAF, ORF,
+  RW2, DNG, and more) alongside JPEG/PNG/WebP. Your original files are stored and downloaded
+  untouched; the gallery, lightbox, and ZIP exports use generated JPEG previews. Content search
+  indexes the new formats too.
+
+### Fixed
+
+- **Notifications: the "Add channel" button did nothing** when the admin was served over plain HTTP
+  (a LAN IP or an HTTP-only reverse proxy). It depended on a browser API (`crypto.randomUUID`) that
+  exists only on HTTPS/localhost; it now works on insecure origins.
+- **Copying a share link and copying filenames** silently failed over plain HTTP for the same reason
+  (`navigator.clipboard`); both now fall back so they work without HTTPS.
+
+### Notes & limitations
+
+- **RAW previews use the camera's embedded JPEG** (no demosaic — this keeps the app lean and fast).
+  Modern cameras embed a full-resolution preview; some older compacts embed only a small one,
+  yielding a lower-res preview. The original RAW always downloads intact.
+- **PSD** renders its flattened composite (save with *Maximize Compatibility*); layers aren't read.
+  **PSB** (large-document) isn't supported yet. **Video is still never transcoded** (unchanged).
+- Default per-file upload limit raised from 200 MB to **300 MB** (configurable via `MAX_UPLOAD_BYTES`).
+
+### Deployment / upgrade notes
+
+- **Nothing to do — no new services and no database migration.** The backend image gains one small,
+  self-contained RAW-preview dependency (`rawpy`); just `docker compose pull && docker compose up -d`.
+
 ## [1.1.0] - 2026-06-22
 
 ### Added
