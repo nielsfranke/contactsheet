@@ -49,7 +49,7 @@ are very welcome.
 ## Highlights
 
 - **Two gallery modes** — *Showcase* (a polished, view-only gallery) or *Review* (clients flag, like, comment).
-- **Client feedback** — color flags, per-person likes, comments, and **freehand annotations** drawn right on a photo.
+- **Client feedback** — color flags *or* 1–5 star ratings (an instance-wide choice), per-person likes, comments, and **freehand annotations** drawn right on a photo.
 - **Collections** — multi-select photos into named, downloadable sets; admin *and* clients can build them.
 - **Content search** *(optional)* — find photos by what's *in* them ("car at sunset"), in a gallery or across your whole library, via an opt-in on-device AI model. Without it, **All Photos** still browses everything and filters by name, gallery, and IPTC keywords.
 - **Client uploads** — optionally let visitors contribute photos, with an optional **approval queue**.

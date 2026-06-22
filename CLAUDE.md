@@ -163,6 +163,8 @@ Migrations live in `backend/alembic/versions/`. Always create a new file — nev
 0035 — configurable source URL: app_settings.source_url (AGPL §13)
 0036 — separate lightbox filename toggle: galleries.show_filename_lightbox
 0037 — semantic search: image_embeddings table + images.embedding_status + app_settings.semantic_search
+0038 — opener title position: galleries.opener_title_position
+0039 — star ratings: app_settings.rating_mode + images.rating + image_votes.rating
 ```
 
 ## Feature invariants
@@ -234,6 +236,11 @@ Key non-obvious constraints — full details in `docs/architecture/`.
 - **Color flags** (`color_flags_enabled`) — one shared flag per photo, anyone overwrites it.
 - **Likes** (`likes_enabled`) — per-reviewer, one like per person (`image_likes` table).
 - **Team voting** (`enable_team_voting`) — per-reviewer flags in `image_votes`. Depends on Color flags (nested/disabled without it). With team voting on, likes are hidden.
+
+### Rating style: flags vs stars (`app_settings.rating_mode`)
+- Instance-wide switch — `"flags"` (default) shows color flags, `"stars"` shows 1–5 stars. Never both. `color_flags_enabled` is the generic per-gallery "ratings enabled" gate in both modes (kept its name to avoid churning the cascade/preset field lists).
+- **Non-destructive & no conversion.** Stars live in their own columns (`images.rating`, `image_votes.rating`) beside the flag columns; switching modes only changes what's rendered — neither system is converted or cleared. Shared star = `images.rating`; per-reviewer star (team voting) = `image_votes.rating` (one row holds both a reviewer's flag and star). See `docs/architecture/star-ratings.md`.
+- Public shared rating: `POST /api/public/g/{share_token}/images/{image_id}/rate` (sibling to `/flag`); per-reviewer rides the same `/vote` endpoint (`vote_repo.upsert` writes only the field sent).
 
 ### PWA icons
 - Icons are rendered by the backend (`app/services/branding_icon.py`) from branding: logo → monogram → default. Served under `/api/branding/` (not the `/branding/` static mount). ETag = branding signature, so a branding change auto-invalidates browsers.

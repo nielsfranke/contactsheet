@@ -12,6 +12,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **Star ratings as an alternative to color flags.** A new instance-wide **Rating style** setting
+  (Settings → Gallery Defaults) switches every gallery between color flags and classic **1–5 stars** —
+  one or the other, never both. Stars work everywhere flags did: the grid tiles, the lightbox, the
+  filter/group/sort toolbar, and per-reviewer team voting. Switching is **non-destructive** — flags and
+  stars are stored separately and neither is converted or cleared, so you can flip back and forth without
+  losing any review work.
+- **Title position over the header image.** Presentation galleries can now anchor the gallery title to
+  any of nine positions over the full-screen hero (top-left … bottom-right) via a 3×3 picker in the
+  gallery's Look settings. Defaults to centered, exactly as before.
+
+### Fixed
+
+- **Color flag set in the lightbox now shows on the thumbnail immediately.** Flagging a photo in the
+  lightbox and closing it left the grid thumbnail showing the old flag until a page refresh; the tile
+  now adopts the change live (also fixes the same lag for flags set by another reviewer).
+
 ## [1.1.4] - 2026-06-22
 
 ### Fixed
