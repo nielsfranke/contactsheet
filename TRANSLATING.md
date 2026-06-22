@@ -14,23 +14,32 @@ requests. This keeps translations safe from merge conflicts and lets non-develop
 
 ## For translators
 
-All UI text lives in JSON catalogs under [`frontend/messages/`](frontend/messages/):
-`en.json` is the source; `de.json`, `fr.json`, … are translations. You never touch these files
-directly — you edit them through Weblate.
+**You don't need to be a developer, install anything, or touch any code.** Everything happens in
+your browser through Weblate — a friendly web editor that shows the English text next to a box where
+you type your language.
 
-### Translate an existing language
+### 👉 Start here: <https://translate.nielsbox.cc/>
 
-1. Open the ContactSheet project in Weblate.
-2. Pick your language, then translate string by string. Weblate shows the English source, the key
-   name (which hints at where the string appears, e.g. `gallery.lightbox.next`), and any context.
-3. Save. Weblate batches changes and opens a pull request back to the repository; a maintainer
-   reviews and merges it.
+1. **Create a free account** (or sign in) and open the **ContactSheet** project.
+2. **Pick your language.** Don't see it? Click **Start new translation** (a.k.a. *Add new
+   translation*) and choose it — every text is seeded from English, ready for you to fill in.
+3. **Translate, one text at a time.** Weblate shows the English original and a hint about where the
+   text appears in the app (e.g. `gallery.lightbox.next`). Not sure about a string? Skip it, or leave
+   a comment — you don't have to do everything at once, and partial translations are welcome.
+4. **Save.** That's it. Weblate collects your changes and proposes them to the project automatically;
+   a maintainer reviews and publishes them. A new language shows up in the app once a maintainer
+   switches it on.
 
-### Start a new language
+> You never edit files by hand and you never use Git. (Behind the scenes the text lives in JSON
+> catalogs under `frontend/messages/`, but Weblate takes care of all of that for you.)
 
-Weblate has "start new translation" enabled. Choose **Add new translation**, pick the language,
-and Weblate seeds it from `en.json` so every key is present and ready to fill in. Once a maintainer
-registers the locale in the app (see below) it becomes selectable.
+### One thing to watch: keep the “code-looking” bits
+
+Most strings are plain sentences — just translate them. A few contain little placeholders or
+formatting that must stay **exactly as written**, because the app fills them in at runtime. Don't
+worry about memorizing the rules: Weblate warns you if you change one by mistake.
+
+The details are below under *ICU MessageFormat*.
 
 ### ICU MessageFormat — what you must keep
 
