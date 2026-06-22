@@ -15,7 +15,7 @@ const ACCEPTED_VIDEO_TYPES = ["video/mp4", "video/quicktime", "video/webm"];
 // RAW, so matching on `f.type` alone would silently drop them. The backend re-validates by magic.
 const ACCEPTED_VIDEO_EXT = [".mp4", ".mov", ".m4v", ".webm"];
 const ACCEPTED_IMAGE_EXT = [
-  ".jpg", ".jpeg", ".png", ".webp", ".tif", ".tiff", ".psd",
+  ".jpg", ".jpeg", ".png", ".webp", ".tif", ".tiff", ".psd", ".psb",
   // camera RAW
   ".cr2", ".cr3", ".nef", ".nrw", ".arw", ".sr2", ".srf", ".dng", ".raf", ".orf",
   ".rw2", ".pef", ".srw", ".rwl", ".dcr", ".kdc", ".mrw", ".x3f", ".3fr", ".mef", ".iiq",

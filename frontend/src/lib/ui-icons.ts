@@ -25,6 +25,7 @@ import {
   Spline,
   Images,
   Play,
+  FileImage,
 } from "lucide-react";
 
 export const Icons = {
@@ -56,6 +57,8 @@ export const Icons = {
   photo: Images,
   /** Video play badge. */
   play: Play,
+  /** A stored file with no viewable preview (e.g. a PSB without an embedded thumbnail). */
+  noPreviewFile: FileImage,
 } as const;
 
 export type IconName = keyof typeof Icons;

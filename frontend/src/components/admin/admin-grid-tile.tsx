@@ -108,6 +108,17 @@ export function AdminTile({
           className={`w-full ${aspectSquare || fixedHeight ? "h-full object-cover" : "h-auto"}`}
         />
       )}
+      {img.processing_status === "no_preview" && (
+        // Stored but unviewable (e.g. PSB without an embedded thumbnail) — download-only.
+        <div className="w-full h-full flex flex-col items-center justify-center gap-1.5 aspect-square text-muted-foreground px-2 text-center">
+          <Icons.noPreviewFile size={22} />
+          <span className="text-xs uppercase tracking-wide truncate max-w-full">
+            {img.original_filename.includes(".")
+              ? img.original_filename.slice(img.original_filename.lastIndexOf(".") + 1).toUpperCase()
+              : "FILE"}
+          </span>
+        </div>
+      )}
     </>
   );
 

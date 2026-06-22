@@ -67,7 +67,8 @@ def embed_one(image_id: str) -> None:
         image = image_repo.get_by_id(db, image_id)
         if image is None:
             return
-        if image.is_video:
+        if image.is_video or format_detect.is_psb_filename(image.stored_filename):
+            # PSB is excluded from search — its only readable pixels are a tiny embedded thumbnail.
             image_repo.set_embedding_status(db, image_id, "skipped")
             return
 

@@ -91,6 +91,7 @@
     },
     "lightbox": {
       "comments": "Comments",
+      "noPreview": "No preview available — download the original file.",
       "previous": "Previous photo",
       "next": "Next photo",
       "close": "Close",
@@ -586,7 +587,7 @@
       "title": "Drag & Drop",
       "subtitle": "Drag your files or folders anywhere to start your upload",
       "orClick": "or click here",
-      "formats": "JPEG, PNG, WebP up to 200 MB · MP4, MOV, WebM up to 2 GB",
+      "formats": "JPEG, PNG, WebP, TIFF, PSD, PSB & RAW up to 300 MB · MP4, MOV, WebM up to 2 GB",
       "button": "Upload files",
       "cancel": "Cancel",
       "uploading": "Uploading… {progress}%"
@@ -988,7 +989,6 @@
   "errors": {
     "upload_too_large": "This file is too large to upload.",
     "upload_unsupported_type": "That file type isn't supported. Use JPEG, PNG, WebP, TIFF, PSD, or camera RAW.",
-    "upload_psb_unsupported": "Photoshop large-document files (.psb) aren't supported yet. Save as .psd or .tif.",
     "upload_content_mismatch": "This file doesn't look like the image type it claims to be.",
     "client_upload_disabled": "Uploads are no longer enabled for this gallery.",
     "client_upload_too_many": "Too many files at once. Please upload fewer photos.",

@@ -46,7 +46,7 @@ class Format:
     key: str       # canonical id: jpeg/png/webp/tiff/psd/raw/mp4/mov/webm/psb
     ext: str       # canonical stored extension (raw keeps its real extension)
     mime: str      # value stored in images.mime_type (informational; is_video is the real gate)
-    kind: str      # "image" | "raw" | "video" | "reject_psb"
+    kind: str      # "image" | "raw" | "psb" | "video"
 
 
 def _ext_of(filename: str) -> str:
@@ -63,8 +63,8 @@ def _raw(ext_from_name: str, default_ext: str) -> Format:
 def detect_format(header: bytes, filename: str) -> Format | None:
     """Return the detected ``Format`` for ``header`` (first ~32 bytes) + ``filename``.
 
-    ``None`` means unsupported. A ``reject_psb`` result is a *known* format the caller should reject
-    with a dedicated message rather than the generic "unsupported".
+    ``None`` means unsupported. ``kind="psb"`` is accepted but needs special handling — its preview
+    comes from the embedded thumbnail, not a Pillow decode (see psd_thumbnail / image_processing).
     """
     h = header
     ext = _ext_of(filename)
@@ -82,7 +82,7 @@ def detect_format(header: bytes, filename: str) -> Format | None:
         if ver == b"\x00\x01":
             return Format("psd", ".psd", "image/vnd.adobe.photoshop", "image")
         if ver == b"\x00\x02":
-            return Format("psb", ".psb", "image/vnd.adobe.photoshop", "reject_psb")
+            return Format("psb", ".psb", "image/vnd.adobe.photoshop", "psb")
         return None
 
     # Fujifilm RAF carries its own ASCII magic.
@@ -126,6 +126,11 @@ def is_raw_filename(stored_filename: str) -> bool:
 def is_pillow_filename(stored_filename: str) -> bool:
     """Whether a stored file is opened directly by Pillow (jpeg/png/webp/tiff/psd)."""
     return _ext_of(stored_filename) in _PILLOW_EXTS
+
+
+def is_psb_filename(stored_filename: str) -> bool:
+    """Whether a stored file is a PSB (preview comes from the embedded thumbnail, not Pillow)."""
+    return _ext_of(stored_filename) == ".psb"
 
 
 def ml_can_read_original(stored_filename: str) -> bool:

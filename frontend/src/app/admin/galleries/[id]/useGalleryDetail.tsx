@@ -443,10 +443,13 @@ export function useGalleryDetail(id: string) {
     };
   }, [gallery, adminSettings]);
 
-  // Ordered, done-only list the lightbox traverses, matching the on-screen display order.
+  // Ordered, displayable list the lightbox traverses, matching the on-screen display order.
+  // "no_preview" tiles (e.g. PSB without a thumbnail) are included so they're navigable.
   const lightboxList = useMemo(() => {
     const order = groups ? groups.flatMap((g) => g.images) : filteredSorted;
-    return order.filter((img) => img.processing_status === "done");
+    return order.filter(
+      (img) => img.processing_status === "done" || img.processing_status === "no_preview",
+    );
   }, [groups, filteredSorted]);
 
   function openPreview(img: ImageResponse, intent?: LightboxIntent) {

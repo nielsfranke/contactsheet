@@ -16,6 +16,12 @@ import { OverlayPill } from "@/components/chrome/OverlayPill";
 import { MediaBadge } from "@/components/chrome/MediaBadge";
 import { useTranslations } from "next-intl";
 
+/** "art.psb" → "PSB"; used to label download-only (no-preview) tiles. */
+function extensionOf(filename: string): string {
+  const i = filename.lastIndexOf(".");
+  return i >= 0 ? filename.slice(i + 1).toUpperCase() : "FILE";
+}
+
 const FLAG_COLORS: { value: ColorFlag; bg: string }[] = [
   { value: "green",  bg: "bg-green-500" },
   { value: "red",    bg: "bg-red-500" },
@@ -77,7 +83,10 @@ export function PhotoGrid({
   lightboxImages,
 }: Props) {
   const { open } = useLightboxStore();
-  const ready = images.filter((img) => img.processing_status === "done");
+  // "no_preview" (e.g. a PSB without an embedded thumbnail) is displayable as a download-only tile.
+  const ready = images.filter(
+    (img) => img.processing_status === "done" || img.processing_status === "no_preview",
+  );
   const pending = images.filter((img) => img.processing_status === "pending");
   const failed = images.filter((img) => img.processing_status === "error");
 
@@ -242,7 +251,18 @@ function PhotoTile({
           aria-label={img.original_filename}
           className={`block w-full h-full rounded-[inherit] outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-white ${selectionMode || collabMode ? "cursor-pointer" : "cursor-zoom-in"}`}
         >
-          {img.is_video ? (
+          {img.processing_status === "no_preview" ? (
+            // Stored but unviewable (e.g. PSB with no embedded thumbnail) — a download-only tile.
+            <div
+              style={!aspectSquare && !fixedHeight ? { aspectRatio: imageAspect(img) } : undefined}
+              className={`flex w-full flex-col items-center justify-center gap-2 bg-zinc-800 px-3 text-center text-zinc-400 ${aspectSquare || fixedHeight ? "h-full" : ""}`}
+            >
+              <Icons.noPreviewFile size={28} />
+              <span className="max-w-full truncate text-xs uppercase tracking-wide">
+                {extensionOf(img.original_filename)}
+              </span>
+            </div>
+          ) : img.is_video ? (
             // Browser-rendered poster: preload metadata and seek to the first frame.
             <video
               src={img.video_url ? `${img.video_url}#t=0.1` : undefined}

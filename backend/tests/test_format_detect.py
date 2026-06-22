@@ -38,11 +38,11 @@ def test_psd_accepted():
     assert f and f.key == "psd" and f.kind == "image"
 
 
-# --- PSB is detected but rejected with a dedicated kind ---------------------------------------
+# --- PSB is accepted (preview from the embedded thumbnail; see psd_thumbnail) ------------------
 
-def test_psb_is_reject_kind():
+def test_psb_accepted_as_psb_kind():
     f = _detect(b"8BPS\x00\x02" + b"\x00" * 8, "huge.psb")
-    assert f and f.key == "psb" and f.kind == "reject_psb"
+    assert f and f.key == "psb" and f.kind == "psb" and f.ext == ".psb"
 
 
 # --- Camera RAW -------------------------------------------------------------------------------

@@ -9,7 +9,7 @@ from PIL import Image as PilImage
 
 from app.config import settings as app_settings
 
-from .helpers import make_gallery, add_image, png_bytes
+from .helpers import make_gallery, add_image, png_bytes, psb_bytes
 
 
 def tiff_bytes(color=(40, 160, 90), size=(16, 16)) -> bytes:
@@ -130,15 +130,29 @@ def test_tiff_upload_processes_to_done(admin_client):
     assert img["processing_status"] == "done" and img["thumb_url"]
 
 
-def test_psb_upload_rejected_with_code(admin_client):
+def test_psb_with_embedded_thumbnail_renders(admin_client):
     g = make_gallery(admin_client, "G")
-    # Minimal PSB header (8BPS + version 2); the gate trips on detection before any decode.
-    psb = b"8BPS\x00\x02" + b"\x00" * 64
     r = admin_client.post(
         f"/api/galleries/{g['id']}/images",
-        files=[("files", ("huge.psb", psb, "application/octet-stream"))],
+        files=[("files", ("art.psb", psb_bytes(with_thumbnail=True), "application/octet-stream"))],
     )
-    assert r.status_code == 415 and r.json()["code"] == "upload_psb_unsupported"
+    assert r.status_code == 201, r.text
+    img = admin_client.get(f"/api/galleries/{g['id']}/images").json()[0]
+    # The embedded thumbnail becomes the preview → normal "done" with renditions.
+    assert img["processing_status"] == "done" and img["thumb_url"]
+
+
+def test_psb_without_thumbnail_is_no_preview(admin_client):
+    g = make_gallery(admin_client, "G")
+    r = admin_client.post(
+        f"/api/galleries/{g['id']}/images",
+        files=[("files", ("flat.psb", psb_bytes(with_thumbnail=False), "application/octet-stream"))],
+    )
+    assert r.status_code == 201, r.text
+    img = admin_client.get(f"/api/galleries/{g['id']}/images").json()[0]
+    # Stored & downloadable, but no rendition: a "no_preview" download-only asset.
+    assert img["processing_status"] == "no_preview"
+    assert img["thumb_url"] is None and img["original_url"]
 
 
 # --- Finding 4: moderation gate on per-image endpoints ----------------------------------------

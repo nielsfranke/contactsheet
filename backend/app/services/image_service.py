@@ -240,12 +240,6 @@ def upload_images(
                 code="upload_unsupported_type",
                 detail=f"Unsupported file type. Allowed: {_ACCEPTED_LABEL}",
             )
-        if fmt.kind == "reject_psb":
-            raise CodedHTTPException(
-                status_code=status.HTTP_415_UNSUPPORTED_MEDIA_TYPE,
-                code="upload_psb_unsupported",
-                detail="Photoshop large-document files (.psb) are not supported. Save as .psd or .tif.",
-            )
         is_video = fmt.kind == "video"
         if is_video and not allow_video:
             raise CodedHTTPException(

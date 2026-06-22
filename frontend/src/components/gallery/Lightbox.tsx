@@ -16,6 +16,7 @@ import { useTranslations } from "next-intl";
 import { api } from "@/lib/api";
 import { lightboxTones } from "@/lib/lightbox-theme";
 import { previewSrcSet } from "@/lib/gridLayout";
+import { Icons } from "@/lib/ui-icons";
 import { useLightboxKeys } from "./lightbox-keys";
 import { photoSrc as resolvePhotoSrc, variantSrc as resolveVariantSrc } from "./lightbox-image-src";
 import type { Anchor, ColorFlag, CollabFeatures, LightboxBackdrop } from "@/lib/types";
@@ -631,6 +632,17 @@ export function Lightbox({
   // carousel, so the two never drift. `showThumb`/`showPhoto` let the mobile path window which slides
   // actually load images (the rest are sized-but-empty so the scroll geometry stays correct).
   function slideContent(im: (typeof images)[number], isCurrent: boolean, showThumb = true, showPhoto = true) {
+    if (im.processing_status === "no_preview") {
+      // No viewable rendition (e.g. a PSB without an embedded thumbnail). Show the file + name; the
+      // download control in the chrome serves the original when downloads are enabled.
+      return (
+        <div className="flex h-full w-full flex-col items-center justify-center gap-3 px-6 text-center text-zinc-400">
+          <Icons.noPreviewFile size={56} />
+          <div className="max-w-md break-all text-sm">{im.original_filename}</div>
+          <div className="text-xs text-zinc-500">{t("noPreview")}</div>
+        </div>
+      );
+    }
     return (
       <>
         {/* Cached-thumbnail underlay — always painted behind the photo, never the backdrop. */}

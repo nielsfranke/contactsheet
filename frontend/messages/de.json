@@ -91,6 +91,7 @@
     },
     "lightbox": {
       "comments": "Kommentare",
+      "noPreview": "Keine Vorschau verfügbar – lade die Originaldatei herunter.",
       "previous": "Vorheriges Foto",
       "next": "Nächstes Foto",
       "close": "Schließen",
@@ -586,7 +587,7 @@
       "title": "Ziehen & Ablegen",
       "subtitle": "Ziehen Sie Ihre Dateien oder Ordner irgendwohin, um den Upload zu starten",
       "orClick": "oder hier klicken",
-      "formats": "JPEG, PNG, WebP bis 200 MB · MP4, MOV, WebM bis 2 GB",
+      "formats": "JPEG, PNG, WebP, TIFF, PSD, PSB & RAW bis 300 MB · MP4, MOV, WebM bis 2 GB",
       "button": "Dateien hochladen",
       "cancel": "Abbrechen",
       "uploading": "Wird hochgeladen… {progress} %"
@@ -988,7 +989,6 @@
   "errors": {
     "upload_too_large": "Diese Datei ist zu groß für den Upload.",
     "upload_unsupported_type": "Dieser Dateityp wird nicht unterstützt. Verwenden Sie JPEG, PNG, WebP, TIFF, PSD oder Kamera-RAW.",
-    "upload_psb_unsupported": "Photoshop-Großdokumente (.psb) werden noch nicht unterstützt. Bitte als .psd oder .tif speichern.",
     "upload_content_mismatch": "Diese Datei entspricht nicht dem angegebenen Bildtyp.",
     "client_upload_disabled": "Uploads sind für diese Galerie nicht mehr aktiviert.",
     "client_upload_too_many": "Zu viele Dateien auf einmal. Bitte laden Sie weniger Fotos hoch.",

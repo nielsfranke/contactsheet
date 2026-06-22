@@ -41,7 +41,8 @@ export const MODE_LABELS: Record<ModeType, string> = {
   presentation: "Showcase",
 };
 export type ColorFlag = "none" | "green" | "red" | "yellow" | "blue";
-export type ProcessingStatus = "pending" | "done" | "error";
+// "no_preview" = stored & downloadable but has no thumbnail (e.g. a PSB with no embedded preview).
+export type ProcessingStatus = "pending" | "done" | "error" | "no_preview";
 // Opener font key — one of the registry keys in lib/gallery-fonts.ts, or a legacy
 // "sans"/"serif"/"mono" alias. Validated server-side (backend FontType literal).
 export type FontType = string;

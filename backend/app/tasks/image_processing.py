@@ -1,6 +1,7 @@
 # SPDX-FileCopyrightText: 2026 Niels Franke
 # SPDX-License-Identifier: AGPL-3.0-or-later
 
+import io
 import json
 import logging
 import os
@@ -11,6 +12,7 @@ from PIL import Image as PilImage
 from PIL.ExifTags import TAGS
 
 from app.config import settings
+from app.storage import format_detect, psd_thumbnail
 from app.storage.local import LocalStorage
 
 logger = logging.getLogger(__name__)
@@ -117,12 +119,8 @@ def _open_source(original_path: str, stored_filename: str) -> PilImage.Image:
     bounded in memory; the camera's own rendering is also what a client expects to see. RAW files
     with no embedded preview raise (the worker marks the image errored — full demosaic is Phase 2).
     """
-    from app.storage import format_detect
-
     if not format_detect.is_raw_filename(stored_filename):
         return PilImage.open(original_path)
-
-    import io
 
     import rawpy
 
@@ -197,7 +195,25 @@ def process_image(image_id: str, gallery_id: str, stored_filename: str) -> None:
 
         targets = preview_targets(settings_repo.get(db).high_res_previews)
 
-        img = _open_source(original_path, stored_filename)
+        is_psb = format_detect.is_psb_filename(stored_filename)
+        if is_psb:
+            # PSB preview comes from the embedded thumbnail (read from the file header — never the
+            # multi-GB image data). No thumbnail (saved without "Maximize Compatibility") → store it
+            # as a download-only asset with no renditions ("no_preview").
+            data = psd_thumbnail.extract_thumbnail(original_path)
+            if data is None:
+                image_repo.update_processing_result(
+                    db, image_id, width=None, height=None,
+                    exif_data=None, iptc_data=None, status="no_preview",
+                )
+                image_repo.set_embedding_status(db, image_id, "skipped")
+                from app.realtime import publish as realtime_publish
+                realtime_publish(gallery_id, "image", image_id=image_id)
+                logger.info("Stored PSB without preview: %s", image_id)
+                return
+            img = PilImage.open(io.BytesIO(data))
+        else:
+            img = _open_source(original_path, stored_filename)
         # Decompression-bomb / giant-dimension guard: reject on the header-declared dimensions
         # before any pixel buffer is allocated (img.copy()/thumbnail in _save_resized). A crafted
         # highly-compressible file can be tiny on disk yet huge in memory; bail early → status error.
@@ -239,9 +255,13 @@ def process_image(image_id: str, gallery_id: str, stored_filename: str) -> None:
         realtime_publish(gallery_id, "image", image_id=image_id)
         logger.info("Processed image %s (%dx%d)", image_id, width, height)
 
-        # Queue semantic-search indexing now that renditions exist (no-op unless enabled).
-        from app.tasks.embed_task import submit as submit_embedding
-        submit_embedding(image_id)
+        # Queue semantic-search indexing now that renditions exist (no-op unless enabled). PSB is
+        # excluded from search (the embedded thumbnail is too small to give a useful vector).
+        if is_psb:
+            image_repo.set_embedding_status(db, image_id, "skipped")
+        else:
+            from app.tasks.embed_task import submit as submit_embedding
+            submit_embedding(image_id)
     except Exception:
         logger.exception("Failed to process image %s", image_id)
         image_repo.set_processing_error(db, image_id)

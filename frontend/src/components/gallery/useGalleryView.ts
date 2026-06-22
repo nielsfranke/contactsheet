@@ -214,7 +214,10 @@ export function useGalleryView(
   // in the lightbox spans every image even when the grid is split into flag groups.
   const lightboxImages = useMemo(() => {
     const order = groups ? groups.flatMap((g) => g.images) : filteredSorted;
-    return order.filter((img) => img.processing_status === "done");
+    // Include "no_preview" (e.g. PSB without a thumbnail) so it's navigable in the lightbox.
+    return order.filter(
+      (img) => img.processing_status === "done" || img.processing_status === "no_preview",
+    );
   }, [groups, filteredSorted]);
 
   const { isOpen } = useLightboxStore();
