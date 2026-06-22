@@ -15,7 +15,7 @@ const nextConfig: NextConfig = {
     position: "bottom-right",
   },
   experimental: {
-    proxyClientMaxBodySize: 250 * 1024 * 1024, // 250 MB — matches backend max_upload_bytes
+    proxyClientMaxBodySize: 300 * 1024 * 1024, // 300 MB — matches backend max_upload_bytes
   },
   async rewrites() {
     // In development: proxy /api and /uploads to the FastAPI backend

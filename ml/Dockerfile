@@ -9,8 +9,10 @@ FROM python:3.12-slim AS ml
 WORKDIR /app
 
 # libgomp1 is OpenMP runtime that ONNX Runtime links against for multi-threaded CPU inference.
+# gosu lets start.sh drop privileges after fixing the cache-dir ownership (see below).
 RUN apt-get update && apt-get install -y --no-install-recommends \
     curl \
+    gosu \
     libgomp1 \
     && rm -rf /var/lib/apt/lists/*
 
@@ -23,12 +25,14 @@ COPY ml/ ./
 ENV HF_HOME=/data/ml-cache
 ENV ORT_INTRA_THREADS=4
 
-# Non-root, matching the backend's UID for shared-volume read access.
-RUN useradd -r -u 1001 mluser && mkdir -p /data/ml-cache && chown -R mluser /app /data/ml-cache
-USER mluser
+# Non-root app user, matching the backend's UID for shared-volume read access. The container starts
+# as root so start.sh can chown the (possibly root-owned) bind-mounted cache dir, then drops to
+# mluser via gosu — without this, a bind mount at ./data/ml-cache breaks the model download.
+RUN useradd -r -u 1001 mluser && mkdir -p /data/ml-cache && chown -R mluser /app /data/ml-cache \
+    && chmod +x /app/start.sh
 
 EXPOSE 8001
 HEALTHCHECK --interval=30s --timeout=3s --start-period=20s --retries=3 \
     CMD curl -fsS http://localhost:8001/health || exit 1
 
-CMD ["uvicorn", "app:app", "--host", "0.0.0.0", "--port", "8001"]
+CMD ["/app/start.sh"]

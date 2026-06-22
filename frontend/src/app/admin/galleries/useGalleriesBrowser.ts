@@ -215,7 +215,7 @@ export function useGalleriesBrowser() {
     browseLoading: browse.isLoading,
     browseFetchingMore: browse.isFetchingNextPage,
     hasMore: !!browse.hasNextPage,
-    loadMore: () => browse.fetchNextPage(),
+    loadMore: browse.fetchNextPage,  // stable identity (React Query) → safe in effect deps
     openResult,
     // sort
     sort,

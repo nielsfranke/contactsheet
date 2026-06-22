@@ -3,7 +3,7 @@
 
 "use client";
 
-import { Suspense } from "react";
+import { Suspense, useEffect, useRef } from "react";
 import { useTranslations } from "next-intl";
 import type { GlobalSearchResult, OverviewSort } from "@/lib/types";
 import { Search, Plus, ArrowUp, ArrowDown, Pin, ScanSearch, Loader2 } from "lucide-react";
@@ -55,6 +55,22 @@ function GalleriesBrowser() {
     photoSort, photoDir, pickPhotoSort,
     browseItems, browseTotal, browseLoading, browseFetchingMore, hasMore, loadMore,
   } = useGalleriesBrowser();
+
+  // Infinite scroll for "All Photos": a sentinel below the grid auto-loads the next page when it
+  // nears the viewport. The "Load more" button stays as a fallback (and end/loading indicator).
+  const sentinelRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const el = sentinelRef.current;
+    if (!el || !hasMore) return;
+    const obs = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting && !browseFetchingMore) loadMore();
+      },
+      { rootMargin: "600px" },
+    );
+    obs.observe(el);
+    return () => obs.disconnect();
+  }, [hasMore, browseFetchingMore, loadMore]);
 
   const photoMode = searchMode === "photos";
 
@@ -255,7 +271,7 @@ function GalleriesBrowser() {
               </p>
               {photoGrid(browseItems)}
               {hasMore && (
-                <div className="mt-6 flex justify-center">
+                <div ref={sentinelRef} className="mt-6 flex justify-center">
                   <Button variant="outline" size="sm" onClick={() => loadMore()} disabled={browseFetchingMore}>
                     {browseFetchingMore && <Loader2 size={14} className="mr-1.5 animate-spin" />}
                     {t("loadMore")}
