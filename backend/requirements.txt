@@ -8,6 +8,9 @@ PyJWT==2.10.1
 bcrypt==4.2.1
 python-multipart==0.0.18
 Pillow==11.0.0
+# Camera-RAW preview extraction (rawpy.extract_thumb pulls the embedded JPEG — no full demosaic).
+# Wheels bundle libraw, so no system packages are needed. NumPy (below) covers the bitmap-thumb path.
+rawpy==0.24.0
 slowapi==0.1.9
 apprise==1.9.0
 # Semantic search: NumPy powers the brute-force cosine ranking over stored embeddings; httpx is

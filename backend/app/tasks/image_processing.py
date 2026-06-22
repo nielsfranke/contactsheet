@@ -109,6 +109,31 @@ def _extract_exif(img: PilImage.Image) -> dict | None:
         return None
 
 
+def _open_source(original_path: str, stored_filename: str) -> PilImage.Image:
+    """Open an upload as a Pillow image for rendition generation.
+
+    Pillow-native stills (jpeg/png/webp/tiff/psd) open directly. Camera RAW is decoded *only* via
+    its embedded JPEG preview (``rawpy.extract_thumb``) — no sensor demosaic, so it's fast and
+    bounded in memory; the camera's own rendering is also what a client expects to see. RAW files
+    with no embedded preview raise (the worker marks the image errored — full demosaic is Phase 2).
+    """
+    from app.storage import format_detect
+
+    if not format_detect.is_raw_filename(stored_filename):
+        return PilImage.open(original_path)
+
+    import io
+
+    import rawpy
+
+    with rawpy.imread(original_path) as raw:
+        thumb = raw.extract_thumb()
+    if thumb.format == rawpy.ThumbFormat.JPEG:
+        return PilImage.open(io.BytesIO(thumb.data))
+    # Some bodies embed a raw bitmap thumbnail instead of a JPEG.
+    return PilImage.fromarray(thumb.data)
+
+
 def _auto_rotate(img: PilImage.Image) -> PilImage.Image:
     try:
         from PIL import ImageOps
@@ -172,7 +197,7 @@ def process_image(image_id: str, gallery_id: str, stored_filename: str) -> None:
 
         targets = preview_targets(settings_repo.get(db).high_res_previews)
 
-        img = PilImage.open(original_path)
+        img = _open_source(original_path, stored_filename)
         # Decompression-bomb / giant-dimension guard: reject on the header-declared dimensions
         # before any pixel buffer is allocated (img.copy()/thumbnail in _save_resized). A crafted
         # highly-compressible file can be tiny on disk yet huge in memory; bail early → status error.

@@ -392,3 +392,26 @@ def test_search_endpoint_returns_ranked_images(admin_client, monkeypatch):
     assert r.status_code == 200, r.text
     ids = [img["id"] for img in r.json()]
     assert ids == [near, far]                      # ranked, most-similar first
+
+
+# --- Broad-format indexing: RAW/PSD embed from the rendition, not the unreadable original --------
+
+def test_use_original_honored_for_pillow_formats():
+    # JPEG/TIFF originals are readable by the sidecar → honor index_originals.
+    assert embed_task._use_original("a.jpg", index_originals=True) is True
+    assert embed_task._use_original("a.tif", index_originals=True) is True
+    # …and medium when the setting is off.
+    assert embed_task._use_original("a.jpg", index_originals=False) is False
+
+
+def test_raw_and_psd_always_index_from_rendition():
+    # The sidecar's plain Pillow can't read these originals → never use the original.
+    for name in ("shot.cr2", "shot.cr3", "shot.nef", "shot.arw", "art.psd"):
+        assert embed_task._use_original(name, index_originals=True) is False
+
+
+def test_source_path_points_at_medium_for_raw():
+    p = embed_task._source_path("gid", "x.cr2", embed_task._use_original("x.cr2", True))
+    assert "/medium/" in p and p.endswith("x.cr2")  # JPEG bytes stored under the raw's name
+    p_jpg = embed_task._source_path("gid", "x.jpg", embed_task._use_original("x.jpg", True))
+    assert "/original/" in p_jpg

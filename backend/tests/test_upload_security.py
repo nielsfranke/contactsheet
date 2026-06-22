@@ -3,9 +3,19 @@
 
 """Upload-pipeline / media-serving / moderation hardening (findings 1–4)."""
 
+import io
+
+from PIL import Image as PilImage
+
 from app.config import settings as app_settings
 
 from .helpers import make_gallery, add_image, png_bytes
+
+
+def tiff_bytes(color=(40, 160, 90), size=(16, 16)) -> bytes:
+    buf = io.BytesIO()
+    PilImage.new("RGB", size, color).save(buf, format="TIFF")
+    return buf.getvalue()
 
 
 def _upload(admin_client, gallery_id, data=None, content_type="image/png", name="p.png"):
@@ -104,6 +114,31 @@ def test_client_upload_total_request_cap(admin_client, monkeypatch):
         data={"uploader": "Alice"},
     )
     assert r.status_code == 413 and r.json()["code"] == "upload_too_large"
+
+
+# --- Broad format support (Phase 1): TIFF accepted, PSB rejected ------------------------------
+
+def test_tiff_upload_processes_to_done(admin_client):
+    g = make_gallery(admin_client, "G")
+    r = admin_client.post(
+        f"/api/galleries/{g['id']}/images",
+        files=[("files", ("scan.tif", tiff_bytes(), "image/tiff"))],
+    )
+    assert r.status_code == 201, r.text
+    img = admin_client.get(f"/api/galleries/{g['id']}/images").json()[0]
+    # TIFF goes through the normal Pillow pipeline → JPEG renditions exist.
+    assert img["processing_status"] == "done" and img["thumb_url"]
+
+
+def test_psb_upload_rejected_with_code(admin_client):
+    g = make_gallery(admin_client, "G")
+    # Minimal PSB header (8BPS + version 2); the gate trips on detection before any decode.
+    psb = b"8BPS\x00\x02" + b"\x00" * 64
+    r = admin_client.post(
+        f"/api/galleries/{g['id']}/images",
+        files=[("files", ("huge.psb", psb, "application/octet-stream"))],
+    )
+    assert r.status_code == 415 and r.json()["code"] == "upload_psb_unsupported"
 
 
 # --- Finding 4: moderation gate on per-image endpoints ----------------------------------------

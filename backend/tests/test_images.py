@@ -34,11 +34,19 @@ def test_upload_rejects_unsupported_type(admin_client):
     assert r.status_code == 415 and r.json()["code"] == "upload_unsupported_type"
 
 
-def test_upload_rejects_content_mismatch(admin_client):
+def test_upload_trusts_bytes_not_content_type(admin_client):
     g = make_gallery(admin_client, "G")
-    # Declared PNG but bytes are not a PNG → magic-byte check fails.
+    # The format is sniffed from the bytes, so a spoofed content_type/extension can't smuggle a
+    # different type: real PNG bytes labelled as a PDF are accepted as the PNG they actually are.
+    r = _upload(admin_client, g["id"], png_bytes(), content_type="application/pdf", name="x.pdf")
+    assert r.status_code == 201, r.text
+
+
+def test_upload_rejects_garbage_bytes(admin_client):
+    g = make_gallery(admin_client, "G")
+    # Bytes that match no known format are rejected regardless of the declared image content_type.
     r = _upload(admin_client, g["id"], b"not really a png", content_type="image/png")
-    assert r.status_code == 415 and r.json()["code"] == "upload_content_mismatch"
+    assert r.status_code == 415 and r.json()["code"] == "upload_unsupported_type"
 
 
 def test_delete_image_soft_deletes(admin_client):

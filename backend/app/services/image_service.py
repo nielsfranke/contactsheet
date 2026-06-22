@@ -18,47 +18,18 @@ from app.realtime import publish as realtime_publish
 from app.repositories import activity_repo, comment_repo, gallery_repo, image_repo, like_repo, vote_repo
 from app.schemas.image import GlobalSearchResult, ImageResponse, ImageUpdate, PhotoPage, UploadResponse
 from app.services import notification_service
+from app.storage import format_detect
 from app.storage.base import StorageProvider
 from app.tasks.image_processing import submit_image_processing
 
-_ALLOWED_MIMES = {
-    "image/jpeg": ".jpg",
-    "image/png": ".png",
-    "image/webp": ".webp",
-}
+# Number of leading bytes sniffed to detect the file format (covers every magic in format_detect).
+_HEADER_BYTES = 32
 
-# Video formats accepted as-is (no transcoding). Only browser-playable containers:
-# MP4/MOV (H.264) and WebM (VP9/AV1). H.265/ProRes upload but won't play in-browser.
-_VIDEO_MIMES = {
-    "video/mp4": ".mp4",
-    "video/quicktime": ".mov",
-    "video/webm": ".webm",
-}
+# Human-readable list of accepted formats, for the "unsupported type" error.
+_ACCEPTED_LABEL = "JPEG, PNG, WebP, TIFF, PSD, camera RAW, MP4, MOV, WebM"
 
 # Max files a public visitor may send in one client-upload request.
 CLIENT_UPLOAD_MAX_FILES = 50
-
-_MAGIC: dict[str, bytes] = {
-    "image/jpeg": b"\xff\xd8\xff",
-    "image/png": b"\x89PNG",
-    "image/webp": b"RIFF",
-}
-
-
-def _check_magic(path: str, mime: str) -> bool:
-    with open(path, "rb") as f:
-        header = f.read(12)
-    if mime == "image/webp":
-        return header[:4] == b"RIFF" and header[8:12] == b"WEBP"
-    # MP4/MOV (ISO-BMFF) carry an 'ftyp' box at offset 4; WebM is EBML-framed.
-    if mime in ("video/mp4", "video/quicktime"):
-        return header[4:8] == b"ftyp"
-    if mime == "video/webm":
-        return header[:4] == b"\x1aE\xdf\xa3"
-    expected = _MAGIC.get(mime)
-    if not expected:
-        return True
-    return header[:len(expected)] == expected
 
 
 def _image_to_response(
@@ -246,6 +217,7 @@ def upload_images(
     moderation_status: str = "approved",
     max_image_bytes: int | None = None,
     max_total_bytes: int | None = None,
+    allow_video: bool = True,
 ) -> list[UploadResponse]:
     gallery = gallery_repo.get_by_id(db, gallery_id)
     if not gallery:
@@ -257,19 +229,35 @@ def upload_images(
     total_bytes = 0
 
     for file in files:
-        mime = file.content_type or ""
-        is_video = mime in _VIDEO_MIMES
-        if mime not in _ALLOWED_MIMES and not is_video:
+        # Detect the real format from the leading bytes — the browser content_type is unreliable
+        # (often empty/octet-stream) for TIFF/PSD/RAW. Peek the header, then rewind for the stream.
+        header = file.file.read(_HEADER_BYTES)
+        file.file.seek(0)
+        fmt = format_detect.detect_format(header, file.filename or "")
+        if fmt is None:
             raise CodedHTTPException(
                 status_code=status.HTTP_415_UNSUPPORTED_MEDIA_TYPE,
                 code="upload_unsupported_type",
-                detail=f"Unsupported file type: {mime}. Allowed: JPEG, PNG, WebP, MP4, MOV, WebM",
+                detail=f"Unsupported file type. Allowed: {_ACCEPTED_LABEL}",
+            )
+        if fmt.kind == "reject_psb":
+            raise CodedHTTPException(
+                status_code=status.HTTP_415_UNSUPPORTED_MEDIA_TYPE,
+                code="upload_psb_unsupported",
+                detail="Photoshop large-document files (.psb) are not supported. Save as .psd or .tif.",
+            )
+        is_video = fmt.kind == "video"
+        if is_video and not allow_video:
+            raise CodedHTTPException(
+                status_code=status.HTTP_415_UNSUPPORTED_MEDIA_TYPE,
+                code="client_upload_video",
+                detail="Video upload is not available for client uploads — images only",
             )
 
+        mime = fmt.mime
         # Videos are stored as-is (no transcoding) and carry a larger size cap.
-        ext = _VIDEO_MIMES[mime] if is_video else _ALLOWED_MIMES[mime]
         size_cap = settings.max_video_bytes if is_video else image_cap
-        stored_filename = f"{uuid.uuid4()}{ext}"
+        stored_filename = f"{uuid.uuid4()}{fmt.ext}"
 
         # Folder uploads send a relative path as the filename (e.g. "shoot/IMG_1.jpg").
         # Keep only the base name so exports, ZIPs and copy-filenames never leak the path.
@@ -295,12 +283,8 @@ def upload_images(
                         )
                     out.write(chunk)
             total_bytes += file_size
-            if not _check_magic(tmp_path, mime):
-                raise CodedHTTPException(
-                    status_code=status.HTTP_415_UNSUPPORTED_MEDIA_TYPE,
-                    code="upload_content_mismatch",
-                    detail="File content does not match declared type",
-                )
+            # No separate content/declared-type check: the format was derived from the bytes
+            # themselves (detect_format), so a spoofed extension can't smuggle a different type.
             with open(tmp_path, "rb") as src:
                 storage.save(relative_path, src)
         finally:
@@ -369,13 +353,6 @@ def client_upload_images(
             code="client_upload_too_many",
             detail=f"Too many files in one upload (max {CLIENT_UPLOAD_MAX_FILES})",
         )
-    if any((f.content_type or "") in _VIDEO_MIMES for f in files):
-        raise CodedHTTPException(
-            status_code=status.HTTP_415_UNSUPPORTED_MEDIA_TYPE,
-            code="client_upload_video",
-            detail="Video upload is not available for client uploads — images only",
-        )
-
     name = (uploader or "").strip()[:100] or "Guest"
     # Moderated galleries hold client uploads in the approval queue until the photographer reviews;
     # otherwise they're public the moment processing finishes (legacy behaviour).
@@ -386,6 +363,7 @@ def client_upload_images(
         moderation_status="pending" if pending else "approved",
         max_image_bytes=settings.client_upload_max_file_bytes,
         max_total_bytes=settings.client_upload_max_total_bytes,
+        allow_video=False,
     )
     if results:
         # Record the client contribution in the activity log (admin uploads go a different path

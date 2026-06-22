@@ -19,6 +19,7 @@ from app.config import settings
 from app.database import SessionLocal
 from app.ml import embedder
 from app.repositories import image_embedding_repo, image_repo, settings_repo
+from app.storage import format_detect
 
 logger = logging.getLogger(__name__)
 
@@ -38,11 +39,19 @@ def _active_config(db) -> tuple[str, bool] | None:
     return cfg.get("model", DEFAULT_MODEL), bool(cfg.get("index_originals", True))
 
 
-def _source_path(gallery_id: str, stored_filename: str, index_originals: bool) -> str:
+def _source_path(gallery_id: str, stored_filename: str, use_original: bool) -> str:
     # The sidecar resizes to model resolution regardless, so the medium rendition is the cheap
     # default (a few hundred KB vs. a multi-MB original) with negligible quality loss for CLIP.
-    variant = "original" if index_originals else "medium"
+    variant = "original" if use_original else "medium"
     return os.path.join(settings.upload_dir, gallery_id, variant, stored_filename)
+
+
+def _use_original(stored_filename: str, index_originals: bool) -> bool:
+    # Honor the setting only when the sidecar (plain Pillow) can actually read the original. Camera
+    # RAW and PSD can't be read from the original, so they're always indexed from the `medium` JPEG
+    # rendition — for RAW that rendition is the embedded camera preview, which is the best readable
+    # representation we have (no demosaic), so this is correct rather than a downgrade.
+    return index_originals and format_detect.ml_can_read_original(stored_filename)
 
 
 def embed_one(image_id: str) -> None:
@@ -62,9 +71,12 @@ def embed_one(image_id: str) -> None:
             image_repo.set_embedding_status(db, image_id, "skipped")
             return
 
-        path = _source_path(image.gallery_id, image.stored_filename, index_originals)
-        if not os.path.exists(path) and index_originals is False:
-            # Medium not generated yet (e.g. very fresh upload) — fall back to the original.
+        use_original = _use_original(image.stored_filename, index_originals)
+        path = _source_path(image.gallery_id, image.stored_filename, use_original)
+        if not use_original and not os.path.exists(path) and \
+                format_detect.ml_can_read_original(image.stored_filename):
+            # Medium not generated yet (e.g. very fresh upload) — fall back to the original, but only
+            # when the sidecar can read it (never for RAW/PSD, whose original is unreadable).
             path = _source_path(image.gallery_id, image.stored_filename, True)
 
         try:

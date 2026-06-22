@@ -12,8 +12,11 @@ import { useReviewerStore } from "@/store/reviewer";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useTranslations } from "next-intl";
+import { ACCEPTED_IMAGE_EXT_ATTR } from "@/hooks/useImageUpload";
 
-const ACCEPT = "image/jpeg,image/png,image/webp";
+// Images only on the public path (no video for client uploads); RAW/TIFF/PSD arrive with no
+// usable MIME, so accept by extension. The backend re-validates by magic and rejects video.
+const ACCEPT = ACCEPTED_IMAGE_EXT_ATTR;
 
 interface Props {
   shareToken: string;

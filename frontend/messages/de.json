@@ -987,7 +987,8 @@
   },
   "errors": {
     "upload_too_large": "Diese Datei ist zu groß für den Upload.",
-    "upload_unsupported_type": "Dieser Dateityp wird nicht unterstützt. Verwenden Sie JPEG, PNG oder WebP.",
+    "upload_unsupported_type": "Dieser Dateityp wird nicht unterstützt. Verwenden Sie JPEG, PNG, WebP, TIFF, PSD oder Kamera-RAW.",
+    "upload_psb_unsupported": "Photoshop-Großdokumente (.psb) werden noch nicht unterstützt. Bitte als .psd oder .tif speichern.",
     "upload_content_mismatch": "Diese Datei entspricht nicht dem angegebenen Bildtyp.",
     "client_upload_disabled": "Uploads sind für diese Galerie nicht mehr aktiviert.",
     "client_upload_too_many": "Zu viele Dateien auf einmal. Bitte laden Sie weniger Fotos hoch.",

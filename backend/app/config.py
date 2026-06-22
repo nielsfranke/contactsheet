@@ -56,7 +56,7 @@ class Settings(BaseSettings):
     # GIL during resize/encode, so threads give real parallelism for batch uploads. Kept small so a
     # big drop can't saturate every core or pile up SQLite writers.
     image_workers: int = 3
-    max_upload_bytes: int = 209_715_200  # 200 MB
+    max_upload_bytes: int = 314_572_800  # 300 MB — headroom for large TIFF/PSD and RAW originals
     # Reject images whose pixel area exceeds this before decoding (decompression-bomb / giant-
     # dimension guard). Checked against the header dimensions, so a malicious file is refused
     # without ever allocating its full bitmap. 100 MP comfortably covers real cameras.
