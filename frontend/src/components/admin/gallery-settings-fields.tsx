@@ -154,6 +154,7 @@ export interface LookValues {
   preview_corners: CornersType;
   bg_brightness: BrightnessType;
   show_filename: boolean;
+  show_filename_lightbox: boolean;
   show_exif: boolean;
   show_iptc: boolean;
 }
@@ -224,6 +225,12 @@ export function LookFields({
         hint={t("filenameHint")}
         checked={value.show_filename}
         onChange={(v) => onChange({ show_filename: v })}
+      />
+      <Toggle
+        label={t("filenameLightbox")}
+        hint={t("filenameLightboxHint")}
+        checked={value.show_filename_lightbox}
+        onChange={(v) => onChange({ show_filename_lightbox: v })}
       />
       <Toggle
         label={t("exif")}

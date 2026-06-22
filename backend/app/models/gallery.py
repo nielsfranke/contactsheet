@@ -73,6 +73,7 @@ class Gallery(Base):
     # Require photographer approval before client uploads become public (approval queue).
     client_upload_moderation: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     show_filename: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    show_filename_lightbox: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     show_exif: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     show_iptc: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
 

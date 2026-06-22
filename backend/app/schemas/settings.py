@@ -47,6 +47,7 @@ class GalleryPreset(BaseModel):
     annotations_enabled: bool | None = None
     sets_enabled: bool | None = None
     show_filename: bool | None = None
+    show_filename_lightbox: bool | None = None
     show_exif: bool | None = None
     show_iptc: bool | None = None
 

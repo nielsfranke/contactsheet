@@ -68,6 +68,7 @@ export interface GallerySettings {
   client_upload_enabled: boolean;
   client_upload_moderation: boolean;
   show_filename: boolean;
+  show_filename_lightbox: boolean;
   show_exif: boolean;
   show_iptc: boolean;
 }
@@ -229,6 +230,7 @@ export interface GalleryPreset {
   annotations_enabled?: boolean;
   sets_enabled?: boolean;
   show_filename?: boolean;
+  show_filename_lightbox?: boolean;
   show_exif?: boolean;
   show_iptc?: boolean;
 }

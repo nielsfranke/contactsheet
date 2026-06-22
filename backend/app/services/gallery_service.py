@@ -53,7 +53,7 @@ _PASSTHROUGH_UPDATE_FIELDS = (
     "preview_corners", "bg_brightness",
     "color_flags_enabled", "likes_enabled", "comments_enabled", "annotations_enabled",
     "sets_enabled", "client_upload_enabled", "client_upload_moderation",
-    "show_filename", "show_exif", "show_iptc",
+    "show_filename", "show_filename_lightbox", "show_exif", "show_iptc",
     "hide_parent_nav",
 )
 
@@ -72,7 +72,7 @@ _PRESET_FIELDS = frozenset({
     "preview_corners", "bg_brightness", "bg_dimmed_color",
     "downloads_enabled", "enable_team_voting", "color_flags_enabled",
     "likes_enabled", "comments_enabled", "annotations_enabled", "sets_enabled",
-    "show_filename", "show_exif", "show_iptc",
+    "show_filename", "show_filename_lightbox", "show_exif", "show_iptc",
 })
 
 

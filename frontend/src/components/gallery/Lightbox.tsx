@@ -68,6 +68,8 @@ interface Props {
   /** Instance/gallery high-res preview mode — drives the srcset width descriptors. */
   highRes?: boolean;
   features?: CollabFeatures;
+  /** Show the original filename in the footer. Admin defaults on; public is gallery-controlled. */
+  showFilename?: boolean;
   showExif?: boolean;
   showIptc?: boolean;
   /** When set, comments are read/written through the admin-authenticated endpoint. */
@@ -93,6 +95,7 @@ export function Lightbox({
   watermarkEnabled = false,
   highRes = false,
   features = DEFAULT_FEATURES,
+  showFilename = true,
   showExif: exifEnabled = true,
   showIptc: iptcEnabled = false,
   adminGalleryId,
@@ -1061,8 +1064,9 @@ export function Lightbox({
         );
       })()}
 
-      {/* Filename / annotate hint — hidden in immersive mode */}
-      {!immersive && (
+      {/* Filename / annotate hint — hidden in immersive mode. The annotate hint always shows while
+          annotating; the filename row obeys the per-gallery `showFilename` toggle. */}
+      {!immersive && (annotating || showFilename) && (
         <div className="px-4 py-2 flex-shrink-0">
           {annotating ? (
             <p className={`text-xs text-center truncate ${strong}`}>{ta("hint")}</p>

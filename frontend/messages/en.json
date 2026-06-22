@@ -800,6 +800,8 @@
       "showFileInfo": "Show file information",
       "filename": "Filename",
       "filenameHint": "Caption each thumbnail with its filename",
+      "filenameLightbox": "Filename in lightbox",
+      "filenameLightboxHint": "Show the filename below the enlarged image",
       "exif": "EXIF capture data",
       "exifHint": "Camera metadata in the lightbox",
       "iptc": "IPTC metadata",

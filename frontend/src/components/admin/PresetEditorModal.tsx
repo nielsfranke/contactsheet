@@ -38,6 +38,7 @@ const BUILTIN: Required<Omit<GalleryPreset, "bg_dimmed_color">> = {
   annotations_enabled: false,
   sets_enabled: false,
   show_filename: false,
+  show_filename_lightbox: false,
   show_exif: false,
   show_iptc: false,
 };
@@ -65,6 +66,7 @@ export function PresetEditorModal({ open, onOpenChange, mode, preset }: Props) {
         preview_corners: merged.preview_corners,
         bg_brightness: merged.bg_brightness,
         show_filename: merged.show_filename,
+        show_filename_lightbox: merged.show_filename_lightbox,
         show_exif: merged.show_exif,
         show_iptc: merged.show_iptc,
       } satisfies LookValues,

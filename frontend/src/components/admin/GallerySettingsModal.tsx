@@ -82,6 +82,7 @@ export function GallerySettingsModal({
     preview_corners: gallery.preview_corners,
     bg_brightness: gallery.bg_brightness,
     show_filename: gallery.show_filename,
+    show_filename_lightbox: gallery.show_filename_lightbox,
     show_exif: gallery.show_exif,
     show_iptc: gallery.show_iptc,
   });

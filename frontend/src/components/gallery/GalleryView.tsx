@@ -238,6 +238,7 @@ export function GalleryView({ gallery, shareToken, galleryToken }: Props) {
           watermarkEnabled={watermarkEnabled}
           highRes={gallery.high_res_previews}
           features={features}
+          showFilename={gallery.show_filename_lightbox}
           showExif={gallery.show_exif}
           showIptc={gallery.show_iptc}
           protectImages
