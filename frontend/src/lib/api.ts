@@ -15,7 +15,10 @@ import type {
   GalleryUpdate,
   ImageResponse,
   ImageUpdate,
+  GlobalSearchResult,
+  PhotoPage,
   PublicGalleryResult,
+  SemanticSearchStatus,
   UploadResponse,
   Vote,
   VoteSummary,
@@ -120,6 +123,31 @@ export const api = {
     me: () => request<{ username: string }>("/api/auth/me"),
   },
 
+  // Instance-wide semantic photo search (admin). Hits span every gallery, each tagged with its
+  // gallery name + share token. 503 when the feature is off / the ML sidecar is unreachable.
+  search: {
+    photos: (q: string, threshold?: number) => {
+      const params = new URLSearchParams({ q });
+      if (threshold !== undefined) params.set("threshold", String(threshold));
+      return request<GlobalSearchResult[]>(`/api/search?${params.toString()}`);
+    },
+  },
+
+  // Cross-gallery "All Photos" browser — every photo, sorted + paginated (load-more). Optional `q`
+  // filters by filename (the fallback search when semantic content search is off).
+  photos: {
+    list: (params: { sort: "date" | "name"; dir: "asc" | "desc"; limit: number; offset: number; q?: string }) => {
+      const qs = new URLSearchParams({
+        sort: params.sort,
+        dir: params.dir,
+        limit: String(params.limit),
+        offset: String(params.offset),
+      });
+      if (params.q) qs.set("q", params.q);
+      return request<PhotoPage>(`/api/photos?${qs.toString()}`);
+    },
+  },
+
   galleries: {
     list: () => request<GalleryResponse[]>("/api/galleries"),
     get: (id: string) => request<GalleryResponse>(`/api/galleries/${id}`),
@@ -141,6 +169,13 @@ export const api = {
         body: JSON.stringify({ cover_image_id: imageId }),
       }),
     images: (id: string) => request<ImageResponse[]>(`/api/galleries/${id}/images`),
+    // Semantic content search within this gallery + its sub-galleries. `threshold` (0..1)
+    // overrides the configured accuracy cutoff for this query. 503 = feature unavailable.
+    search: (id: string, q: string, threshold?: number) => {
+      const params = new URLSearchParams({ q });
+      if (threshold !== undefined) params.set("threshold", String(threshold));
+      return request<ImageResponse[]>(`/api/galleries/${id}/search?${params.toString()}`);
+    },
     reorder: (id: string, imageIds: string[]) =>
       request<void>(`/api/galleries/${id}/reorder`, {
         method: "POST",
@@ -304,6 +339,14 @@ export const api = {
       });
     },
     deleteLogo: () => request<void>("/api/admin/settings/logo", { method: "DELETE" }),
+    // Semantic-search index progress + ML sidecar health (for the settings panel).
+    semanticStatus: () =>
+      request<SemanticSearchStatus>("/api/admin/settings/semantic-search/status"),
+    // Re-queue every image that still needs indexing (manual nudge after errors).
+    reindexSemantic: () =>
+      request<SemanticSearchStatus>("/api/admin/settings/semantic-search/reindex", {
+        method: "POST",
+      }),
     testNotification: (data: {
       channel_id?: string;
       type?: string;

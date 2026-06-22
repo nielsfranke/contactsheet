@@ -161,6 +161,8 @@ Migrations live in `backend/alembic/versions/`. Always create a new file — nev
 0033 — gallery sort defaults: app_settings.gallery_sort / gallery_sort_dir
 0034 — per-reviewer likes: image_likes table (unique image_id+reviewer_name)
 0035 — configurable source URL: app_settings.source_url (AGPL §13)
+0036 — separate lightbox filename toggle: galleries.show_filename_lightbox
+0037 — semantic search: image_embeddings table + images.embedding_status + app_settings.semantic_search
 ```
 
 ## Feature invariants
@@ -235,3 +237,10 @@ Key non-obvious constraints — full details in `docs/architecture/`.
 
 ### PWA icons
 - Icons are rendered by the backend (`app/services/branding_icon.py`) from branding: logo → monogram → default. Served under `/api/branding/` (not the `/branding/` static mount). ETag = branding signature, so a branding change auto-invalidates browsers.
+
+### Semantic search (optional)
+- **Embeddings come from a separate `contactsheet-ml` sidecar** (`ml/`), not the backend — the backend has no ML runtime. It's an optional Docker Compose profile (`--profile ml`); the default deploy is unchanged. The backend reaches it via `ML_SERVICE_URL` and calls `app/ml/embedder.py`; images are passed **by path** over the shared `/data` volume, not by bytes.
+- **Off by default, twice:** `app_settings.semantic_search.enabled` is false until an admin opts in, and the sidecar is absent unless the operator runs the profile. `embedder.is_configured()` gates everything.
+- **Vectors live in SQLite** (`image_embeddings`, one row per image per `model`), L2-normalized float32 BLOBs; ranking is brute-force NumPy cosine in `image_embedding_repo.search`, scoped to a gallery subtree via a join — no native vector extension.
+- **Embeddings never bypass access control:** search returns image IDs; hydration goes through the normal `image_service` serializer, so soft-delete/moderation/watermark rules still apply. Soft-deleted images are excluded by the search join.
+- **Indexing is background + bounded:** queued on a small pool (`embed_task`, `embed_workers`) from the end of `process_image` (renditions guaranteed to exist) so it never blocks uploads. Videos are `skipped`. Enabling the feature or changing the model (re)queues the library via `semantic_search_service.on_settings_change`.

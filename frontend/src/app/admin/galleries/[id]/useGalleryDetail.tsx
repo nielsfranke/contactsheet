@@ -86,6 +86,10 @@ export function useGalleryDetail(id: string) {
 
   const sortSeededRef = useRef(false);
 
+  // Semantic content search (opt-in feature). When a query is active, the photo grid shows
+  // server-ranked results instead of the client-side filtered/sorted list.
+  const [searchQuery, setSearchQuery] = useState("");
+
   const { data: gallery, isLoading } = useQuery({
     queryKey: ["gallery", id],
     queryFn: () => api.galleries.get(id),
@@ -149,6 +153,22 @@ export function useGalleryDetail(id: string) {
   });
 
   const upload = useImageUpload(id, refetchImages);
+
+  // Semantic search: only available when the instance has the feature on. The query is debounced
+  // implicitly by react-query's keying — each settled term is fetched once and cached.
+  const searchEnabled = adminSettings?.semantic_search?.enabled ?? false;
+  const searchTerm = searchQuery.trim();
+  const searchActive = searchEnabled && searchTerm.length > 0;
+  const {
+    data: searchResults,
+    isFetching: searchLoading,
+    isError: searchError,
+  } = useQuery({
+    queryKey: ["gallery-search", id, searchTerm],
+    queryFn: () => api.galleries.search(id, searchTerm),
+    enabled: !!id && searchActive,
+    placeholderData: (prev) => prev,
+  });
 
   // Live updates: refresh photos/comments/votes/collections as clients act in this gallery.
   useGalleryRealtime({ kind: "admin", adminGalleryId: id });
@@ -346,6 +366,9 @@ export function useGalleryDetail(id: string) {
   const captureSortAvailable = useMemo(() => images.some(hasCaptureDate), [images]);
 
   const filteredSorted = useMemo(() => {
+    // Search mode wins: show the server's similarity ranking as-is (no client filter/sort/group).
+    if (searchActive) return searchResults ?? [];
+
     let list = images;
     const q = arrange.filterName.trim().toLowerCase();
     if (q) list = list.filter((img) => img.original_filename.toLowerCase().includes(q));
@@ -367,7 +390,7 @@ export function useGalleryDetail(id: string) {
       }
     });
     return sorted;
-  }, [images, arrange, activeCollection, collections, captureSortAvailable]);
+  }, [images, arrange, activeCollection, collections, captureSortAvailable, searchActive, searchResults]);
 
   const visibleIds = useMemo(() => filteredSorted.map((img) => img.id), [filteredSorted]);
   const selection = useImageSelection(visibleIds);
@@ -387,6 +410,8 @@ export function useGalleryDetail(id: string) {
     setDeriveState({ imageIds: [...selection.selected], defaultName: "", collectionId: null, nonce: Date.now() });
 
   const groups: ImageGroup[] | undefined = useMemo(() => {
+    // No grouping while searching — ranked results render as one flat, ordered list.
+    if (searchActive) return undefined;
     if (arrange.groupKey !== "flag") return undefined;
     return FLAG_GROUP_ORDER
       .map((value) => ({
@@ -395,7 +420,7 @@ export function useGalleryDetail(id: string) {
         images: filteredSorted.filter((img: ImageResponse) => img.color_flag === value),
       }))
       .filter((g) => g.images.length > 0);
-  }, [filteredSorted, arrange.groupKey, tf]);
+  }, [filteredSorted, arrange.groupKey, tf, searchActive]);
 
   // Admin photo-grid look: mirror the gallery's client settings (WYSIWYG), unless the instance is
   // set to a custom admin-view override, in which case use that (per-field built-in fallback).
@@ -579,6 +604,13 @@ export function useGalleryDetail(id: string) {
     // arrange
     arrange,
     setArrange,
+    // semantic search
+    searchEnabled,
+    searchQuery,
+    setSearchQuery,
+    searchActive,
+    searchLoading,
+    searchError,
     // dialog/UI state
     settingsOpen,
     setSettingsOpen,

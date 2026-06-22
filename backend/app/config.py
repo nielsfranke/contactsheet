@@ -72,5 +72,17 @@ class Settings(BaseSettings):
     # while comfortably covering phone/camera photos.
     client_upload_max_pixels: int = 50_000_000
 
+    # Semantic search (optional). Inference runs in a separate `contactsheet-ml` sidecar so the
+    # main backend image stays lean and the feature is opt-in at deploy time. The backend never
+    # loads a model itself — it POSTs image paths / query text to this URL and stores the returned
+    # vectors. Empty/None = no sidecar configured (search stays unavailable even if toggled on).
+    ml_service_url: str | None = None
+    # Per-request timeout (seconds) for sidecar calls. Image encodes are the slow side; a generous
+    # ceiling keeps a busy sidecar from erroring spuriously without hanging the worker forever.
+    ml_request_timeout: int = 60
+    # Worker threads that push images to the sidecar for indexing. Kept low so backfill/indexing
+    # never starves HTTP or the image-rendering pool on a modest CPU box.
+    embed_workers: int = 2
+
 
 settings = Settings()

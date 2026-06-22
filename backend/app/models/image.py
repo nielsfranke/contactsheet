@@ -55,6 +55,10 @@ class Image(Base):
     processing_status: Mapped[str] = mapped_column(String(10), nullable=False, default="pending")
     # values: "pending" | "done" | "error"
 
+    # Semantic-search index status (only acted on when the feature is enabled):
+    # "pending" | "indexed" | "skipped" (video / unencodable) | "error".
+    embedding_status: Mapped[str] = mapped_column(String(10), nullable=False, default="pending")
+
     deleted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True, index=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=_now)
 

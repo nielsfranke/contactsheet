@@ -9,7 +9,7 @@ import type { ColorFlag } from "@/lib/types";
 import { Input } from "@/components/ui/input";
 import { ToolbarBand } from "@/components/gallery/ToolbarBand";
 import { InputClearButton } from "@/components/chrome/InputClearButton";
-import { Search, Ban, MessageCircle, ArrowDownUp, X, SlidersHorizontal } from "lucide-react";
+import { Search, Ban, MessageCircle, ArrowDownUp, X, SlidersHorizontal, ScanSearch, Loader2 } from "lucide-react";
 
 export type ToolbarSortKey = "manual" | "filename" | "date" | "captured";
 export type ToolbarGroupKey = "none" | "flag";
@@ -21,6 +21,16 @@ export interface ToolbarArrange {
   sortKey: ToolbarSortKey;
   sortAsc: boolean;
   groupKey: ToolbarGroupKey;
+}
+
+/** Optional semantic content-search (admin only). When provided, it becomes the toolbar's primary
+ *  field and the filename filter is demoted into the Filter sheet — so "search" means search-by-
+ *  content (the photographer's primary intent) and the two never share one ambiguous box. */
+export interface ToolbarContentSearch {
+  query: string;
+  setQuery: (next: string) => void;
+  loading: boolean;
+  placeholder: string;
 }
 
 /** Which collaboration controls to surface. The admin shows them all; the client gates them on
@@ -54,6 +64,9 @@ interface Props {
   /** Positioning + padding for the bar; differs by host layout (admin bleeds into page padding,
    *  the client sits inside its own sticky container). Colors/geometry live here. */
   className?: string;
+  /** Admin-only semantic content search. When set, takes the primary slot and pushes the filename
+   *  filter into the Filter sheet. Absent on the public gallery — that toolbar is unchanged. */
+  search?: ToolbarContentSearch;
 }
 
 /**
@@ -69,18 +82,25 @@ interface Props {
  */
 export function GalleryToolbar({
   arrange, setArrange, shownCount, totalCount,
-  features = { colorFlags: true, comments: true }, captureSortAvailable = true, className,
+  features = { colorFlags: true, comments: true }, captureSortAvailable = true, className, search,
 }: Props) {
   const t = useTranslations("gallery.toolbar");
   const tf = useTranslations("gallery.flags");
   const tc = useTranslations("common");
   const [sheetOpen, setSheetOpen] = useState(false);
 
+  // Content-search mode: the input is the primary field; while a query is active the filter/sort
+  // controls step aside (results are a similarity ranking, not a client-side filter/sort).
+  const searchMode = !!search;
+  const searching = searchMode && search!.query.trim() !== "";
+
   const filterActive =
     arrange.filterName.trim() !== "" || arrange.flagFilters.size > 0 || arrange.commentsOnly;
-  // Drives the trigger badge — only the controls that now live in the sheet count (the filename
-  // search keeps its own inline clear button).
-  const sheetFilterCount = arrange.flagFilters.size + (arrange.commentsOnly ? 1 : 0);
+  // Drives the trigger badge — the controls that live in the sheet. In content-search mode the
+  // filename filter lives there too, so it counts; otherwise it keeps its own inline clear button.
+  const sheetFilterCount =
+    arrange.flagFilters.size + (arrange.commentsOnly ? 1 : 0) +
+    (searchMode && arrange.filterName.trim() !== "" ? 1 : 0);
 
   function toggleFlag(f: ColorFlag) {
     const next = new Set(arrange.flagFilters);
@@ -156,42 +176,69 @@ export function GalleryToolbar({
   return (
     <>
     <ToolbarBand className={className}>
-      {/* Filter by filename. On a phone it flexes to share the band's single row with the Filter
-          trigger; at sm+ it returns to a fixed width sized for the longest placeholder. Right
-          padding is only reserved when the clear button is actually shown. */}
-      <div className="relative flex-1 min-w-0 sm:flex-none sm:w-56">
-        <Search size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
-        <Input
-          value={arrange.filterName}
-          onChange={(e) => setArrange({ ...arrange, filterName: e.target.value })}
-          placeholder={t("filterPlaceholder")}
-          className={`pl-8 h-8 text-sm w-full ${arrange.filterName ? "pr-8" : "pr-3"}`}
-        />
-        {arrange.filterName && (
-          <InputClearButton onClick={() => setArrange({ ...arrange, filterName: "" })} label={tc("clear")} />
-        )}
-      </div>
+      {searchMode ? (
+        /* Content search is the primary field. It owns the row; the filename filter moves into the
+           Filter sheet so the two distinct jobs never share one ambiguous box. */
+        <div className="relative flex-1 min-w-0">
+          <ScanSearch size={15} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
+          <Input
+            value={search!.query}
+            onChange={(e) => search!.setQuery(e.target.value)}
+            placeholder={search!.placeholder}
+            aria-label={search!.placeholder}
+            className={`pl-8 h-8 text-sm w-full ${search!.query ? "pr-8" : "pr-3"}`}
+          />
+          {search!.query && (
+            search!.loading ? (
+              <Loader2 size={14} className="absolute right-2.5 top-1/2 -translate-y-1/2 animate-spin text-muted-foreground" />
+            ) : (
+              <InputClearButton onClick={() => search!.setQuery("")} label={tc("clear")} />
+            )
+          )}
+        </div>
+      ) : (
+        /* Filter by filename — the primary field on the public gallery (and admin without content
+           search). On a phone it flexes to share the band's row with the Filter trigger; at sm+ it
+           returns to a fixed width. Right padding is only reserved when the clear button shows. */
+        <div className="relative flex-1 min-w-0 sm:flex-none sm:w-56">
+          <Search size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
+          <Input
+            value={arrange.filterName}
+            onChange={(e) => setArrange({ ...arrange, filterName: e.target.value })}
+            placeholder={t("filterPlaceholder")}
+            className={`pl-8 h-8 text-sm w-full ${arrange.filterName ? "pr-8" : "pr-3"}`}
+          />
+          {arrange.filterName && (
+            <InputClearButton onClick={() => setArrange({ ...arrange, filterName: "" })} label={tc("clear")} />
+          )}
+        </div>
+      )}
 
-      {/* Mobile-only trigger — opens the bottom sheet with the flag/comment/sort/group controls. */}
-      <button
-        onClick={() => setSheetOpen(true)}
-        aria-haspopup="dialog"
-        aria-expanded={sheetOpen}
-        className="sm:hidden inline-flex items-center gap-1.5 h-8 shrink-0 rounded-lg border border-input bg-background px-2.5 text-sm text-foreground transition-colors hover:bg-accent outline-none focus-visible:ring-2 focus-visible:ring-ring"
-      >
-        <SlidersHorizontal size={14} />
-        {t("filterSort")}
-        {sheetFilterCount > 0 && (
-          <span className="ml-0.5 inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-primary px-1 text-[10px] font-semibold leading-none text-primary-foreground tabular-nums">
-            {sheetFilterCount}
-          </span>
-        )}
-      </button>
+      {/* Filter & sort trigger → bottom sheet. Mobile-only normally; in content-search mode it's the
+          home for every filter/sort control (filename included) and shows at all sizes — but steps
+          aside while a search query is active, since results are a ranking, not a filtered list. */}
+      {!searching && (
+        <button
+          onClick={() => setSheetOpen(true)}
+          aria-haspopup="dialog"
+          aria-expanded={sheetOpen}
+          className={`${searchMode ? "" : "sm:hidden "}inline-flex items-center gap-1.5 h-8 shrink-0 rounded-lg border border-input bg-background px-2.5 text-sm text-foreground transition-colors hover:bg-accent outline-none focus-visible:ring-2 focus-visible:ring-ring ${searchMode ? "ml-auto" : ""}`}
+        >
+          <SlidersHorizontal size={14} />
+          {t("filterSort")}
+          {sheetFilterCount > 0 && (
+            <span className="ml-0.5 inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-primary px-1 text-[10px] font-semibold leading-none text-primary-foreground tabular-nums">
+              {sheetFilterCount}
+            </span>
+          )}
+        </button>
+      )}
 
       {/* ── Desktop inline controls (sm+) ───────────────────────────────────────────────────── */}
 
-      {/* Flag chips + comments */}
-      {(features.colorFlags || features.comments) && (
+      {/* Flag chips + comments — inline only when NOT in content-search mode (else they live in the
+          sheet, behind the Filter trigger). */}
+      {!searchMode && (features.colorFlags || features.comments) && (
         <div className="hidden sm:flex items-center gap-1.5">
           {features.colorFlags && flagChips("w-5 h-5")}
           {features.comments && (
@@ -210,15 +257,18 @@ export function GalleryToolbar({
         </div>
       )}
 
-      {/* Sort + group — pushed right on wide screens. */}
-      <div className="hidden sm:flex flex-wrap items-center gap-2 sm:ml-auto">
-        {sortSelect(selectCls)}
-        {sortDirButton("h-8 w-8")}
-        {features.colorFlags && groupSelect(selectCls)}
-      </div>
+      {/* Sort + group — pushed right on wide screens. Hidden while actively searching. In content-
+          search mode group moves to the sheet, keeping only Sort inline. */}
+      {!searching && (
+        <div className={`hidden sm:flex flex-wrap items-center gap-2 ${searchMode ? "" : "sm:ml-auto"}`}>
+          {sortSelect(selectCls)}
+          {sortDirButton("h-8 w-8")}
+          {!searchMode && features.colorFlags && groupSelect(selectCls)}
+        </div>
+      )}
 
-      {/* Result count + clear (only while filtering) */}
-      {filterActive && (
+      {/* Result count + clear (only while filtering, and not while a content search is active) */}
+      {filterActive && !searching && (
         <div className="hidden sm:flex items-center gap-1.5 text-xs text-muted-foreground">
           <span className="tabular-nums">{t("resultCount", { shown: shownCount, total: totalCount })}</span>
           <button
@@ -238,7 +288,7 @@ export function GalleryToolbar({
         and pin the sheet to the 1-row band). It still sits inside `.gallery-scope`, so the public
         gallery tone applies. */}
     {sheetOpen && (
-        <div className="sm:hidden">
+        <div className={searchMode ? "" : "sm:hidden"}>
           <div
             className="fixed inset-0 z-40 bg-black/50"
             onClick={() => setSheetOpen(false)}
@@ -260,6 +310,26 @@ export function GalleryToolbar({
                 <X size={18} />
               </button>
             </div>
+
+            {/* Filename filter — only here in content-search mode (the band's primary slot is taken
+                by content search). */}
+            {searchMode && (
+              <div className="space-y-2">
+                <p className="text-xs font-medium text-muted-foreground">{t("filenameLabel")}</p>
+                <div className="relative">
+                  <Search size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
+                  <Input
+                    value={arrange.filterName}
+                    onChange={(e) => setArrange({ ...arrange, filterName: e.target.value })}
+                    placeholder={t("filterPlaceholder")}
+                    className={`pl-8 h-11 text-sm w-full ${arrange.filterName ? "pr-8" : "pr-3"}`}
+                  />
+                  {arrange.filterName && (
+                    <InputClearButton onClick={() => setArrange({ ...arrange, filterName: "" })} label={tc("clear")} />
+                  )}
+                </div>
+              </div>
+            )}
 
             {features.colorFlags && (
               <div className="space-y-2">

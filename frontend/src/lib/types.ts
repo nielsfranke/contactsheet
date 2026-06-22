@@ -345,8 +345,46 @@ export interface AppSettings {
   footer_enabled: boolean;
   footer: FooterSettings | null;
   notifications: NotificationSettings | null;
+  semantic_search: SemanticSearchSettings | null;
   activity_ip_logging: boolean;
   activity_ip_retention_days: number;
+}
+
+// Semantic content search config (global). Off by default; the ML sidecar only runs when enabled.
+export interface SemanticSearchSettings {
+  enabled: boolean;
+  model: string;
+  default_threshold: number;
+  index_originals: boolean;
+}
+
+// A hit from instance-wide photo search/browse — an image plus the gallery it lives in (for the
+// badge + deep-link from the overview).
+export interface GlobalSearchResult extends ImageResponse {
+  gallery_name: string;
+  gallery_share_token: string;
+}
+
+// One page of the cross-gallery "All Photos" browser.
+export interface PhotoPage {
+  items: GlobalSearchResult[];
+  total: number;
+  offset: number;
+  limit: number;
+}
+
+// Index progress + ML sidecar health, surfaced in the settings panel.
+export interface SemanticSearchStatus {
+  enabled: boolean;
+  configured: boolean;
+  model: string;
+  default_threshold: number;
+  sidecar: { status: string; model: string; ready: boolean } | null;
+  indexed: number;
+  pending: number;
+  error: number;
+  skipped: number;
+  total: number;
 }
 
 export interface AppSettingsUpdate {
@@ -378,6 +416,7 @@ export interface AppSettingsUpdate {
   footer_enabled?: boolean;
   footer?: FooterSettings | null;
   notifications?: NotificationSettings | null;
+  semantic_search?: SemanticSearchSettings | null;
   activity_ip_logging?: boolean;
   activity_ip_retention_days?: number;
 }

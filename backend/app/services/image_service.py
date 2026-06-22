@@ -16,7 +16,7 @@ from app.models.gallery import Gallery
 from app.models.image import Image
 from app.realtime import publish as realtime_publish
 from app.repositories import activity_repo, comment_repo, gallery_repo, image_repo, like_repo, vote_repo
-from app.schemas.image import ImageResponse, ImageUpdate, UploadResponse
+from app.schemas.image import GlobalSearchResult, ImageResponse, ImageUpdate, PhotoPage, UploadResponse
 from app.services import notification_service
 from app.storage.base import StorageProvider
 from app.tasks.image_processing import submit_image_processing
@@ -158,6 +158,85 @@ def list_images(
     ]
 
 
+def search_images(
+    db: Session,
+    ranked: list[tuple[str, float]],
+    storage: StorageProvider,
+) -> list[ImageResponse]:
+    """Serialize semantic-search hits (admin view), preserving the similarity ranking. `ranked` is
+    a list of (image_id, score) pairs; missing/soft-deleted ids are dropped."""
+    if not ranked:
+        return []
+    image_ids = [iid for iid, _ in ranked]
+    images = image_repo.get_many(db, image_ids)
+    counts = comment_repo.counts_for_images(db, image_ids)
+    anno_counts = comment_repo.anchored_counts_for_images(db, image_ids)
+    out: list[ImageResponse] = []
+    for iid, _score in ranked:
+        img = images.get(iid)
+        if img is None:
+            continue
+        out.append(
+            _image_to_response(
+                img, storage, True, counts.get(iid, 0), anno_counts.get(iid, 0)
+            )
+        )
+    return out
+
+
+def _with_gallery_context(
+    db: Session, responses: list[ImageResponse]
+) -> list[GlobalSearchResult]:
+    """Tag each serialized image with its gallery's name + share token (for the overview's badge +
+    deep-link). One batched gallery fetch, order preserved."""
+    galleries = gallery_repo.get_by_ids(db, [r.gallery_id for r in responses])
+    out: list[GlobalSearchResult] = []
+    for r in responses:
+        g = galleries.get(r.gallery_id)
+        out.append(
+            GlobalSearchResult(
+                **r.model_dump(),
+                gallery_name=g.name if g else "",
+                gallery_share_token=g.share_token if g else "",
+            )
+        )
+    return out
+
+
+def global_search_images(
+    db: Session,
+    ranked: list[tuple[str, float]],
+    storage: StorageProvider,
+) -> list[GlobalSearchResult]:
+    """Instance-wide semantic search hits, each tagged with its gallery context."""
+    return _with_gallery_context(db, search_images(db, ranked, storage))
+
+
+def list_all_photos(
+    db: Session,
+    storage: StorageProvider,
+    sort: str,
+    direction: str,
+    limit: int,
+    offset: int,
+    name_filter: str | None = None,
+) -> PhotoPage:
+    """A page of the cross-gallery "All Photos" browser — every photo, sorted by date/name, each
+    tagged with its gallery. `name_filter` narrows by filename (the fallback search when semantic
+    search is off); semantic search uses a separate path."""
+    items, total = image_repo.list_all(db, sort, direction, limit, offset, name_filter=name_filter)
+    ids = [img.id for img in items]
+    counts = comment_repo.counts_for_images(db, ids)
+    anno_counts = comment_repo.anchored_counts_for_images(db, ids)
+    responses = [
+        _image_to_response(img, storage, True, counts.get(img.id, 0), anno_counts.get(img.id, 0))
+        for img in items
+    ]
+    return PhotoPage(
+        items=_with_gallery_context(db, responses), total=total, offset=offset, limit=limit
+    )
+
+
 def upload_images(
     db: Session,
     gallery_id: str,
@@ -242,6 +321,9 @@ def upload_images(
             mime_type=mime,
             sort_order=existing_count + len(results),
             processing_status="done" if is_video else "pending",
+            # Videos are never embedded; mark them skipped up front so the index status is accurate
+            # without waiting for a backfill pass. Images are indexed after their renditions exist.
+            embedding_status="skipped" if is_video else "pending",
             is_video=is_video,
             uploaded_by=uploaded_by,
             moderation_status=moderation_status,

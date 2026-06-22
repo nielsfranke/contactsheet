@@ -23,7 +23,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { LogOut, Settings, ChevronLeft, SlidersHorizontal, Palette, Images, LayoutGrid, PanelBottom, Menu, Bell, KeyRound } from "lucide-react";
+import { LogOut, Settings, ChevronLeft, SlidersHorizontal, Palette, Images, LayoutGrid, PanelBottom, Menu, Bell, KeyRound, ScanSearch } from "lucide-react";
 import Link from "next/link";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -48,6 +48,7 @@ const SETTINGS_NAV = [
     labelKey: "workspaceGroup",
     items: [
       { href: "/admin/settings/workspace", labelKey: "workspace", icon: LayoutGrid },
+      { href: "/admin/settings/search", labelKey: "search", icon: ScanSearch },
       { href: "/admin/settings/account", labelKey: "account", icon: KeyRound },
       { href: "/admin/settings/notifications", labelKey: "notifications", icon: Bell },
       { href: "/admin/settings/general", labelKey: "general", icon: SlidersHorizontal },

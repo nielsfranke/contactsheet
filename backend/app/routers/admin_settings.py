@@ -62,6 +62,7 @@ def _to_response(s) -> AppSettingsResponse:
         footer_enabled=s.footer_enabled,
         footer=s.footer,
         notifications=mask_settings(s.notifications),
+        semantic_search=s.semantic_search,
         activity_ip_logging=s.activity_ip_logging,
         activity_ip_retention_days=s.activity_ip_retention_days,
     )
@@ -114,6 +115,11 @@ def update_settings(
         else:
             stored = settings_repo.get(db).notifications
             updates["notifications"] = merge_incoming(stored, body.notifications.model_dump())
+    # Semantic search: object replaces the whole config; explicit null clears it. Enabling it or
+    # changing the model (re)queues the library for indexing — see semantic_search_service.
+    semantic_before = settings_repo.get(db).semantic_search
+    if "semantic_search" in body.model_fields_set:
+        updates["semantic_search"] = body.semantic_search.model_dump() if body.semantic_search else None
     # Admin-only view + footer scalars.
     for field in ("admin_grid_mode", "overview_size", "overview_shape", "overview_spacing", "overview_corners", "overview_sort", "overview_sort_dir", "gallery_sort", "gallery_sort_dir", "footer_enabled", "brand_display", "brand_font", "activity_ip_logging", "activity_ip_retention_days"):
         if getattr(body, field) is not None:
@@ -129,7 +135,35 @@ def update_settings(
         # Bring existing thumb/medium files in line with the new setting (background).
         from app.tasks.preview_upgrade import upgrade_previews_async
         upgrade_previews_async()
+    if "semantic_search" in body.model_fields_set:
+        # Enabling search, or switching encoder, (re)queues the library for indexing in the
+        # background. Disabling is a no-op for stored vectors (they're just ignored).
+        from app.services import semantic_search_service
+        semantic_search_service.on_settings_change(db, semantic_before, s.semantic_search)
     return _to_response(s)
+
+
+@router.get("/semantic-search/status")
+def semantic_search_status(
+    db: Session = Depends(get_db),
+    _admin: str = Depends(get_current_admin),
+):
+    """Index progress (indexed/pending/error/skipped) + ML sidecar health for the settings panel."""
+    from app.services import semantic_search_service
+    return semantic_search_service.status(db)
+
+
+@router.post("/semantic-search/reindex")
+def semantic_search_reindex(
+    db: Session = Depends(get_db),
+    _admin: str = Depends(get_current_admin),
+):
+    """Re-queue every image that still needs indexing (manual nudge after errors / a stuck sidecar).
+    No-op unless the feature is enabled and a sidecar is configured."""
+    from app.tasks import embed_task
+    embed_task.run_backfill()
+    from app.services import semantic_search_service
+    return semantic_search_service.status(db)
 
 
 class _NotificationTest(BaseModel):

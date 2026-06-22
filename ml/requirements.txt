@@ -1,0 +1,11 @@
+# ContactSheet ML sidecar — CPU-only ONNX inference. No PyTorch (that's the whole point: it keeps
+# the image small enough to ship as an optional add-on).
+fastapi==0.115.6
+uvicorn[standard]==0.32.1
+onnxruntime==1.20.1
+transformers==4.47.1
+huggingface_hub==0.27.0
+Pillow==11.0.0
+numpy==2.2.1
+# SigLIP uses a SentencePiece tokenizer.
+sentencepiece==0.2.0

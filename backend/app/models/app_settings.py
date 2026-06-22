@@ -75,6 +75,11 @@ class AppSettings(Base):
     # Holds the global master switch, per-event-type toggles, and the Apprise channel list.
     notifications: Mapped[dict | None] = mapped_column(JSON, nullable=True)
 
+    # Semantic content-search config blob (shape: schemas.settings.SemanticSearchSettings);
+    # None = unset/off. Holds the master switch, encoder model name, and default threshold.
+    # Off by default — indexing and the ML sidecar only run once an admin opts in.
+    semantic_search: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+
     # Activity-log IP capture (privacy-sensitive — off by default). When on, public events
     # (view/download/upload) store the client IP; gallery opens are also logged (deduped per IP).
     # IPs are scrubbed to NULL after `activity_ip_retention_days`.

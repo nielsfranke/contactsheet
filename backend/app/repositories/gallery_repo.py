@@ -85,6 +85,30 @@ def soft_delete(db: Session, gallery: Gallery) -> Gallery:
     return gallery
 
 
+def get_by_ids(db: Session, gallery_ids: list[str]) -> dict[str, Gallery]:
+    """Fetch galleries by id as an id→Gallery map (for attaching gallery context to search hits)."""
+    if not gallery_ids:
+        return {}
+    rows = db.execute(select(Gallery).where(Gallery.id.in_(gallery_ids))).scalars().all()
+    return {g.id: g for g in rows}
+
+
+def descendant_ids(db: Session, gallery_id: str) -> list[str]:
+    """The gallery's id plus every live descendant's id (unlimited nesting), via the same
+    frontier walk as soft_delete. Used to scope a semantic search to a gallery subtree."""
+    ids = [gallery_id]
+    frontier = [gallery_id]
+    while frontier:
+        children = db.execute(
+            select(Gallery.id).where(
+                Gallery.parent_id.in_(frontier), Gallery.deleted_at.is_(None)
+            )
+        ).scalars().all()
+        frontier = list(children)
+        ids.extend(frontier)
+    return ids
+
+
 def count_images(db: Session, gallery_id: str, only_approved: bool = False) -> int:
     stmt = select(func.count()).where(Image.gallery_id == gallery_id, Image.deleted_at.is_(None))
     if only_approved:

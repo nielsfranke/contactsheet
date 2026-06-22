@@ -44,6 +44,23 @@ class ImageResponse(BaseModel):
     created_at: datetime
 
 
+class GlobalSearchResult(ImageResponse):
+    """An image from instance-wide search/browse. Carries its gallery's name + share token so the
+    overview can badge each result and deep-link straight into that gallery's lightbox."""
+
+    gallery_name: str
+    gallery_share_token: str
+
+
+class PhotoPage(BaseModel):
+    """One page of the cross-gallery "All Photos" browser. `total` drives the load-more affordance."""
+
+    items: list[GlobalSearchResult]
+    total: int
+    offset: int
+    limit: int
+
+
 class ImageUpdate(BaseModel):
     sort_order: int | None = None
     color_flag: ColorFlag | None = None

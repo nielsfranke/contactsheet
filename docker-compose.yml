@@ -22,6 +22,9 @@ services:
       # extra proxy fronts the stack (e.g. Nginx Proxy Manager → bundled nginx). NOT settable in
       # the web UI.
       TRUSTED_PROXY_HOPS: "${TRUSTED_PROXY_HOPS:-1}"
+      # Semantic search (optional): URL of the ML sidecar. Empty = feature unavailable. Set to
+      # http://ml:8001 and start the stack with `--profile ml` to enable Content Search.
+      ML_SERVICE_URL: "${ML_SERVICE_URL:-}"
       # Optional — only needed for non-interactive first-run setup; otherwise the
       # browser setup wizard handles these (SECRET_KEY is auto-generated & stored in the DB):
       # SECRET_KEY: "${SECRET_KEY:-}"
@@ -49,6 +52,33 @@ services:
       # node is always present in the standalone runner image (no curl/wget guarantee);
       # treat any non-5xx response as healthy so redirects/login still pass.
       test: ["CMD", "node", "-e", "require('http').get('http://localhost:3000/',r=>process.exit(r.statusCode<500?0:1)).on('error',()=>process.exit(1))"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 20s
+
+  # Optional ML sidecar for semantic content search. Only started with `--profile ml`, so the
+  # default `docker compose up` is unchanged and pays none of its size/CPU cost. When enabled,
+  # also set ML_SERVICE_URL=http://ml:8001 in .env so the backend talks to it.
+  ml:
+    profiles: ["ml"]
+    image: ${REGISTRY:-ghcr.io/nielsfranke}/contactsheet-ml:${TAG:-latest}
+    build:
+      context: .
+      dockerfile: ml/Dockerfile
+      target: ml
+    volumes:
+      # Read-only access to the photos it indexes, plus a persistent model-weights cache.
+      - ./uploads:/data/uploads:ro
+      - ./data/ml-cache:/data/ml-cache
+    environment:
+      # INT8 graphs by default (smaller/faster on CPU). Set 0 for full-precision.
+      ONNX_QUANTIZED: "${ML_QUANTIZED:-1}"
+      # CPU threads for inference. Keep below the host core count so indexing can't starve serving.
+      ORT_INTRA_THREADS: "${ML_THREADS:-4}"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:8001/health"]
       interval: 30s
       timeout: 3s
       retries: 3

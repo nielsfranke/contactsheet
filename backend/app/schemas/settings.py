@@ -66,6 +66,25 @@ class AdminGridView(BaseModel):
     preview_corners: CornersType | None = None
 
 
+class SemanticSearchSettings(BaseModel):
+    """Semantic content-search config. Off by default; the ML sidecar and indexing only run once
+    an admin enables it. `model` selects the encoder (pluggable — swapping re-indexes the library).
+    `default_threshold` seeds the search UI's accuracy slider (cosine cutoff, 0..1)."""
+
+    model_config = {"extra": "forbid"}
+
+    enabled: bool = False
+    model: str = Field(default="siglip2-base-multilingual", min_length=1, max_length=64)
+    # SigLIP cosines sit in a low, offset range: every text has a ~0.06–0.07 baseline similarity
+    # with any image (so a *too*-low cutoff matches even gibberish), while a real topical match
+    # rises to ~0.09–0.12. The default sits in that gap. Raising it tightens precision; lowering
+    # favours recall. The slider operates in the meaningful 0–30% band.
+    default_threshold: float = Field(default=0.08, ge=0.0, le=1.0)
+    # Encode the original file (vs. the medium rendition). Originals give the model the most to
+    # work with; the sidecar downsamples internally so the cost is the same either way.
+    index_originals: bool = True
+
+
 class AppSettingsUpdate(BaseModel):
     instance_name: str | None = Field(default=None, min_length=1, max_length=255)
     accent_color: str | None = Field(default=None, pattern=r"^#[0-9a-fA-F]{3,8}$")
@@ -106,6 +125,8 @@ class AppSettingsUpdate(BaseModel):
     footer: FooterSettings | None = None
     # Object replaces (merged over stored to preserve masked URLs); explicit null clears it.
     notifications: NotificationSettings | None = None
+    # Object replaces the whole semantic-search config; explicit null clears it.
+    semantic_search: SemanticSearchSettings | None = None
     # Activity-log IP capture (privacy-sensitive).
     activity_ip_logging: bool | None = None
     activity_ip_retention_days: int | None = Field(default=None, ge=1, le=3650)
@@ -170,6 +191,7 @@ class AppSettingsResponse(BaseModel):
     footer: FooterSettings | None = None
     # Masked (channel URLs hidden, has_url flag added) — see schemas.notifications.mask_settings.
     notifications: dict | None = None
+    semantic_search: SemanticSearchSettings | None = None
     activity_ip_logging: bool = False
     activity_ip_retention_days: int = 90
 

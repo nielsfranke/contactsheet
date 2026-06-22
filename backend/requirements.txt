@@ -10,3 +10,8 @@ python-multipart==0.0.18
 Pillow==11.0.0
 slowapi==0.1.9
 apprise==1.9.0
+# Semantic search: NumPy powers the brute-force cosine ranking over stored embeddings; httpx is
+# the client for the optional ML sidecar. The encoder model itself lives in the sidecar image, not
+# here — the backend stays free of any ML runtime.
+numpy==2.2.1
+httpx==0.28.1

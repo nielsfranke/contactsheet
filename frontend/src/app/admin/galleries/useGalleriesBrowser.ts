@@ -4,11 +4,11 @@
 "use client";
 
 import { useState } from "react";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import { api } from "@/lib/api";
-import type { GalleryResponse, OverviewSort, SortDir } from "@/lib/types";
+import type { GalleryResponse, GlobalSearchResult, OverviewSort, SortDir } from "@/lib/types";
 import { sortGalleries, NATURAL_SORT_DIR, flattenTree } from "@/lib/gallery-sort";
 import { useAdminDndActive } from "@/components/admin/AdminDnd";
 import { toast } from "sonner";
@@ -27,6 +27,17 @@ export function useGalleriesBrowser() {
   const dimId = active?.kind === "gallery" ? active.galleryId : null;
   const [filter, setFilter] = useState("");
   const [createOpen, setCreateOpen] = useState(false);
+  // Cross-gallery semantic photo search — a second, distinct "job" from the gallery-name filter,
+  // so it gets its own state and an explicit mode toggle (only when the feature is enabled).
+  const [searchMode, setSearchMode] = useState<"galleries" | "photos">("galleries");
+  const [photoQuery, setPhotoQuery] = useState("");
+  // Sort for the "All Photos" browse (independent of the gallery overview sort).
+  const [photoSort, setPhotoSort] = useState<"date" | "name">("date");
+  const [photoDir, setPhotoDir] = useState<SortDir>("desc");
+  const pickPhotoSort = (field: "date" | "name") => {
+    if (field === photoSort) setPhotoDir((d) => (d === "asc" ? "desc" : "asc"));
+    else { setPhotoSort(field); setPhotoDir(field === "name" ? "asc" : "desc"); }
+  };
   // Rename / delete dialogs (per-card actions; the target is the listed gallery).
   const [renameTarget, setRenameTarget] = useState<GalleryResponse | null>(null);
   const [renameValue, setRenameValue] = useState("");
@@ -117,8 +128,56 @@ export function useGalleriesBrowser() {
     dir,
   );
 
+  // "All Photos" is always available. With the ML feature ON, a query runs semantic content search;
+  // with it OFF, the same box filters by filename (handled by the browse endpoint). No query = a
+  // plain sorted browse either way.
+  const searchEnabled = settings?.semantic_search?.enabled ?? false;
+  const effectiveMode: "galleries" | "photos" = searchMode;
+  const photoTerm = photoQuery.trim();
+  const semanticActive = effectiveMode === "photos" && photoTerm.length > 0 && searchEnabled;
+  const browseFilter = searchEnabled ? "" : photoTerm; // filename filter only when ML is off
+  const browseActive = effectiveMode === "photos" && !semanticActive;
+
+  const {
+    data: photoResults = [],
+    isFetching: photoLoading,
+    isError: photoError,
+  } = useQuery({
+    queryKey: ["global-photo-search", photoTerm],
+    queryFn: () => api.search.photos(photoTerm),
+    enabled: semanticActive,
+    placeholderData: (prev) => prev,
+  });
+
+  // Browse / filename-filter — sorted + paginated via load-more. Re-keys on the filename filter so
+  // a filtered view paginates independently.
+  const PAGE_SIZE = 60;
+  const browse = useInfiniteQuery({
+    queryKey: ["all-photos", photoSort, photoDir, browseFilter],
+    queryFn: ({ pageParam }) =>
+      api.photos.list({
+        sort: photoSort,
+        dir: photoDir,
+        q: browseFilter || undefined,
+        limit: PAGE_SIZE,
+        offset: pageParam,
+      }),
+    initialPageParam: 0,
+    getNextPageParam: (last, all) => {
+      const loaded = all.reduce((n, p) => n + p.items.length, 0);
+      return loaded < last.total ? loaded : undefined;
+    },
+    enabled: browseActive,
+  });
+  const browseItems = browse.data?.pages.flatMap((p) => p.items) ?? [];
+  const browseTotal = browse.data?.pages[0]?.total ?? 0;
+
   // One consistent action: open the gallery's detail page (its sub-galleries + photos + tools).
   const openGallery = (g: GalleryResponse) => router.push(`/admin/galleries/${g.id}`);
+
+  // Open a search hit: jump to its gallery and deep-link the lightbox straight to that image.
+  const openResult = (r: GlobalSearchResult) =>
+    router.push(`/admin/galleries/${r.gallery_id}?image=${r.id}`);
 
   const tileShape = shape === "square" ? "aspect-square" : "aspect-[3/2]";
   const tileCorners = corners === "square" ? "rounded-none" : "rounded-lg";
@@ -136,6 +195,28 @@ export function useGalleriesBrowser() {
     setFilter,
     createOpen,
     setCreateOpen,
+    // cross-gallery photos: view switch + search/filter + browse
+    searchEnabled,
+    searchMode: effectiveMode,
+    setSearchMode,
+    photoQuery,
+    setPhotoQuery,
+    semanticActive,
+    browseFiltered: browseFilter.length > 0,
+    photoResults,
+    photoLoading,
+    photoError,
+    // All Photos browse / filename-filter
+    photoSort,
+    photoDir,
+    pickPhotoSort,
+    browseItems,
+    browseTotal,
+    browseLoading: browse.isLoading,
+    browseFetchingMore: browse.isFetchingNextPage,
+    hasMore: !!browse.hasNextPage,
+    loadMore: () => browse.fetchNextPage(),
+    openResult,
     // sort
     sort,
     dir,

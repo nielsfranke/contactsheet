@@ -187,9 +187,12 @@ def process_image(image_id: str, gallery_id: str, stored_filename: str) -> None:
         # plain transposed copy that no longer carries _getexif / IPTC, so extracting after the
         # rotate silently dropped all EXIF and IPTC.
         exif_dict = _extract_exif(img) if hasattr(img, "_getexif") else None
-        exif_json = json.dumps(exif_dict) if exif_dict else None
+        # ensure_ascii=False stores literal UTF-8 so non-ASCII IPTC values (umlauts in keywords,
+        # places, names) survive as real characters — the "All Photos" filter substring-matches the
+        # extracted JSON, and SQLite's json_extract of an *array* otherwise keeps \uXXXX escapes.
+        exif_json = json.dumps(exif_dict, ensure_ascii=False) if exif_dict else None
         iptc_dict = _extract_iptc(img)
-        iptc_json = json.dumps(iptc_dict) if iptc_dict else None
+        iptc_json = json.dumps(iptc_dict, ensure_ascii=False) if iptc_dict else None
         img = _auto_rotate(img)
         width, height = img.size
 
@@ -210,6 +213,10 @@ def process_image(image_id: str, gallery_id: str, stored_filename: str) -> None:
         from app.realtime import publish as realtime_publish
         realtime_publish(gallery_id, "image", image_id=image_id)
         logger.info("Processed image %s (%dx%d)", image_id, width, height)
+
+        # Queue semantic-search indexing now that renditions exist (no-op unless enabled).
+        from app.tasks.embed_task import submit as submit_embedding
+        submit_embedding(image_id)
     except Exception:
         logger.exception("Failed to process image %s", image_id)
         image_repo.set_processing_error(db, image_id)

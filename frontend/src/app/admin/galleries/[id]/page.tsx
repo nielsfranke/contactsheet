@@ -3,8 +3,8 @@
 
 "use client";
 
-import { useEffect } from "react";
-import { useParams } from "next/navigation";
+import { useEffect, useRef } from "react";
+import { useParams, useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { SidebarPortal, SubGalleryCard } from "./parts";
 import { useGalleryDetail } from "./useGalleryDetail";
@@ -49,6 +49,12 @@ export default function GalleryDetailPage() {
     activeDragId,
     arrange,
     setArrange,
+    searchEnabled,
+    searchQuery,
+    setSearchQuery,
+    searchActive,
+    searchLoading,
+    searchError,
     openSettings,
     handleDownload,
     setShareOpen,
@@ -95,6 +101,21 @@ export default function GalleryDetailPage() {
     return () => setMobileHeaderNav(null);
     // Primitive deps (not the translator/objects) so this only re-runs on a real context change.
   }, [gallery, upLabel, upHref, setMobileHeaderNav]);
+
+  // Deep-link from cross-gallery photo search (?image=…): once this gallery's photos load, open the
+  // lightbox straight at the linked image. Consumed once, so paging/closing won't reopen it.
+  const searchParams = useSearchParams();
+  const focusImageId = searchParams.get("image");
+  const focusConsumed = useRef(false);
+  const openPreview = d.openPreview;
+  useEffect(() => {
+    if (!focusImageId || focusConsumed.current || images.length === 0) return;
+    const img = images.find((i) => i.id === focusImageId);
+    if (img) {
+      focusConsumed.current = true;
+      openPreview(img);
+    }
+  }, [focusImageId, images, openPreview]);
 
   if (isLoading || !gallery) {
     return (
@@ -254,14 +275,37 @@ export default function GalleryDetailPage() {
           </>
         ) : (
           <>
-            {/* Photo-first (leaf or mixed): view controls, grid, upload — then sub-galleries below. */}
+            {/* Photo-first (leaf or mixed): view controls, grid, upload — then sub-galleries below.
+                When content search is enabled it takes the toolbar's primary slot (the filename
+                filter moves into the Filter sheet). */}
             <GalleryViewToolbar
               arrange={arrange}
               setArrange={setArrange}
               captureSortAvailable={captureSortAvailable}
               shownCount={filteredSorted.length}
               totalCount={images.length}
+              search={
+                searchEnabled && images.length > 0
+                  ? {
+                      query: searchQuery,
+                      setQuery: setSearchQuery,
+                      loading: searchLoading,
+                      placeholder: t("search.placeholder"),
+                    }
+                  : undefined
+              }
             />
+
+            {/* Live status for an active content search (the ranked grid is below). */}
+            {searchActive && (
+              <p className="-mt-2 px-1 text-xs text-muted-foreground" aria-live="polite">
+                {searchError
+                  ? t("search.error")
+                  : searchLoading
+                    ? t("search.searching")
+                    : t("search.resultCount", { n: filteredSorted.length })}
+              </p>
+            )}
 
             {/* Header / cover image buttons — only for an empty gallery, where there's no photo grid
                 and this is the sole visible CTA (and no photo to pick a cover from). Once the gallery
@@ -286,8 +330,14 @@ export default function GalleryDetailPage() {
               groups={groups}
               galleryId={id}
               onRefetch={refetchImages}
-              emptyMessage={images.length === 0 ? t("emptyNoImages") : t("emptyFiltered")}
-              draggable={arrange.sortKey === "manual" && !groups && !selection.mode}
+              emptyMessage={
+                searchActive
+                  ? t("search.noResults")
+                  : images.length === 0
+                    ? t("emptyNoImages")
+                    : t("emptyFiltered")
+              }
+              draggable={arrange.sortKey === "manual" && !groups && !selection.mode && !searchActive}
               onOpen={d.openPreview}
               selectionMode={selection.mode}
               isSelected={selection.isSelected}

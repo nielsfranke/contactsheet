@@ -26,7 +26,7 @@ from app.schemas.gallery import (
     ShareTokenUpdate,
 )
 from app.schemas.image import ImageResponse, ImageTransfer, ReorderRequest, TransferResult
-from app.services import comment_service, gallery_service, image_service
+from app.services import comment_service, gallery_service, image_service, semantic_search_service
 from app.storage.base import StorageProvider
 
 router = APIRouter(prefix="/api/galleries", tags=["galleries"])
@@ -152,6 +152,29 @@ def list_images(
     _admin: str = Depends(get_current_admin),
 ):
     return image_service.list_images(db, gallery_id, storage, include_original_url=True)
+
+
+@router.get("/{gallery_id}/search", response_model=list[ImageResponse])
+def search_gallery(
+    gallery_id: str,
+    q: str = Query(..., min_length=1, max_length=200),
+    threshold: float | None = Query(None, ge=0.0, le=1.0),
+    db: Session = Depends(get_db),
+    storage: StorageProvider = Depends(get_storage),
+    _admin: str = Depends(get_current_admin),
+):
+    """Semantic search within this gallery and its sub-galleries. Results are ranked by similarity;
+    `threshold` (0..1) overrides the configured accuracy cutoff for this query."""
+    gallery = gallery_repo.get_by_id(db, gallery_id)
+    if not gallery:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Gallery not found")
+    try:
+        ranked = semantic_search_service.search(db, gallery_id, q, threshold=threshold)
+    except semantic_search_service.SearchUnavailable as exc:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=str(exc)
+        ) from exc
+    return image_service.search_images(db, ranked, storage)
 
 
 def _verify_image_in_gallery(db: Session, gallery_id: str, image_id: str):

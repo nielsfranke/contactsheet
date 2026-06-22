@@ -20,7 +20,7 @@ from app.version import __version__
 from app.errors import CodedHTTPException
 from app.rate_limit import limiter
 from app.routers import auth, galleries, images, public
-from app.routers import admin_settings, branding_icon, collections, realtime, setup, zip_export
+from app.routers import admin_settings, branding_icon, collections, realtime, search, setup, zip_export
 
 _log = logging.getLogger(__name__)
 
@@ -192,6 +192,7 @@ app.include_router(zip_export.router)
 app.include_router(admin_settings.router)
 app.include_router(branding_icon.router)
 app.include_router(realtime.router)
+app.include_router(search.router)
 
 
 @app.get("/api/health")
