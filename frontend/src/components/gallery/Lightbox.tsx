@@ -1068,13 +1068,18 @@ export function Lightbox({
       })()}
 
       {/* Filename / annotate hint — hidden in immersive mode. The annotate hint always shows while
-          annotating; the filename row obeys the per-gallery `showFilename` toggle. */}
-      {!immersive && (annotating || showFilename) && (
+          annotating; the filename row obeys the per-gallery `showFilename` toggle. The row is always
+          reserved (when chrome is visible) with a non-breaking-space placeholder when there's no
+          text, so the image keeps the same bottom margin whether or not a caption is shown — instead
+          of running to the bottom edge when the caption is off. */}
+      {!immersive && (
         <div className="px-4 py-2 flex-shrink-0">
           {annotating ? (
             <p className={`text-xs text-center truncate ${strong}`}>{ta("hint")}</p>
-          ) : (
+          ) : showFilename ? (
             <p className={`text-xs ${faint} text-center truncate`}>{image.original_filename}</p>
+          ) : (
+            <p className="text-xs text-center truncate select-none" aria-hidden>&nbsp;</p>
           )}
         </div>
       )}
