@@ -196,7 +196,7 @@ export function AnnotationLayer({
   }
 
   if (!rect) {
-    return <div ref={rootRef} className="absolute inset-0 pointer-events-none" />;
+    return <div ref={rootRef} className="absolute inset-0 z-20 pointer-events-none" />;
   }
 
   const surfaceStyle: React.CSSProperties = {
@@ -223,7 +223,10 @@ export function AnnotationLayer({
   const popTy = popAbove ? "calc(-100% - 8px)" : "8px";
 
   return (
-    <div ref={rootRef} className="absolute inset-0 pointer-events-none">
+    // z-20 lifts the layer above the photo (`relative z-10`) so the drawing surface and mark
+    // hit-areas actually receive pointer events; the root stays pointer-events-none, so taps outside
+    // an interactive child still fall through to the image (immersive toggle).
+    <div ref={rootRef} className="absolute inset-0 z-20 pointer-events-none">
       <div
         ref={surfaceRef}
         className={`absolute ${drawing && !pending ? "pointer-events-auto" : "pointer-events-none"}`}
