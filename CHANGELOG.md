@@ -21,6 +21,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   and every image was failing to index. It now shows **"reachable, model not loaded"** with a hint
   (check the sidecar logs; often an unwritable model-cache dir) when the service is up but indexing
   is erroring, so this case diagnoses itself.
+- **Lightbox: images keep a consistent bottom margin in showcase mode.** With the caption/filename
+  off, the photo ran to the bottom edge; the footer row is now always reserved so the image has the
+  same bottom margin whether or not a caption is shown.
 
 ## [1.1.3] - 2026-06-22
 
