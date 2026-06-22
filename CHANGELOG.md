@@ -12,6 +12,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.1.2] - 2026-06-22
+
+### Added
+
+- **Photoshop PSB support.** Upload `.psb` (large-document) files. When the file carries an embedded
+  preview (saved with *Maximize Compatibility*) it shows a normal thumbnail; otherwise it appears as
+  a download-only tile and the original downloads intact. No heavy decoder — the preview is read
+  straight from the file's embedded thumbnail, so it stays fast even on multi-GB files.
+
+### Fixed
+
+- The upload drop-zone hint still read "JPEG, PNG, WebP up to 200 MB" — it now lists the formats and
+  limit added in 1.1.1 (TIFF, PSD, PSB & RAW, up to 300 MB).
+
+### Notes & limitations
+
+- PSB previews depend on the embedded thumbnail (small if Photoshop saved a small one), and PSB is
+  excluded from content search. Very large PSB still respect the upload size limit (`MAX_UPLOAD_BYTES`).
+
 ## [1.1.1] - 2026-06-22
 
 ### Added
