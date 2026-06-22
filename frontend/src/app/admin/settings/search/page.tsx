@@ -63,6 +63,10 @@ export default function SearchSettingsPage() {
     save({ semantic_search: { ...cfg, ...patch } });
 
   const sidecarReachable = !!idx?.sidecar;
+  // "Stalled" = reachable but the model isn't loaded *and* images are failing — the tell-tale of a
+  // sidecar that answers /health (so it looks "online") yet can't load its model (e.g. an unwritable
+  // model-cache dir). `ready` is false only transiently before the first embed, so we gate on errors.
+  const sidecarStalled = sidecarReachable && !idx?.sidecar?.ready && (idx?.error ?? 0) > 0;
   // The feature can only run when the optional ML sidecar is configured AND reachable. Until the
   // first status load (idx undefined) we don't claim it's unavailable, to avoid a flicker.
   const statusKnown = idx !== undefined;
@@ -136,11 +140,22 @@ export default function SearchSettingsPage() {
                 <h2 className="text-sm font-medium text-foreground">{t("indexTitle")}</h2>
                 <p className="text-xs text-muted-foreground mt-1">
                   {t("sidecar")}:{" "}
-                  <span className={sidecarReachable ? "text-emerald-600 dark:text-emerald-400" : "text-amber-600 dark:text-amber-400"}>
-                    {sidecarReachable ? t("sidecarOnline") : t("sidecarOffline")}
+                  <span
+                    className={
+                      sidecarStalled
+                        ? "text-destructive"
+                        : sidecarReachable
+                          ? "text-emerald-600 dark:text-emerald-400"
+                          : "text-amber-600 dark:text-amber-400"
+                    }
+                  >
+                    {sidecarStalled ? t("sidecarStalled") : sidecarReachable ? t("sidecarOnline") : t("sidecarOffline")}
                   </span>
                   {idx?.model ? ` · ${idx.model}` : ""}
                 </p>
+                {sidecarStalled && (
+                  <p className="text-xs text-destructive mt-2 max-w-prose">{t("sidecarStalledHint")}</p>
+                )}
               </div>
               <Button
                 variant="outline"

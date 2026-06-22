@@ -625,6 +625,8 @@
       "sidecar": "ML service",
       "sidecarOnline": "online",
       "sidecarOffline": "offline",
+      "sidecarStalled": "reachable, model not loaded",
+      "sidecarStalledHint": "The ML service responds but its model isn't loading, so every image fails to index. Check the sidecar logs (`docker compose logs ml`) — a common cause is the model-cache directory not being writable by the container.",
       "reindex": "Re-index",
       "reindexQueued": "Re-indexing queued.",
       "reindexFailed": "Could not start re-indexing.",

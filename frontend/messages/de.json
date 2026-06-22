@@ -625,6 +625,8 @@
       "sidecar": "ML-Dienst",
       "sidecarOnline": "online",
       "sidecarOffline": "offline",
+      "sidecarStalled": "erreichbar, Modell nicht geladen",
+      "sidecarStalledHint": "Der ML-Dienst antwortet, aber sein Modell lädt nicht — daher schlägt jedes Bild beim Indexieren fehl. Prüfe die Sidecar-Logs (`docker compose logs ml`); häufige Ursache ist ein für den Container nicht beschreibbares Modell-Cache-Verzeichnis.",
       "reindex": "Neu indexieren",
       "reindexQueued": "Neuindexierung in Warteschlange.",
       "reindexFailed": "Neuindexierung konnte nicht gestartet werden.",
