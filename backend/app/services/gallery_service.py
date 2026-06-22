@@ -24,6 +24,7 @@ from app.repositories import settings_repo
 from app.schemas.gallery import (
     GalleryCreate,
     GalleryDerive,
+    GalleryMetaResponse,
     GalleryPublicResponse,
     GalleryResponse,
     GalleryUpdate,
@@ -525,6 +526,65 @@ def get_public_gallery(
         "logo_url": f"/branding/{app_settings.logo_filename}" if app_settings.logo_filename else None,
     })
     return gallery, public
+
+
+def _meta_image_url(gallery: Gallery, db: Session, storage: StorageProvider) -> str | None:
+    """A large-ish preview image for link unfurls: header → uploaded cover → first photo (medium).
+
+    Prefers full-size branding uploads over the small grid thumbnail used by cover cards."""
+    header = _header_image_url(gallery)
+    if header:
+        return header
+    uploaded = _uploaded_cover_url(gallery)
+    if uploaded:
+        return uploaded
+    photo = gallery_repo.get_cover_image(db, gallery)
+    if photo and photo.processing_status == "done":
+        return storage.get_url(f"{gallery.id}/medium/{photo.stored_filename}")
+    return None
+
+
+def _absolutize(rel: str | None, base: str | None) -> str | None:
+    """Make an app-relative URL absolute against ``public_base_url`` when it's set; otherwise leave
+    it relative for the frontend to resolve via Next's ``metadataBase``."""
+    if not rel or rel.startswith(("http://", "https://")) or not base:
+        return rel
+    return base.rstrip("/") + rel
+
+
+def get_gallery_meta(
+    db: Session, share_token: str, storage: StorageProvider
+) -> GalleryMetaResponse:
+    """Side-effect-free preview metadata for a share link (Open Graph / link unfurls).
+
+    Unlike ``get_public_gallery`` this enqueues NO view notification and logs NO activity — a
+    scraper fetching the link must not look like a client opening the gallery. Expired/unknown
+    tokens 404 so the frontend falls back to the generic preview. Password-protected galleries
+    expose their name but not the cover image."""
+    gallery = gallery_repo.get_by_share_token(db, share_token)
+    if not gallery:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Gallery not found")
+
+    if gallery.expires_at:
+        expires = gallery.expires_at
+        if expires.tzinfo is None:
+            expires = expires.replace(tzinfo=timezone.utc)
+        if expires < datetime.now(timezone.utc):
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Gallery not found")
+
+    app_settings = settings_repo.get(db)
+    password_protected = gallery.password_hash is not None
+    image_url = None
+    if not password_protected:
+        image_url = _absolutize(_meta_image_url(gallery, db, storage), app_settings.public_base_url)
+
+    return GalleryMetaResponse(
+        name=gallery.name,
+        description=gallery.description or "",
+        image_url=image_url,
+        instance_name=app_settings.instance_name,
+        password_protected=password_protected,
+    )
 
 
 def export_flagged(db: Session, gallery_id: str, flag: str | None = None, include_flag: bool = False) -> str:

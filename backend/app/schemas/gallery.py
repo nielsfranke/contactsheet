@@ -337,3 +337,18 @@ class GalleryPublicResponse(BaseModel):
     # Studio identity shown in the client gallery header (always present).
     instance_name: str | None = None
     logo_url: str | None = None
+
+
+class GalleryMetaResponse(BaseModel):
+    """Minimal, side-effect-free metadata for link-unfurl previews (Open Graph).
+
+    Served from ``GET /api/public/g/{share_token}/meta``. Deliberately NOT the full gallery
+    response: it triggers no view notification / activity log, and withholds the cover image for
+    password-protected galleries. ``image_url`` is absolute when ``public_base_url`` is configured,
+    otherwise app-relative (the frontend resolves it via ``metadataBase``)."""
+
+    name: str
+    description: str = ""
+    image_url: str | None = None
+    instance_name: str | None = None
+    password_protected: bool = False

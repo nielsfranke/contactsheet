@@ -48,6 +48,10 @@ services:
       backend:
         condition: service_healthy
     restart: unless-stopped
+    environment:
+      # The Next server fetches per-gallery Open Graph metadata directly from the backend
+      # (container-to-container, not via nginx) for link-preview unfurls.
+      BACKEND_INTERNAL_URL: "http://backend:8000"
     healthcheck:
       # node is always present in the standalone runner image (no curl/wget guarantee);
       # treat any non-5xx response as healthy so redirects/login still pass.

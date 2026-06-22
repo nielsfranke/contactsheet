@@ -22,7 +22,7 @@ from app.repositories import activity_repo, comment_repo, gallery_repo, image_re
 from app.schemas.auth import GalleryAuthRequest, GalleryAuthResponse
 from app.schemas.collection import CollectionCreate, CollectionResponse, CollectionUpdate
 from app.schemas.comment import CommentCreate, CommentResponse
-from app.schemas.gallery import GalleryPublicResponse
+from app.schemas.gallery import GalleryMetaResponse, GalleryPublicResponse
 from app.schemas.image import ImageResponse, PublicFlagRequest, PublicLikeRequest, UploadResponse
 from app.schemas.vote import VoteCreate, VoteResponse
 from app.schemas.zip_job import PublicZipCreate, ZipJobResponse
@@ -78,6 +78,17 @@ def get_public_gallery(
         activity_service.log_view(db, gallery.id, request)
 
     return public_response
+
+
+@router.get("/g/{share_token}/meta", response_model=GalleryMetaResponse)
+def get_public_gallery_meta(
+    share_token: str,
+    db: Session = Depends(get_db),
+    storage: StorageProvider = Depends(get_storage),
+):
+    """Open Graph preview metadata for a share link. Read-only and side-effect-free: a link-unfurl
+    by a chat app must not enqueue a view notification or log an activity."""
+    return gallery_service.get_gallery_meta(db, share_token, storage)
 
 
 @router.post("/g/{share_token}/auth", response_model=GalleryAuthResponse)

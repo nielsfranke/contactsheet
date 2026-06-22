@@ -66,6 +66,80 @@ def test_expired_gallery_returns_410(admin_client):
     assert r.status_code == 410 and r.json()["code"] == "gallery_expired"
 
 
+# --- Link-preview metadata (Open Graph) -------------------------------------
+
+def test_meta_returns_name_and_image(admin_client):
+    g = make_gallery(admin_client, "Wedding", mode="presentation")
+    add_image(g["id"])
+    from fastapi.testclient import TestClient
+    from app.main import app
+    pub = TestClient(app)
+    r = pub.get(f"/api/public/g/{g['share_token']}/meta")
+    assert r.status_code == 200
+    body = r.json()
+    assert body["name"] == "Wedding"
+    assert body["password_protected"] is False
+    assert body["image_url"] and "/medium/" in body["image_url"]
+
+
+def test_meta_password_protected_hides_image(admin_client):
+    g = make_gallery(admin_client, "Locked")
+    add_image(g["id"])
+    admin_client.patch(f"/api/galleries/{g['id']}", json={"password": "secret"})
+    from fastapi.testclient import TestClient
+    from app.main import app
+    pub = TestClient(app)
+    r = pub.get(f"/api/public/g/{g['share_token']}/meta")
+    assert r.status_code == 200
+    body = r.json()
+    # The name isn't secret (the password gate shows it), but the cover sits behind the gate.
+    assert body["name"] == "Locked"
+    assert body["password_protected"] is True
+    assert body["image_url"] is None
+
+
+def test_meta_expired_returns_404(admin_client):
+    g = make_gallery(admin_client, "Gone")
+    past = (datetime.now(timezone.utc) - timedelta(days=1)).isoformat()
+    admin_client.patch(f"/api/galleries/{g['id']}", json={"expires_at": past})
+    from fastapi.testclient import TestClient
+    from app.main import app
+    pub = TestClient(app)
+    assert pub.get(f"/api/public/g/{g['share_token']}/meta").status_code == 404
+
+
+def test_meta_unknown_token_404(admin_client):
+    assert admin_client.get("/api/public/g/nope/meta").status_code == 404
+
+
+def test_meta_is_side_effect_free(admin_client, db):
+    """A scraper unfurling the link must not enqueue a view notification or log a view — unlike the
+    full gallery endpoint."""
+    from app.repositories import notification_repo
+
+    # Enable notifications with the (default-off) "view" event on, so a view *would* be queued.
+    admin_client.patch("/api/admin/settings", json={
+        "notifications": {
+            "enabled": True,
+            "events": {"view": True},
+            "channels": [{"id": "c1", "type": "custom", "url": "json://localhost", "enabled": True}],
+        },
+    })
+    g = make_gallery(admin_client, "Spy", mode="presentation")
+
+    from fastapi.testclient import TestClient
+    from app.main import app
+    pub = TestClient(app)
+
+    # /meta must not touch the outbox...
+    pub.get(f"/api/public/g/{g['share_token']}/meta")
+    assert notification_repo.list_pending(db) == []
+
+    # ...whereas opening the full gallery does (proves the setup would have produced one).
+    pub.get(f"/api/public/g/{g['share_token']}")
+    assert any(r.event_type == "view" for r in notification_repo.list_pending(db))
+
+
 def test_pending_moderated_uploads_hidden_from_public(admin_client):
     g = make_gallery(admin_client, "Mod", mode="collaboration")
     add_image(g["id"], moderation_status="approved")
