@@ -12,6 +12,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.1.0] - 2026-06-22
+
 ### Added
 
 - **Content search (optional).** Find photos by what's *in* them ("car at sunset", "team photo with
