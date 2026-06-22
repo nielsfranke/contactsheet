@@ -16,6 +16,8 @@ import { useTranslations } from "next-intl";
 import { api } from "@/lib/api";
 import { lightboxTones } from "@/lib/lightbox-theme";
 import { previewSrcSet } from "@/lib/gridLayout";
+import { useLightboxKeys } from "./lightbox-keys";
+import { photoSrc as resolvePhotoSrc, variantSrc as resolveVariantSrc } from "./lightbox-image-src";
 import type { Anchor, ColorFlag, CollabFeatures, LightboxBackdrop } from "@/lib/types";
 import {
   X,
@@ -348,15 +350,19 @@ export function Lightbox({
     addAnnotation.mutate({ anchor, text, name: reviewerName });
   }
 
-  useEffect(() => {
-    function onKey(e: KeyboardEvent) {
-      if (e.key === "Escape") close();
-      if (e.key === "ArrowRight") next();
-      if (e.key === "ArrowLeft") prev();
-    }
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [close, next, prev]);
+  useLightboxKeys({ close, next, prev });
+
+  // Resolve a rendition src — the watermark proxy when active (it has /small + /medium routes so the
+  // watermark is never bypassed), else the stored rendition. `small` is used on phones (see `compact`)
+  // and `medium` on desktop. Shared by the displayed photo, the swipe-peek neighbors, and the neighbor
+  // preloader effect below — declared here (above that effect) so it's never used before declaration.
+  function variantSrc(im: (typeof images)[number], variant: "small" | "medium"): string {
+    return resolveVariantSrc(im, variant, { watermarkEnabled, shareToken });
+  }
+  // The displayed source for a slide: small on phones, medium (+srcset) on desktop.
+  function photoSrc(im: (typeof images)[number]): string {
+    return resolvePhotoSrc(im, compact, { watermarkEnabled, shareToken });
+  }
 
   // Detect a phone-class device → serve `small` instead of `medium` (see `compact` above).
   useEffect(() => {
@@ -587,21 +593,6 @@ export function Lightbox({
       else paintTrack(0, 0, true); // snap back
     }
   }
-
-  // Resolve a rendition src — the watermark proxy when active (it has /small + /medium routes so the
-  // watermark is never bypassed), else the stored rendition. `small` is used on phones (see `compact`)
-  // and `medium` on desktop. Shared by the displayed photo, the swipe-peek neighbors, and the
-  // neighbor preloader, so the cache hits on the exact resource the slide renders.
-  function variantSrc(im: (typeof images)[number], variant: "small" | "medium"): string {
-    if (watermarkEnabled && shareToken) {
-      return `/api/public/g/${shareToken}/images/${im.id}/${variant}`;
-    }
-    if (variant === "small") return im.small_url ?? im.medium_url ?? im.thumb_url ?? "";
-    return im.medium_url ?? im.thumb_url ?? "";
-  }
-  // The displayed source for a slide: small on phones, medium (+srcset) on desktop.
-  const photoSrc = (im: (typeof images)[number]): string =>
-    compact ? variantSrc(im, "small") : variantSrc(im, "medium");
 
   if (!image) return null;
 
