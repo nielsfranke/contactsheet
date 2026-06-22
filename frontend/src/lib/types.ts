@@ -41,6 +41,10 @@ export const MODE_LABELS: Record<ModeType, string> = {
   presentation: "Showcase",
 };
 export type ColorFlag = "none" | "green" | "red" | "yellow" | "blue";
+// Instance-wide rating style (app_settings.rating_mode). Never both at once.
+export type RatingMode = "flags" | "stars";
+// 0 = unrated, 1–5 = stars.
+export type Rating = 0 | 1 | 2 | 3 | 4 | 5;
 // "no_preview" = stored & downloadable but has no thumbnail (e.g. a PSB with no embedded preview).
 export type ProcessingStatus = "pending" | "done" | "error" | "no_preview";
 // Opener font key — one of the registry keys in lib/gallery-fonts.ts, or a legacy
@@ -129,6 +133,7 @@ export interface GalleryPublicResponse extends GallerySettings {
   watermark_enabled: boolean;
   high_res_previews: boolean;
   lightbox_backdrop: LightboxBackdrop;
+  rating_mode: RatingMode;
   default_sort: GallerySortKey;
   default_sort_dir: SortDir;
   headline: string | null;
@@ -152,7 +157,10 @@ export interface GalleryPublicResponse extends GallerySettings {
 
 /** Which collaboration interactions are exposed to clients (subset of GallerySettings). */
 export interface CollabFeatures {
+  /** Ratings enabled (per-gallery gate). The rendered UI is flags or stars per `ratingMode`. */
   colorFlags: boolean;
+  /** Which rating UI to show when ratings are enabled (instance-wide setting). */
+  ratingMode: RatingMode;
   likes: boolean;
   comments: boolean;
   /** Anchored comment pins. Requires `comments`. */
@@ -176,6 +184,7 @@ export interface Vote {
   gallery_id: string;
   reviewer_name: string;
   color_flag: ColorFlag;
+  rating: Rating;
   updated_at: string;
 }
 
@@ -338,6 +347,7 @@ export interface AppSettings {
   public_base_url: string | null;
   source_url: string | null;
   high_res_previews: boolean;
+  rating_mode: RatingMode;
   preset_presentation: GalleryPreset | null;
   preset_collaboration: GalleryPreset | null;
   admin_grid_mode: AdminGridMode;
@@ -409,6 +419,7 @@ export interface AppSettingsUpdate {
   public_base_url?: string;
   source_url?: string;
   high_res_previews?: boolean;
+  rating_mode?: RatingMode;
   preset_presentation?: GalleryPreset | null;
   preset_collaboration?: GalleryPreset | null;
   admin_grid_mode?: AdminGridMode;
@@ -441,6 +452,7 @@ export interface ImageResponse {
   iptc_data: Record<string, string | string[]> | null;
   sort_order: number;
   color_flag: ColorFlag;
+  rating: Rating;
   likes: number;
   comment_count: number;
   annotation_count: number;
@@ -522,6 +534,7 @@ export interface UploadResponse {
 export interface ImageUpdate {
   sort_order?: number;
   color_flag?: ColorFlag;
+  rating?: Rating;
   original_filename?: string;
 }
 

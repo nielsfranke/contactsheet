@@ -32,8 +32,26 @@ def get_all_for_gallery(db: Session, gallery_id: str) -> list[ImageVote]:
     ).scalars().all()
 
 
-def upsert(db: Session, image_id: str, gallery_id: str, reviewer_name: str, color_flag: str) -> ImageVote:
+def upsert(
+    db: Session,
+    image_id: str,
+    gallery_id: str,
+    reviewer_name: str,
+    color_flag: str | None = None,
+    rating: int | None = None,
+) -> ImageVote:
+    """Set this reviewer's flag and/or star for an image. Only the field(s) supplied are written,
+    so a stars-mode reviewer updates `rating` without clobbering a stored `color_flag` (and vice
+    versa) — the row carries both, the active rating_mode decides which is shown."""
     now = datetime.now(timezone.utc)
+
+    def _apply(vote: ImageVote) -> None:
+        if color_flag is not None:
+            vote.color_flag = color_flag
+        if rating is not None:
+            vote.rating = rating
+        vote.updated_at = now
+
     existing = db.execute(
         select(ImageVote).where(
             ImageVote.image_id == image_id,
@@ -42,8 +60,7 @@ def upsert(db: Session, image_id: str, gallery_id: str, reviewer_name: str, colo
     ).scalar_one_or_none()
 
     if existing:
-        existing.color_flag = color_flag
-        existing.updated_at = now
+        _apply(existing)
         db.commit()
         db.refresh(existing)
         return existing
@@ -53,7 +70,8 @@ def upsert(db: Session, image_id: str, gallery_id: str, reviewer_name: str, colo
         image_id=image_id,
         gallery_id=gallery_id,
         reviewer_name=reviewer_name,
-        color_flag=color_flag,
+        color_flag=color_flag if color_flag is not None else "none",
+        rating=rating if rating is not None else 0,
         created_at=now,
         updated_at=now,
     )
@@ -68,8 +86,7 @@ def upsert(db: Session, image_id: str, gallery_id: str, reviewer_name: str, colo
                 ImageVote.reviewer_name == reviewer_name,
             )
         ).scalar_one()
-        existing.color_flag = color_flag
-        existing.updated_at = now
+        _apply(existing)
         db.commit()
         db.refresh(existing)
         return existing

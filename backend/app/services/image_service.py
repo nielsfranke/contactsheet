@@ -382,6 +382,8 @@ def update_image(db: Session, image_id: str, data: ImageUpdate) -> Image:
         updates["sort_order"] = data.sort_order
     if data.color_flag is not None:
         updates["color_flag"] = data.color_flag
+    if data.rating is not None:
+        updates["rating"] = data.rating
     if data.original_filename is not None:
         updates["original_filename"] = data.original_filename.strip() or image.original_filename
 
@@ -592,6 +594,26 @@ def public_set_flag(
     except Exception:
         pass
     notification_service.enqueue(db, gallery.id, "flag", reviewer_name, meta={"image_id": image_id, "flag": flag})
+    realtime_publish(gallery.id, "flag", image_id=image_id)
+    return updated
+
+
+def public_set_rating(
+    db: Session, gallery: Gallery, image_id: str, rating: int, reviewer_name: str = "client"
+) -> Image:
+    """Set the shared 1–5 star rating (0 clears) — the stars-mode parallel to public_set_flag.
+    Rides the same activity/notification/realtime channel so the grid invalidates identically."""
+    if gallery.mode != "collaboration":
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Gallery is not in collaboration mode")
+    image = image_repo.get_by_id(db, image_id)
+    if not image or image.gallery_id != gallery.id or image.moderation_status != "approved":
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Image not found")
+    updated = image_repo.update_fields(db, image, rating=rating)
+    try:
+        activity_repo.log(db, gallery.id, "rated", reviewer_name, image_id=image_id, meta={"rating": rating})
+    except Exception:
+        pass
+    notification_service.enqueue(db, gallery.id, "flag", reviewer_name, meta={"image_id": image_id, "rating": rating})
     realtime_publish(gallery.id, "flag", image_id=image_id)
     return updated
 

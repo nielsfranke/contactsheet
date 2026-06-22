@@ -41,6 +41,11 @@ class AppSettings(Base):
     # 300px / 1920px set; toggling regenerates existing files in the background.
     high_res_previews: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
 
+    # Instance-wide rating style: "flags" (color flags) | "stars" (1–5). Switches the whole
+    # instance between the two; never both. Stars and flags are stored in separate columns so
+    # switching is non-destructive.
+    rating_mode: Mapped[str] = mapped_column(String(10), nullable=False, default="flags")
+
     # Default look & behaviour for newly created galleries, one preset per mode.
     # None = built-in model defaults; shape is validated by schemas.settings.GalleryPreset.
     preset_presentation: Mapped[dict | None] = mapped_column(JSON, nullable=True)

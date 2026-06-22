@@ -515,6 +515,12 @@ export const api = {
         body: JSON.stringify({ flag }),
         headers: authHeaders(galleryToken),
       }),
+    rateImage: (token: string, imageId: string, rating: number, galleryToken?: string) =>
+      request<ImageResponse>(`/api/public/g/${token}/images/${imageId}/rate`, {
+        method: "POST",
+        body: JSON.stringify({ rating }),
+        headers: authHeaders(galleryToken),
+      }),
     likeImage: (token: string, imageId: string, reviewer: string, galleryToken?: string) =>
       request<ImageResponse>(`/api/public/g/${token}/images/${imageId}/like`, {
         method: "POST",
@@ -548,6 +554,12 @@ export const api = {
       request<Vote>(`/api/public/g/${token}/images/${imageId}/vote`, {
         method: "PUT",
         body: JSON.stringify({ reviewer_name: reviewerName, color_flag: colorFlag }),
+        headers: authHeaders(galleryToken),
+      }),
+    setRatingVote: (token: string, imageId: string, reviewerName: string, rating: number, galleryToken?: string) =>
+      request<Vote>(`/api/public/g/${token}/images/${imageId}/vote`, {
+        method: "PUT",
+        body: JSON.stringify({ reviewer_name: reviewerName, rating }),
         headers: authHeaders(galleryToken),
       }),
     createZip: (token: string, subgalleryShareTokens: string[], galleryToken?: string) =>

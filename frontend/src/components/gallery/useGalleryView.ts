@@ -19,6 +19,8 @@ import { useLightboxStore } from "@/store/lightbox";
 import { useReviewerStore } from "@/store/reviewer";
 
 export const FLAG_GROUP_ORDER: ColorFlag[] = ["green", "red", "yellow", "blue", "none"];
+// Rating group buckets, highest first, unrated last.
+export const RATING_GROUP_ORDER: number[] = [5, 4, 3, 2, 1, 0];
 
 /**
  * Controller hook for the public gallery viewer. Owns all data fetching, collaboration state,
@@ -47,6 +49,7 @@ export function useGalleryView(
   const [arrange, setArrange] = useState<ArrangeState>({
     filterName: "",
     flagFilters: new Set<ColorFlag>(),
+    ratingFilters: new Set<number>(),
     commentsOnly: false,
     sortKey: gallery.default_sort,
     sortAsc: gallery.default_sort_dir !== "desc",
@@ -63,6 +66,7 @@ export function useGalleryView(
   // no flags/likes/comments — so everything collapses to false there.
   const features = {
     colorFlags: collabMode && gallery.color_flags_enabled,
+    ratingMode: gallery.rating_mode,
     likes: collabMode && gallery.likes_enabled,
     comments: collabMode && gallery.comments_enabled,
     annotations: collabMode && gallery.comments_enabled && gallery.annotations_enabled,
@@ -160,12 +164,22 @@ export function useGalleryView(
     () => Object.fromEntries(votes.map((v) => [v.image_id, v.color_flag])),
     [votes],
   );
+  const voteRatingByImageId = useMemo(
+    () => Object.fromEntries(votes.map((v) => [v.image_id, v.rating])),
+    [votes],
+  );
 
   // In team voting the displayed flag is the reviewer's vote, otherwise the stored image flag.
   const flagOf = useMemo(
     () => (img: ImageResponse): ColorFlag =>
       teamVoting ? ((votesByImageId[img.id] as ColorFlag) ?? "none") : img.color_flag,
     [teamVoting, votesByImageId],
+  );
+  // Star-mode parallel to flagOf: per-reviewer star under team voting, else the shared image rating.
+  const ratingOf = useMemo(
+    () => (img: ImageResponse): number =>
+      teamVoting ? (voteRatingByImageId[img.id] ?? 0) : img.rating,
+    [teamVoting, voteRatingByImageId],
   );
 
   // "Capture Date" sort is only offered when at least one photo carries EXIF capture metadata;
@@ -178,6 +192,7 @@ export function useGalleryView(
     const q = arrange.filterName.trim().toLowerCase();
     if (q) list = list.filter((img) => img.original_filename.toLowerCase().includes(q));
     if (arrange.flagFilters.size > 0) list = list.filter((img) => arrange.flagFilters.has(flagOf(img)));
+    if (arrange.ratingFilters.size > 0) list = list.filter((img) => arrange.ratingFilters.has(ratingOf(img)));
     if (arrange.commentsOnly) list = list.filter((img) => img.comment_count > 0);
     if (activeCollection) {
       const member = new Set(collections.find((c) => c.id === activeCollection)?.image_ids ?? []);
@@ -191,24 +206,29 @@ export function useGalleryView(
         case "filename": return a.original_filename.localeCompare(b.original_filename) * dir;
         case "date": return (a.created_at < b.created_at ? -1 : 1) * dir;
         case "captured": return compareCaptureDate(a, b, dir);
+        case "rating": return (ratingOf(a) - ratingOf(b)) * dir;
         default: return (a.sort_order - b.sort_order) * dir;
       }
     });
-  }, [rawImages, arrange, flagOf, activeCollection, collections, captureSortAvailable]);
+  }, [rawImages, arrange, flagOf, ratingOf, activeCollection, collections, captureSortAvailable]);
 
   const visibleIds = useMemo(() => filteredSorted.map((img) => img.id), [filteredSorted]);
   const selection = useImageSelection(visibleIds);
 
-  // Group (by color flag) when requested.
+  // Group (by color flag or by star rating) when requested.
   const groups = useMemo(() => {
-    if (arrange.groupKey !== "flag") return null;
-    return FLAG_GROUP_ORDER
-      .map((value) => ({
-        key: value,
-        images: filteredSorted.filter((img) => flagOf(img) === value),
-      }))
-      .filter((g) => g.images.length > 0);
-  }, [filteredSorted, arrange.groupKey, flagOf]);
+    if (arrange.groupKey === "flag") {
+      return FLAG_GROUP_ORDER
+        .map((value) => ({ key: value as string, images: filteredSorted.filter((img) => flagOf(img) === value) }))
+        .filter((g) => g.images.length > 0);
+    }
+    if (arrange.groupKey === "rating") {
+      return RATING_GROUP_ORDER
+        .map((value) => ({ key: `rating:${value}`, images: filteredSorted.filter((img) => ratingOf(img) === value) }))
+        .filter((g) => g.images.length > 0);
+    }
+    return null;
+  }, [filteredSorted, arrange.groupKey, flagOf, ratingOf]);
 
   // One lightbox sequence across the whole (filtered) gallery, in display order — so paging
   // in the lightbox spans every image even when the grid is split into flag groups.
@@ -225,6 +245,13 @@ export function useGalleryView(
   function handleVote(imageId: string, flag: string) {
     if (!reviewerName) return;
     api.public.setVote(shareToken, imageId, reviewerName, flag, galleryToken).then(() => {
+      qc.invalidateQueries({ queryKey: ["public-votes", shareToken, reviewerName] });
+    });
+  }
+
+  function handleRatingVote(imageId: string, rating: number) {
+    if (!reviewerName) return;
+    api.public.setRatingVote(shareToken, imageId, reviewerName, rating, galleryToken).then(() => {
       qc.invalidateQueries({ queryKey: ["public-votes", shareToken, reviewerName] });
     });
   }
@@ -288,6 +315,8 @@ export function useGalleryView(
     zip,
     // derived
     votesByImageId,
+    voteRatingByImageId,
+    ratingOf,
     likedSet,
     filteredSorted,
     captureSortAvailable,
@@ -306,6 +335,7 @@ export function useGalleryView(
     deleteCollectionMutation,
     renameCollectionMutation,
     handleVote,
+    handleRatingVote,
     toggleLike,
     handleDownload,
   };

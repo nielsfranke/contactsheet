@@ -23,7 +23,7 @@ from app.schemas.auth import GalleryAuthRequest, GalleryAuthResponse
 from app.schemas.collection import CollectionCreate, CollectionResponse, CollectionUpdate
 from app.schemas.comment import CommentCreate, CommentResponse
 from app.schemas.gallery import GalleryMetaResponse, GalleryPublicResponse
-from app.schemas.image import ImageResponse, PublicFlagRequest, PublicLikeRequest, UploadResponse
+from app.schemas.image import ImageResponse, PublicFlagRequest, PublicLikeRequest, PublicRateRequest, UploadResponse
 from app.schemas.vote import VoteCreate, VoteResponse
 from app.schemas.zip_job import PublicZipCreate, ZipJobResponse
 from app.services import activity_service, collection_service, comment_service, gallery_service, image_service, notification_service, watermark_service
@@ -253,6 +253,30 @@ def flag_image(
     )
 
 
+@router.post("/g/{share_token}/images/{image_id}/rate", response_model=ImageResponse)
+@limiter.limit("120/minute")
+def rate_image(
+    request: Request,
+    share_token: str,
+    image_id: str,
+    body: PublicRateRequest,
+    db: Session = Depends(get_db),
+    storage: StorageProvider = Depends(get_storage),
+    gallery_id_from_token: str | None = Depends(get_optional_gallery_token),
+):
+    gallery, public = gallery_service.get_public_gallery(db, share_token, storage)
+    _require_gallery_access(gallery, gallery_id_from_token)
+
+    image = image_service.public_set_rating(db, gallery, image_id, body.rating)
+    count = comment_repo.count_for_image(db, image_id)
+    acount = comment_repo.anchored_counts_for_images(db, [image_id]).get(image_id, 0)
+    return image_service._image_to_response(
+        image, storage, gallery.downloads_enabled, count, acount,
+        watermarked=public.watermark_enabled, share_token=share_token,
+        proxy_variants=public.watermark_enabled or not gallery.downloads_enabled,
+    )
+
+
 @router.get("/g/{share_token}/likes", response_model=list[str])
 def get_likes(
     share_token: str,
@@ -440,15 +464,19 @@ def set_vote(
     if not image or image.gallery_id != gallery.id or image.moderation_status != "approved":
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Image not found")
 
-    vote = vote_repo.upsert(db, image_id, gallery.id, body.reviewer_name, body.color_flag)
+    # Write only the field the client actually sent (flags vs stars mode); the other stays put.
+    sets_rating = "rating" in body.model_fields_set
+    vote = vote_repo.upsert(
+        db, image_id, gallery.id, body.reviewer_name,
+        rating=body.rating if sets_rating else None,
+        color_flag=None if sets_rating else body.color_flag,
+    )
+    meta = {"rating": body.rating} if sets_rating else {"flag": body.color_flag}
     try:
-        activity_repo.log(
-            db, gallery.id, "voted", body.reviewer_name,
-            image_id=image_id, meta={"flag": body.color_flag}
-        )
+        activity_repo.log(db, gallery.id, "voted", body.reviewer_name, image_id=image_id, meta=meta)
     except Exception:
         pass
-    notification_service.enqueue(db, gallery.id, "flag", body.reviewer_name, meta={"image_id": image_id, "flag": body.color_flag})
+    notification_service.enqueue(db, gallery.id, "flag", body.reviewer_name, meta={"image_id": image_id, **meta})
     realtime_publish(gallery.id, "vote", image_id=image_id)
     return vote
 

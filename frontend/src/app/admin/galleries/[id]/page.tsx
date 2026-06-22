@@ -284,6 +284,7 @@ export default function GalleryDetailPage() {
               captureSortAvailable={captureSortAvailable}
               shownCount={filteredSorted.length}
               totalCount={images.length}
+              ratingMode={adminSettings?.rating_mode ?? "flags"}
               search={
                 searchEnabled && images.length > 0
                   ? {

@@ -62,6 +62,7 @@ export function AdminImageGrid({
     queryFn: () => api.adminSettings.get(),
   });
   const highRes = appSettings?.high_res_previews ?? true;
+  const ratingMode = appSettings?.rating_mode ?? "flags";
 
   const deleteMutation = useMutation({
     mutationFn: (imageId: string) => api.images.delete(imageId),
@@ -82,7 +83,7 @@ export function AdminImageGrid({
   const rounded = cornerRounding(presentation.previewCorners);
   // Drag-to-reorder needs uniform tiles, so reorder mode is always a square grid; every other
   // view mirrors the gallery's own layout/preview settings.
-  const cardProps = { galleryId, onDelete, deleting, onOpen, rounded, highRes, onSetHeaderImage, onSetCoverImage, onRenameImage, onMoveImage, onRemoveFromCollection, selectionMode, isSelected, onToggleSelect, onRangeSelect };
+  const cardProps = { galleryId, onDelete, deleting, onOpen, rounded, highRes, ratingMode, onSetHeaderImage, onSetCoverImage, onRenameImage, onMoveImage, onRemoveFromCollection, selectionMode, isSelected, onToggleSelect, onRangeSelect };
 
   // Reorder (sortable, square grid) only when sort=manual; otherwise tiles are plain-draggable for
   // move-to-gallery DnD. Both run inside the page-level DndContext.

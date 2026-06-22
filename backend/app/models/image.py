@@ -39,6 +39,8 @@ class Image(Base):
     sort_order: Mapped[int] = mapped_column(Integer, nullable=False, default=0, index=True)
 
     color_flag: Mapped[str] = mapped_column(String(10), nullable=False, default="none")
+    # Shared 1–5 star rating (0 = unrated); the stars-mode parallel to color_flag.
+    rating: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     likes: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     # Reviewer name of a public client uploader; null for photographer (admin) uploads.
     uploaded_by: Mapped[str | None] = mapped_column(String(100), nullable=True)

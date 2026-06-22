@@ -14,6 +14,7 @@ import { Loader2, AlertCircle, Check } from "lucide-react";
 import { Icons } from "@/lib/ui-icons";
 import { OverlayPill } from "@/components/chrome/OverlayPill";
 import { MediaBadge } from "@/components/chrome/MediaBadge";
+import { StarRating } from "@/components/chrome/StarRating";
 import { useTranslations } from "next-intl";
 
 /** "art.psb" → "PSB"; used to label download-only (no-preview) tiles. */
@@ -29,7 +30,7 @@ const FLAG_COLORS: { value: ColorFlag; bg: string }[] = [
   { value: "blue",   bg: "bg-blue-400" },
 ];
 
-const DEFAULT_FEATURES: CollabFeatures = { colorFlags: true, likes: false, comments: true, annotations: false };
+const DEFAULT_FEATURES: CollabFeatures = { colorFlags: true, ratingMode: "flags", likes: false, comments: true, annotations: false };
 const DEFAULT_PRESENTATION: GridPresentation = {
   previewSize: "medium",
   previewSpacing: "medium",
@@ -48,6 +49,9 @@ interface Props {
   teamVoting?: boolean;
   reviewerVotes?: Record<string, string>;
   onVote?: (imageId: string, flag: string) => void;
+  /** Per-reviewer star ratings (stars + team voting); parallel to reviewerVotes. */
+  reviewerRatings?: Record<string, number>;
+  onRatingVote?: (imageId: string, rating: number) => void;
   /** Image ids the current reviewer has liked (filled-when-mine heart). */
   likedSet?: Set<string>;
   onToggleLike?: (imageId: string) => void;
@@ -72,6 +76,8 @@ export function PhotoGrid({
   teamVoting = false,
   reviewerVotes = {},
   onVote,
+  reviewerRatings = {},
+  onRatingVote,
   likedSet,
   onToggleLike,
   features = DEFAULT_FEATURES,
@@ -114,6 +120,8 @@ export function PhotoGrid({
         teamVoting={teamVoting}
         reviewerFlag={reviewerVotes[img.id] as ColorFlag | undefined}
         onVote={onVote}
+        reviewerRating={reviewerRatings[img.id]}
+        onRatingVote={onRatingVote}
         liked={likedSet?.has(img.id) ?? false}
         onToggleLike={onToggleLike}
         features={features}
@@ -168,6 +176,8 @@ function PhotoTile({
   teamVoting = false,
   reviewerFlag,
   onVote,
+  reviewerRating,
+  onRatingVote,
   liked = false,
   onToggleLike,
   features,
@@ -193,6 +203,8 @@ function PhotoTile({
   teamVoting?: boolean;
   reviewerFlag?: ColorFlag;
   onVote?: (imageId: string, flag: string) => void;
+  reviewerRating?: number;
+  onRatingVote?: (imageId: string, rating: number) => void;
   liked?: boolean;
   onToggleLike?: (imageId: string) => void;
   features: CollabFeatures;
@@ -216,6 +228,17 @@ function PhotoTile({
   }
 
   const effectiveFlag: ColorFlag = teamVoting ? (reviewerFlag ?? "none") : localFlag;
+
+  // Star rating mirrors the flag state exactly (optimistic local + render-time external sync).
+  const stars = features.ratingMode === "stars";
+  const [localRating, setLocalRating] = useState<number>(img.rating);
+  const [syncedRating, setSyncedRating] = useState<number>(img.rating);
+  if (img.rating !== syncedRating) {
+    setSyncedRating(img.rating);
+    setLocalRating(img.rating);
+  }
+  const effectiveRating = teamVoting ? (reviewerRating ?? 0) : localRating;
+
   // In team voting, likes/comments are hidden in favour of per-reviewer flags.
   const showFlags = features.colorFlags;
   const showLikes = features.likes && !teamVoting;
@@ -241,6 +264,21 @@ function PhotoTile({
     } else {
       flagMutation.mutate(effectiveFlag === flagValue ? "none" : flagValue);
     }
+  }
+
+  const ratingMutation = useMutation({
+    mutationFn: (rating: number) => {
+      if (!shareToken) throw new Error("no token");
+      return api.public.rateImage(shareToken, img.id, rating, galleryToken);
+    },
+    onMutate: (rating) => setLocalRating(rating),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["public-images"] }),
+    onError: () => setLocalRating(img.rating),
+  });
+
+  function handleRating(value: number) {
+    if (teamVoting && onRatingVote) onRatingVote(img.id, value);
+    else ratingMutation.mutate(value);
   }
 
   const activeFlagColor = FLAG_COLORS.find((f) => f.value === effectiveFlag);
@@ -318,8 +356,20 @@ function PhotoTile({
 
         {/* Persistent active-flag dot (hidden while hovering, where the picker takes over).
             White ring + soft dark shadow so it reads on both bright and dark photos. */}
-        {collabMode && showFlags && effectiveFlag !== "none" && (
+        {collabMode && showFlags && !stars && effectiveFlag !== "none" && (
           <div className={`absolute top-2 right-2 w-3.5 h-3.5 rounded-full ring-2 ring-white shadow-[0_0_3px_rgba(0,0,0,0.6)] ${activeFlagColor?.bg ?? ""} sm:group-hover:opacity-0 transition-opacity pointer-events-none`} />
+        )}
+
+        {/* Persistent star rating (stars mode) — same hide-on-hover behaviour as the flag dot. */}
+        {collabMode && showFlags && stars && effectiveRating > 0 && (
+          <div className="absolute top-2 right-2 sm:group-hover:opacity-0 transition-opacity pointer-events-none">
+            <StarRating
+              value={effectiveRating}
+              size={13}
+              starClassName="text-amber-400 drop-shadow-[0_0_2px_rgba(0,0,0,0.7)]"
+              emptyClassName="text-white/40 drop-shadow-[0_0_2px_rgba(0,0,0,0.7)]"
+            />
+          </div>
         )}
 
         {/* Persistent comment/annotation indicator so flagged photos are spottable without opening.
@@ -340,8 +390,21 @@ function PhotoTile({
           <div className="absolute inset-0 pointer-events-none hidden sm:block opacity-0 sm:group-hover:opacity-100 transition-opacity">
             <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-black/30" />
 
+            {/* Top-right: star picker (stars mode) */}
+            {showToolbar && showFlags && stars && (
+              <div className="absolute top-2 right-2 pointer-events-auto">
+                <StarRating
+                  value={effectiveRating}
+                  onChange={handleRating}
+                  size={18}
+                  starClassName="text-amber-400 drop-shadow-[0_0_2px_rgba(0,0,0,0.7)]"
+                  emptyClassName="text-white/50 drop-shadow-[0_0_2px_rgba(0,0,0,0.7)]"
+                />
+              </div>
+            )}
+
             {/* Top-right: flag picker */}
-            {showToolbar && showFlags && (
+            {showToolbar && showFlags && !stars && (
               <div className="absolute top-2 right-2 flex items-center gap-1.5 sm:gap-1 pointer-events-auto">
                 {FLAG_COLORS.map((f) => (
                   <button

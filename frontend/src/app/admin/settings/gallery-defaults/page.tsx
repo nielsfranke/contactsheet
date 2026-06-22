@@ -8,7 +8,8 @@ import { useQuery } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
 import { api } from "@/lib/api";
 import { SettingsPageSkeleton } from "@/components/admin/SettingsPageSkeleton";
-import { MODE_LABELS, type LightboxBackdrop, type ModeType } from "@/lib/types";
+import { MODE_LABELS, type LightboxBackdrop, type ModeType, type RatingMode } from "@/lib/types";
+import { Icons } from "@/lib/ui-icons";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Toggle } from "@/components/admin/gallery-settings-fields";
@@ -20,6 +21,11 @@ import { MessagesSquare, Sun } from "lucide-react";
 const MODES: { value: ModeType; descKey: string; icon: React.ReactNode }[] = [
   { value: "collaboration", descKey: "collaborationDesc", icon: <MessagesSquare size={18} /> },
   { value: "presentation", descKey: "presentationDesc", icon: <Sun size={18} /> },
+];
+
+const RATING_MODES: { value: RatingMode; labelKey: string }[] = [
+  { value: "flags", labelKey: "ratingModeFlags" },
+  { value: "stars", labelKey: "ratingModeStars" },
 ];
 
 const BACKDROP_OPTIONS: { value: LightboxBackdrop; labelKey: string; swatch: string }[] = [
@@ -45,6 +51,7 @@ export default function GalleryDefaultsPage() {
 
   const effHighRes = settings.high_res_previews;
   const effBackdrop = settings.lightbox_backdrop;
+  const effRatingMode = settings.rating_mode;
 
   const presetFor = (mode: ModeType) =>
     mode === "collaboration" ? settings.preset_collaboration : settings.preset_presentation;
@@ -125,6 +132,39 @@ export default function GalleryDefaultsPage() {
           <p className="text-xs text-muted-foreground">
             {t("backdropHint")}
           </p>
+        </div>
+      </section>
+
+      {/* Rating style — instance-wide: color flags vs. 1–5 stars (never both) */}
+      <section className="rounded-lg border border-border bg-card/50 p-5 space-y-4">
+        <div>
+          <h2 className="text-sm font-medium text-foreground">{t("ratingStyle")}</h2>
+          <p className="text-xs text-muted-foreground mt-1">{t("ratingStyleHint")}</p>
+        </div>
+        <div className="grid grid-cols-2 gap-2">
+          {RATING_MODES.map((opt) => {
+            const active = effRatingMode === opt.value;
+            return (
+              <button
+                key={opt.value}
+                type="button"
+                onClick={() => save({ rating_mode: opt.value })}
+                className={`flex items-center justify-center gap-2 rounded-md border p-3 transition-colors ${
+                  active ? "border-primary ring-1 ring-primary" : "border-border hover:border-muted-foreground"
+                }`}
+              >
+                {opt.value === "stars" ? (
+                  <Icons.rating size={16} className="text-amber-400" fill="currentColor" />
+                ) : (
+                  <span className="flex gap-0.5">
+                    <span className="h-3 w-3 rounded-full bg-green-500" />
+                    <span className="h-3 w-3 rounded-full bg-red-500" />
+                  </span>
+                )}
+                <span className="text-sm text-foreground">{t(opt.labelKey)}</span>
+              </button>
+            );
+          })}
         </div>
       </section>
 

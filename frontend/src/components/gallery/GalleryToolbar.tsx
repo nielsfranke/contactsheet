@@ -5,18 +5,21 @@
 
 import { useState } from "react";
 import { useTranslations } from "next-intl";
-import type { ColorFlag } from "@/lib/types";
+import type { ColorFlag, RatingMode } from "@/lib/types";
 import { Input } from "@/components/ui/input";
 import { ToolbarBand } from "@/components/gallery/ToolbarBand";
 import { InputClearButton } from "@/components/chrome/InputClearButton";
+import { Icons } from "@/lib/ui-icons";
 import { Search, Ban, MessageCircle, ArrowDownUp, X, SlidersHorizontal, ScanSearch, Loader2 } from "lucide-react";
 
-export type ToolbarSortKey = "manual" | "filename" | "date" | "captured";
-export type ToolbarGroupKey = "none" | "flag";
+export type ToolbarSortKey = "manual" | "filename" | "date" | "captured" | "rating";
+export type ToolbarGroupKey = "none" | "flag" | "rating";
 
 export interface ToolbarArrange {
   filterName: string;
   flagFilters: Set<ColorFlag>;
+  /** Stars mode: filter to photos with these exact ratings (0 = unrated). Parallel to flagFilters. */
+  ratingFilters: Set<number>;
   commentsOnly: boolean;
   sortKey: ToolbarSortKey;
   sortAsc: boolean;
@@ -38,6 +41,8 @@ export interface ToolbarContentSearch {
 export interface ToolbarFeatures {
   colorFlags: boolean;
   comments: boolean;
+  /** Rating style — chips/group/sort switch between flags and stars. Defaults to flags. */
+  ratingMode?: RatingMode;
 }
 
 const FLAG_CHIPS: { value: ColorFlag; bg: string }[] = [
@@ -48,8 +53,10 @@ const FLAG_CHIPS: { value: ColorFlag; bg: string }[] = [
   { value: "blue",   bg: "bg-blue-400" },
 ];
 
+// Rating filter chips: unrated (0) then 1–5.
+const RATING_CHIPS: number[] = [0, 1, 2, 3, 4, 5];
+
 const SORT_KEYS: ToolbarSortKey[] = ["manual", "filename", "date", "captured"];
-const GROUP_KEYS: ToolbarGroupKey[] = ["none", "flag"];
 
 interface Props {
   arrange: ToolbarArrange;
@@ -86,20 +93,24 @@ export function GalleryToolbar({
 }: Props) {
   const t = useTranslations("gallery.toolbar");
   const tf = useTranslations("gallery.flags");
+  const ts = useTranslations("gallery.stars");
   const tc = useTranslations("common");
   const [sheetOpen, setSheetOpen] = useState(false);
+  const stars = features.ratingMode === "stars";
 
   // Content-search mode: the input is the primary field; while a query is active the filter/sort
   // controls step aside (results are a similarity ranking, not a client-side filter/sort).
   const searchMode = !!search;
   const searching = searchMode && search!.query.trim() !== "";
 
+  // The active rating filter set drives chips/count in stars mode; flags use flagFilters.
+  const ratingFilterCount = stars ? arrange.ratingFilters.size : arrange.flagFilters.size;
   const filterActive =
-    arrange.filterName.trim() !== "" || arrange.flagFilters.size > 0 || arrange.commentsOnly;
+    arrange.filterName.trim() !== "" || ratingFilterCount > 0 || arrange.commentsOnly;
   // Drives the trigger badge — the controls that live in the sheet. In content-search mode the
   // filename filter lives there too, so it counts; otherwise it keeps its own inline clear button.
   const sheetFilterCount =
-    arrange.flagFilters.size + (arrange.commentsOnly ? 1 : 0) +
+    ratingFilterCount + (arrange.commentsOnly ? 1 : 0) +
     (searchMode && arrange.filterName.trim() !== "" ? 1 : 0);
 
   function toggleFlag(f: ColorFlag) {
@@ -108,16 +119,28 @@ export function GalleryToolbar({
     setArrange({ ...arrange, flagFilters: next });
   }
 
+  function toggleRating(r: number) {
+    const next = new Set(arrange.ratingFilters);
+    if (next.has(r)) next.delete(r); else next.add(r);
+    setArrange({ ...arrange, ratingFilters: next });
+  }
+
   function clearFilters() {
-    setArrange({ ...arrange, filterName: "", flagFilters: new Set(), commentsOnly: false });
+    setArrange({ ...arrange, filterName: "", flagFilters: new Set(), ratingFilters: new Set(), commentsOnly: false });
   }
 
   const selectCls = "h-8 max-w-full text-sm bg-background border border-input text-foreground rounded-lg px-2";
 
   // Drop "Capture Date" when no photo carries the metadata. If it was the active sort, fall back
   // to filename in the select (the grid does the same), so the control never renders blank.
-  const sortKeys = captureSortAvailable ? SORT_KEYS : SORT_KEYS.filter((k) => k !== "captured");
+  // Sort-by-rating is offered only in stars mode (flags have no numeric order).
+  const sortKeys: ToolbarSortKey[] = [
+    ...(captureSortAvailable ? SORT_KEYS : SORT_KEYS.filter((k) => k !== "captured")),
+    ...(stars ? (["rating"] as ToolbarSortKey[]) : []),
+  ];
   const sortValue = sortKeys.includes(arrange.sortKey) ? arrange.sortKey : "filename";
+  // Group offers flag buckets in flags mode, rating buckets in stars mode.
+  const groupKeys: ToolbarGroupKey[] = ["none", stars ? "rating" : "flag"];
 
   // Shared control renderers — used inline (desktop) and inside the bottom sheet (mobile), so the
   // wiring lives in one place and only the surrounding layout differs.
@@ -136,6 +159,26 @@ export function GalleryToolbar({
           }`}
         >
           {c.value === "none" && <Ban size={11} className="text-background" />}
+        </button>
+      );
+    });
+
+  const ratingChips = (sizeCls: string) =>
+    RATING_CHIPS.map((r) => {
+      const active = arrange.ratingFilters.has(r);
+      const label = r === 0 ? ts("unrated") : ts("nStars", { count: r });
+      return (
+        <button
+          key={r}
+          onClick={() => toggleRating(r)}
+          title={label}
+          aria-label={label}
+          aria-pressed={active}
+          className={`${sizeCls} rounded-md flex items-center justify-center gap-0.5 border transition-all outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 focus-visible:ring-offset-background ${
+            active ? "border-primary ring-1 ring-primary text-foreground" : "border-input text-muted-foreground hover:text-foreground"
+          }`}
+        >
+          {r === 0 ? <Ban size={12} /> : <><span className="text-xs tabular-nums">{r}</span><Icons.rating size={11} className="text-amber-400" fill="currentColor" /></>}
         </button>
       );
     });
@@ -169,7 +212,7 @@ export function GalleryToolbar({
       className={cls}
       aria-label={t("groupBy")}
     >
-      {GROUP_KEYS.map((k) => <option key={k} value={k}>{t(`group.${k}`)}</option>)}
+      {groupKeys.map((k) => <option key={k} value={k}>{t(`group.${k}`)}</option>)}
     </select>
   );
 
@@ -240,7 +283,7 @@ export function GalleryToolbar({
           sheet, behind the Filter trigger). */}
       {!searchMode && (features.colorFlags || features.comments) && (
         <div className="hidden sm:flex items-center gap-1.5">
-          {features.colorFlags && flagChips("w-5 h-5")}
+          {features.colorFlags && (stars ? ratingChips("h-6 px-1.5") : flagChips("w-5 h-5"))}
           {features.comments && (
             <button
               onClick={() => setArrange({ ...arrange, commentsOnly: !arrange.commentsOnly })}
@@ -333,8 +376,8 @@ export function GalleryToolbar({
 
             {features.colorFlags && (
               <div className="space-y-2">
-                <p className="text-xs font-medium text-muted-foreground">{t("flagsLabel")}</p>
-                <div className="flex items-center gap-3">{flagChips("w-8 h-8")}</div>
+                <p className="text-xs font-medium text-muted-foreground">{stars ? t("ratingLabel") : t("flagsLabel")}</p>
+                <div className="flex items-center gap-2 flex-wrap">{stars ? ratingChips("h-9 px-2.5") : flagChips("w-8 h-8")}</div>
               </div>
             )}
 

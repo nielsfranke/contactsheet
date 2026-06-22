@@ -4,6 +4,7 @@
 "use client";
 
 import type { ArrangeState } from "./GalleryAdminSidebar";
+import type { RatingMode } from "@/lib/types";
 import { GalleryToolbar, type ToolbarContentSearch } from "@/components/gallery/GalleryToolbar";
 
 interface Props {
@@ -12,6 +13,8 @@ interface Props {
   captureSortAvailable: boolean;
   shownCount: number;
   totalCount: number;
+  /** Instance rating style — flags vs. stars. */
+  ratingMode: RatingMode;
   /** Semantic content search — present only when the instance has the feature enabled. */
   search?: ToolbarContentSearch;
 }
@@ -25,7 +28,7 @@ interface Props {
  * It sticks to the top of the scroll area (`top-0`). The mobile "go up" affordance now lives in the
  * admin shell's top bar (not a separate in-page up-nav row), so there's no bar height to offset.
  */
-export function GalleryViewToolbar({ arrange, setArrange, captureSortAvailable, shownCount, totalCount, search }: Props) {
+export function GalleryViewToolbar({ arrange, setArrange, captureSortAvailable, shownCount, totalCount, ratingMode, search }: Props) {
   return (
     <GalleryToolbar
       arrange={arrange}
@@ -33,6 +36,7 @@ export function GalleryViewToolbar({ arrange, setArrange, captureSortAvailable, 
       captureSortAvailable={captureSortAvailable}
       shownCount={shownCount}
       totalCount={totalCount}
+      features={{ colorFlags: true, comments: true, ratingMode }}
       search={search}
       className="sticky top-0 z-20 -mx-6 -mt-6 px-6 py-2.5"
     />

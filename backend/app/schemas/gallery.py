@@ -295,6 +295,8 @@ class GalleryPublicResponse(BaseModel):
     high_res_previews: bool = True
     # Instance-wide public lightbox backdrop tone (dimmed/black/white/transparent).
     lightbox_backdrop: str = "dimmed"
+    # Instance-wide rating style: "flags" (color flags) | "stars" (1–5). Tells the client which to render.
+    rating_mode: str = "flags"
     # Instance-wide default photo sort — the client gallery seeds its initial sort from this.
     default_sort: str = "captured"
     default_sort_dir: str = "asc"

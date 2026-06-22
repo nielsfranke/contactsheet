@@ -10,6 +10,8 @@ from pydantic import BaseModel, Field
 
 
 ColorFlag = Literal["none", "green", "red", "yellow", "blue"]
+# 0 = unrated, 1–5 = stars.
+Rating = Literal[0, 1, 2, 3, 4, 5]
 ProcessingStatus = Literal["pending", "done", "error"]
 
 
@@ -27,6 +29,7 @@ class ImageResponse(BaseModel):
     iptc_data: dict[str, Any] | None = None
     sort_order: int
     color_flag: str
+    rating: int = 0
     likes: int
     comment_count: int = 0
     annotation_count: int = 0
@@ -64,11 +67,16 @@ class PhotoPage(BaseModel):
 class ImageUpdate(BaseModel):
     sort_order: int | None = None
     color_flag: ColorFlag | None = None
+    rating: Rating | None = None
     original_filename: str | None = None
 
 
 class PublicFlagRequest(BaseModel):
     flag: ColorFlag
+
+
+class PublicRateRequest(BaseModel):
+    rating: Rating
 
 
 class PublicLikeRequest(BaseModel):

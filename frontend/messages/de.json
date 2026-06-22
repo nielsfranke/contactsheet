@@ -38,6 +38,11 @@
       "blue": "Blau",
       "none": "Ohne Markierung"
     },
+    "stars": {
+      "rated": "{count} von 5 bewertet",
+      "unrated": "Nicht bewertet",
+      "nStars": "{count, plural, one {# Stern} other {# Sterne}}"
+    },
     "footerLabels": {
       "email": "E-Mail",
       "phone": "Telefon"
@@ -102,6 +107,7 @@
       "exif": "Aufnahmedaten",
       "iptc": "Fotoinfos",
       "flag": "Markierung:",
+      "rating": "Bewertung:",
       "flagLabels": {
         "green": "Auswählen",
         "red": "Ablehnen",
@@ -127,6 +133,7 @@
       "groupBy": "Gruppieren nach",
       "filterSort": "Filter & Sortierung",
       "flagsLabel": "Markierungen",
+      "ratingLabel": "Bewertung",
       "done": "Fertig",
       "ascending": "Aufsteigend",
       "descending": "Absteigend",
@@ -137,11 +144,13 @@
         "manual": "Manuell",
         "filename": "Dateiname",
         "date": "Hinzugefügt am",
-        "captured": "Aufnahmedatum"
+        "captured": "Aufnahmedatum",
+        "rating": "Bewertung"
       },
       "group": {
         "none": "Keine Gruppierung",
-        "flag": "Nach Markierung gruppieren"
+        "flag": "Nach Markierung gruppieren",
+        "rating": "Nach Bewertung gruppieren"
       }
     },
     "comments": {
@@ -788,7 +797,11 @@
       "backdropBlack": "Schwarz",
       "backdropWhite": "Weiß",
       "backdropFrosted": "Mattiert",
-      "backdropHint": "Hintergrund hinter dem Vollbild-Foto-Viewer (Kundengalerien und die Admin-Galerieansicht). Weiß und Mattiert verwenden dunkle Bedienelemente; Gedimmt und Schwarz behalten helle Bedienelemente."
+      "backdropHint": "Hintergrund hinter dem Vollbild-Foto-Viewer (Kundengalerien und die Admin-Galerieansicht). Weiß und Mattiert verwenden dunkle Bedienelemente; Gedimmt und Schwarz behalten helle Bedienelemente.",
+      "ratingStyle": "Bewertungsstil",
+      "ratingStyleHint": "Wie Prüfer Fotos in der gesamten Instanz bewerten — Farbmarkierungen oder 1–5 Sterne. Das Umschalten ist verlustfrei; vorhandene Markierungen und Sterne bleiben beide erhalten.",
+      "ratingModeFlags": "Farbmarkierungen",
+      "ratingModeStars": "Sterne 1–5"
     },
     "gallery": {
       "title": "Galerie-Einstellungen",

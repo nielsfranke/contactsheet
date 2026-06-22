@@ -105,6 +105,8 @@ class AppSettingsUpdate(BaseModel):
     # Source-code URL (AGPL §13). "" clears back to the upstream default; an http(s) URL sets it.
     source_url: str | None = Field(default=None, max_length=255)
     high_res_previews: bool | None = None
+    # Instance-wide rating style: color flags vs. 1–5 stars (never both).
+    rating_mode: Literal["flags", "stars"] | None = None
     # An object replaces the preset; explicit null clears it back to built-in defaults;
     # omitted = no change (distinguished via model_fields_set in the router).
     preset_presentation: GalleryPreset | None = None
@@ -177,6 +179,7 @@ class AppSettingsResponse(BaseModel):
     public_base_url: str | None = None
     source_url: str | None = None
     high_res_previews: bool = True
+    rating_mode: str = "flags"
     preset_presentation: GalleryPreset | None = None
     preset_collaboration: GalleryPreset | None = None
     admin_grid_mode: str = "mirror"

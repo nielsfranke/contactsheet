@@ -22,12 +22,14 @@ import {
   Folder, FolderOpen, Pencil, Eraser, Image as ImageIcon, Frame, Layers, X, Copy, FolderPlus, FolderInput,
 } from "lucide-react";
 
-export type SortKey = "manual" | "filename" | "date" | "captured";
-export type GroupKey = "none" | "flag";
+export type SortKey = "manual" | "filename" | "date" | "captured" | "rating";
+export type GroupKey = "none" | "flag" | "rating";
 
 export interface ArrangeState {
   filterName: string;
   flagFilters: Set<ColorFlag>;
+  /** Stars mode: filter to photos with these exact ratings (0 = unrated). */
+  ratingFilters: Set<number>;
   commentsOnly: boolean;
   sortKey: SortKey;
   sortAsc: boolean;

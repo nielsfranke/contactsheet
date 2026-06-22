@@ -10,7 +10,7 @@ import { type DragEndEvent } from "@dnd-kit/core";
 import { useTranslations } from "next-intl";
 import { api } from "@/lib/api";
 import { useAdminDndRegister, useAdminDndActive } from "@/components/admin/AdminDnd";
-import { findChildren, findParent, FLAG_GROUP_ORDER } from "./parts";
+import { findChildren, findParent, FLAG_GROUP_ORDER, RATING_GROUP_ORDER } from "./parts";
 import type { ColorFlag, Collection, GalleryResponse, ImageResponse } from "@/lib/types";
 import { compareCaptureDate, hasCaptureDate } from "@/lib/image-sort";
 import { flattenTree } from "@/lib/gallery-sort";
@@ -34,6 +34,7 @@ export function useGalleryDetail(id: string) {
   const qc = useQueryClient();
   const t = useTranslations("admin.detail");
   const tf = useTranslations("gallery.flags");
+  const ts = useTranslations("gallery.stars");
 
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [settingsTab, setSettingsTab] = useState<SettingsTab>("general");
@@ -78,6 +79,7 @@ export function useGalleryDetail(id: string) {
   const [arrange, setArrange] = useState<ArrangeState>({
     filterName: "",
     flagFilters: new Set<ColorFlag>(),
+    ratingFilters: new Set<number>(),
     commentsOnly: false,
     sortKey: "manual",
     sortAsc: true,
@@ -119,6 +121,8 @@ export function useGalleryDetail(id: string) {
   }, [adminSettings]);
   useEffect(() => {
     if (!sortSeededRef.current || !adminSettings) return;
+    // "rating" is a transient, stars-mode-only sort — never persist it as the instance default.
+    if (arrange.sortKey === "rating") return;
     const dir = arrange.sortAsc ? "asc" : "desc";
     if (arrange.sortKey === adminSettings.gallery_sort && dir === adminSettings.gallery_sort_dir) return;
     api.adminSettings
@@ -373,6 +377,7 @@ export function useGalleryDetail(id: string) {
     const q = arrange.filterName.trim().toLowerCase();
     if (q) list = list.filter((img) => img.original_filename.toLowerCase().includes(q));
     if (arrange.flagFilters.size > 0) list = list.filter((img) => arrange.flagFilters.has(img.color_flag));
+    if (arrange.ratingFilters.size > 0) list = list.filter((img) => arrange.ratingFilters.has(img.rating));
     if (arrange.commentsOnly) list = list.filter((img) => img.comment_count > 0);
     if (activeCollection) {
       const member = new Set(collections.find((c) => c.id === activeCollection)?.image_ids ?? []);
@@ -386,6 +391,7 @@ export function useGalleryDetail(id: string) {
         case "filename": return a.original_filename.localeCompare(b.original_filename) * dir;
         case "date": return (a.created_at < b.created_at ? -1 : 1) * dir;
         case "captured": return compareCaptureDate(a, b, dir);
+        case "rating": return (a.rating - b.rating) * dir;
         default: return (a.sort_order - b.sort_order) * dir;
       }
     });
@@ -412,15 +418,26 @@ export function useGalleryDetail(id: string) {
   const groups: ImageGroup[] | undefined = useMemo(() => {
     // No grouping while searching — ranked results render as one flat, ordered list.
     if (searchActive) return undefined;
-    if (arrange.groupKey !== "flag") return undefined;
-    return FLAG_GROUP_ORDER
-      .map((value) => ({
-        key: value,
-        label: tf(value),
-        images: filteredSorted.filter((img: ImageResponse) => img.color_flag === value),
-      }))
-      .filter((g) => g.images.length > 0);
-  }, [filteredSorted, arrange.groupKey, tf, searchActive]);
+    if (arrange.groupKey === "flag") {
+      return FLAG_GROUP_ORDER
+        .map((value) => ({
+          key: value as string,
+          label: tf(value),
+          images: filteredSorted.filter((img: ImageResponse) => img.color_flag === value),
+        }))
+        .filter((g) => g.images.length > 0);
+    }
+    if (arrange.groupKey === "rating") {
+      return RATING_GROUP_ORDER
+        .map((value) => ({
+          key: `rating:${value}`,
+          label: value === 0 ? ts("unrated") : ts("nStars", { count: value }),
+          images: filteredSorted.filter((img: ImageResponse) => img.rating === value),
+        }))
+        .filter((g) => g.images.length > 0);
+    }
+    return undefined;
+  }, [filteredSorted, arrange.groupKey, tf, ts, searchActive]);
 
   // Admin photo-grid look: mirror the gallery's client settings (WYSIWYG), unless the instance is
   // set to a custom admin-view override, in which case use that (per-field built-in fallback).

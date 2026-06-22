@@ -11,6 +11,7 @@ import { CommentPanel } from "./CommentPanel";
 import { AnnotationLayer } from "./AnnotationLayer";
 import { ReviewerNamePrompt } from "./ReviewerNamePrompt";
 import { ConfirmDialog } from "@/components/chrome/ConfirmDialog";
+import { StarRating } from "@/components/chrome/StarRating";
 import { Button } from "@/components/ui/button";
 import { useTranslations } from "next-intl";
 import { api } from "@/lib/api";
@@ -19,7 +20,7 @@ import { previewSrcSet } from "@/lib/gridLayout";
 import { Icons } from "@/lib/ui-icons";
 import { useLightboxKeys } from "./lightbox-keys";
 import { photoSrc as resolvePhotoSrc, variantSrc as resolveVariantSrc } from "./lightbox-image-src";
-import type { Anchor, ColorFlag, CollabFeatures, LightboxBackdrop } from "@/lib/types";
+import type { Anchor, ColorFlag, CollabFeatures, LightboxBackdrop, Rating } from "@/lib/types";
 import {
   X,
   ChevronLeft,
@@ -64,6 +65,8 @@ interface Props {
   teamVoting?: boolean;
   reviewerVotes?: Record<string, string>;
   onVote?: (imageId: string, flag: string) => void;
+  reviewerRatings?: Record<string, number>;
+  onRatingVote?: (imageId: string, rating: number) => void;
   /** Image ids the current reviewer has liked (filled-when-mine heart). */
   likedSet?: Set<string>;
   onToggleLike?: (imageId: string) => void;
@@ -82,7 +85,7 @@ interface Props {
   protectImages?: boolean;
 }
 
-const DEFAULT_FEATURES: CollabFeatures = { colorFlags: true, likes: false, comments: true, annotations: false };
+const DEFAULT_FEATURES: CollabFeatures = { colorFlags: true, ratingMode: "flags", likes: false, comments: true, annotations: false };
 
 export function Lightbox({
   downloadsEnabled,
@@ -93,6 +96,8 @@ export function Lightbox({
   teamVoting = false,
   reviewerVotes = {},
   onVote,
+  reviewerRatings = {},
+  onRatingVote,
   likedSet,
   onToggleLike,
   watermarkEnabled = false,
@@ -211,6 +216,7 @@ export function Lightbox({
   // different image. This is a render-time reset (React's recommended alternative to
   // a setState-in-effect, which triggers cascading-render warnings).
   const [localFlag, setLocalFlag] = useState<ColorFlag>(image?.color_flag ?? "none");
+  const [localRating, setLocalRating] = useState<number>(image?.rating ?? 0);
   // Plain instant swap between photos — no cross-fade (a fade between differently-shaped portrait/
   // landscape photos always looks off, and most pro galleries just hard-cut). The photo
   // paints over an always-present cached-thumbnail underlay (see the slide below) and decodes
@@ -220,6 +226,7 @@ export function Lightbox({
   if (image?.id !== syncedImageId) {
     setSyncedImageId(image?.id);
     setLocalFlag(image?.color_flag ?? "none");
+    setLocalRating(image?.rating ?? 0);
     setShowComments(false);
     setAnnotating(false);
     setHoveredAnno(null);
@@ -253,6 +260,27 @@ export function Lightbox({
     } else {
       flagMutation.mutate(effectiveFlag === flagValue ? "none" : flagValue);
     }
+  }
+
+  const stars = features.ratingMode === "stars";
+  const effectiveRating = teamVoting ? (reviewerRatings[image?.id ?? ""] ?? 0) : localRating;
+  const ratingMutation = useMutation({
+    mutationFn: (rating: number) => {
+      if (adminGalleryId) return api.images.update(image.id, { rating: rating as Rating });
+      if (!shareToken) throw new Error("no token");
+      return api.public.rateImage(shareToken, image.id, rating, galleryToken);
+    },
+    onMutate: (rating) => setLocalRating(rating),
+    onSuccess: () =>
+      qc.invalidateQueries({
+        queryKey: adminGalleryId ? ["gallery-images", adminGalleryId] : ["public-images"],
+      }),
+    onError: () => setLocalRating(image.rating),
+  });
+
+  function handleRating(value: number) {
+    if (teamVoting && onRatingVote) onRatingVote(image.id, value);
+    else ratingMutation.mutate(value);
   }
 
   const liked = likedSet?.has(image?.id ?? "") ?? false;
@@ -695,8 +723,14 @@ export function Lightbox({
           />
         )}
         {/* Flag color badge — ring flips to black on a light/white backdrop so it stays visible. */}
-        {isCurrent && (collabMode || adminGalleryId) && flagsEnabled && effectiveFlag !== "none" && activeFlagColor && (
+        {isCurrent && (collabMode || adminGalleryId) && flagsEnabled && !stars && effectiveFlag !== "none" && activeFlagColor && (
           <div key="flag" className={`absolute top-3 right-16 w-4 h-4 rounded-full ring-2 ${light ? "ring-black/70" : "ring-white"} shadow-[0_0_3px_rgba(0,0,0,0.4)] ${activeFlagColor.bg}`} />
+        )}
+        {/* Star rating badge (stars mode). */}
+        {isCurrent && (collabMode || adminGalleryId) && flagsEnabled && stars && effectiveRating > 0 && (
+          <div key="rating" className="absolute top-3 right-16">
+            <StarRating value={effectiveRating} size={15} emptyClassName={light ? "text-black/20" : "text-white/30"} />
+          </div>
         )}
       </>
     );
@@ -956,7 +990,20 @@ export function Lightbox({
       {/* Collaboration toolbar — hidden in immersive mode */}
       {showToolbar && !immersive && (
         <div className={`flex items-center gap-3 px-4 py-2 border-t ${borderTone} flex-shrink-0`}>
-          {flagsEnabled && (
+          {flagsEnabled && stars && (
+            <>
+              <span className="text-xs text-zinc-500 flex items-center gap-1">
+                <Icons.rating size={12} /> {t("rating")}
+              </span>
+              <StarRating
+                value={effectiveRating}
+                onChange={handleRating}
+                size={24}
+                emptyClassName={light ? "text-black/25" : "text-white/35"}
+              />
+            </>
+          )}
+          {flagsEnabled && !stars && (
             <>
               <span className="text-xs text-zinc-500 flex items-center gap-1">
                 <Flag size={12} /> {t("flag")}

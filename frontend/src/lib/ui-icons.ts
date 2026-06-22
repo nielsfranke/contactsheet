@@ -26,6 +26,7 @@ import {
   Images,
   Play,
   FileImage,
+  Star,
 } from "lucide-react";
 
 export const Icons = {
@@ -59,6 +60,8 @@ export const Icons = {
   play: Play,
   /** A stored file with no viewable preview (e.g. a PSB without an embedded thumbnail). */
   noPreviewFile: FileImage,
+  /** Star rating (the stars-mode alternative to color flags). */
+  rating: Star,
 } as const;
 
 export type IconName = keyof typeof Icons;

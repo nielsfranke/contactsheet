@@ -38,6 +38,11 @@
       "blue": "Blue",
       "none": "Unflagged"
     },
+    "stars": {
+      "rated": "Rated {count} of 5",
+      "unrated": "Not rated",
+      "nStars": "{count, plural, one {# star} other {# stars}}"
+    },
     "footerLabels": {
       "email": "Email",
       "phone": "Phone"
@@ -102,6 +107,7 @@
       "exif": "Capture data",
       "iptc": "Photo info",
       "flag": "Flag:",
+      "rating": "Rating:",
       "flagLabels": {
         "green": "Select",
         "red": "Reject",
@@ -127,6 +133,7 @@
       "groupBy": "Group by",
       "filterSort": "Filter & sort",
       "flagsLabel": "Flags",
+      "ratingLabel": "Rating",
       "done": "Done",
       "ascending": "Ascending",
       "descending": "Descending",
@@ -137,11 +144,13 @@
         "manual": "Manual",
         "filename": "File Name",
         "date": "Date Added",
-        "captured": "Capture Date"
+        "captured": "Capture Date",
+        "rating": "Rating"
       },
       "group": {
         "none": "No grouping",
-        "flag": "Group by flag"
+        "flag": "Group by flag",
+        "rating": "Group by rating"
       }
     },
     "comments": {
@@ -788,7 +797,11 @@
       "backdropBlack": "Black",
       "backdropWhite": "White",
       "backdropFrosted": "Frosted",
-      "backdropHint": "Backdrop behind the full-screen photo viewer (client galleries and the admin gallery view). White and Frosted use dark controls; Dimmed and Black keep light controls."
+      "backdropHint": "Backdrop behind the full-screen photo viewer (client galleries and the admin gallery view). White and Frosted use dark controls; Dimmed and Black keep light controls.",
+      "ratingStyle": "Rating style",
+      "ratingStyleHint": "How reviewers rate photos across the whole instance — color flags or 1–5 stars. Switching is non-destructive; existing flags and stars are both kept.",
+      "ratingModeFlags": "Color flags",
+      "ratingModeStars": "Stars 1–5"
     },
     "gallery": {
       "title": "Gallery Settings",

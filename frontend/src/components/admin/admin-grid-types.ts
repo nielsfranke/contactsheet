@@ -4,7 +4,7 @@
 // Shared types for the admin image grid (orchestrator + layout + tile). Kept in one module so the
 // layout and tile components don't import back through the orchestrator (avoids a cycle).
 
-import type { CornersType, ImageResponse, SizeType } from "@/lib/types";
+import type { CornersType, ImageResponse, RatingMode, SizeType } from "@/lib/types";
 import type { LightboxIntent } from "@/store/lightbox";
 
 export interface ImageGroup {
@@ -34,6 +34,8 @@ export interface CardProps {
   onOpen?: (img: ImageResponse, intent?: LightboxIntent) => void;
   rounded: string;
   highRes: boolean;
+  /** Instance rating style — flag dots vs. 1–5 stars. */
+  ratingMode: RatingMode;
   onSetHeaderImage?: (img: ImageResponse) => void;
   onSetCoverImage?: (img: ImageResponse) => void;
   onRenameImage?: (img: ImageResponse) => void;

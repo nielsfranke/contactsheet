@@ -265,7 +265,7 @@ export function GalleryDetailDialogs({
           showExif
           showIptc
           adminGalleryId={id}
-          features={{ colorFlags: true, likes: false, comments: true, annotations: true }}
+          features={{ colorFlags: true, ratingMode: adminSettings?.rating_mode ?? "flags", likes: false, comments: true, annotations: true }}
         />
       )}
 

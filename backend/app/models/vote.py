@@ -4,7 +4,7 @@
 import uuid
 from datetime import datetime, timezone
 
-from sqlalchemy import DateTime, ForeignKey, String, UniqueConstraint
+from sqlalchemy import DateTime, ForeignKey, Integer, String, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.database import Base
@@ -31,6 +31,8 @@ class ImageVote(Base):
     )
     reviewer_name: Mapped[str] = mapped_column(String(255), nullable=False)
     color_flag: Mapped[str] = mapped_column(String(10), nullable=False, default="none")
+    # Per-reviewer 1–5 star rating (0 = cleared); the stars-mode parallel to color_flag.
+    rating: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=_now)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=_now, onupdate=_now)
 

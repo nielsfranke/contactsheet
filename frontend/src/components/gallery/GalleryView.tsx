@@ -48,6 +48,7 @@ export function GalleryView({ gallery, shareToken, galleryToken }: Props) {
     isLoading,
     zip,
     votesByImageId,
+    voteRatingByImageId,
     likedSet,
     filteredSorted,
     selection,
@@ -59,6 +60,7 @@ export function GalleryView({ gallery, shareToken, galleryToken }: Props) {
     showSidebar,
     createCollectionMutation,
     handleVote,
+    handleRatingVote,
     toggleLike,
   } = vm;
 
@@ -81,6 +83,8 @@ export function GalleryView({ gallery, shareToken, galleryToken }: Props) {
         teamVoting={teamVoting}
         reviewerVotes={votesByImageId}
         onVote={handleVote}
+        reviewerRatings={voteRatingByImageId}
+        onRatingVote={handleRatingVote}
         likedSet={likedSet}
         onToggleLike={toggleLike}
         features={features}
@@ -99,7 +103,7 @@ export function GalleryView({ gallery, shareToken, galleryToken }: Props) {
       <p>{rawImages.length === 0 ? t("view.emptyGallery") : t("view.emptyFilter")}</p>
       {rawImages.length > 0 && (
         <button
-          onClick={() => vm.setArrange({ ...vm.arrange, filterName: "", flagFilters: new Set(), commentsOnly: false })}
+          onClick={() => vm.setArrange({ ...vm.arrange, filterName: "", flagFilters: new Set(), ratingFilters: new Set(), commentsOnly: false })}
           className="mt-3 inline-flex items-center gap-1 rounded-md px-3 py-1.5 text-sm font-medium text-foreground bg-secondary hover:bg-secondary/80 transition-colors outline-none focus-visible:ring-2 focus-visible:ring-ring"
         >
           {t("toolbar.clearFilters")}
@@ -111,7 +115,9 @@ export function GalleryView({ gallery, shareToken, galleryToken }: Props) {
       {groups.map((g) => (
         <section key={g.key}>
           <h3 className={`text-xs font-medium uppercase tracking-wide mb-2 ${bright ? "text-zinc-500" : "text-zinc-500"}`}>
-            {t(`flags.${g.key}`)} <span className="opacity-60">({g.images.length})</span>
+            {g.key.startsWith("rating:")
+              ? (g.key === "rating:0" ? t("stars.unrated") : t("stars.nStars", { count: Number(g.key.slice(7)) }))
+              : t(`flags.${g.key}`)} <span className="opacity-60">({g.images.length})</span>
           </h3>
           {renderGrid(g.images)}
         </section>
@@ -233,6 +239,8 @@ export function GalleryView({ gallery, shareToken, galleryToken }: Props) {
           teamVoting={teamVoting}
           reviewerVotes={votesByImageId}
           onVote={handleVote}
+          reviewerRatings={voteRatingByImageId}
+          onRatingVote={handleRatingVote}
           likedSet={likedSet}
           onToggleLike={toggleLike}
           watermarkEnabled={watermarkEnabled}

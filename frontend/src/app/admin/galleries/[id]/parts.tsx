@@ -15,6 +15,8 @@ import { cn } from "@/lib/utils";
 import { Send } from "lucide-react";
 
 export const FLAG_GROUP_ORDER: ColorFlag[] = ["green", "red", "yellow", "blue", "none"];
+// Rating group buckets, highest first, unrated last.
+export const RATING_GROUP_ORDER: number[] = [5, 4, 3, 2, 1, 0];
 
 // Find a gallery's children in the cached tree (api.galleries.get returns children: []).
 export function findChildren(tree: GalleryResponse[], id: string): GalleryResponse[] | null {
