@@ -12,6 +12,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **Content search (optional).** Find photos by what's *in* them ("car at sunset", "team photo with
+  trophy") — within a gallery, or across the whole library from the new **All Photos** view. It runs
+  on an on-device, multilingual AI model (SigLIP 2); nothing leaves your server. Enable it under
+  **Settings → Content Search**, with an accuracy slider and a live index-progress readout.
+- **All Photos** — a cross-gallery photo browser on the overview (a tab next to *Galleries*), sorted
+  by date or name, paginated. Its search box runs semantic search when content search is on, and
+  otherwise filters by **filename, gallery name, and IPTC metadata** (keywords, caption, title,
+  location, creator) — so it's useful even without the AI model. Results badge their gallery and
+  deep-link straight into its lightbox.
+
+### Deployment / upgrade notes
+
+- **Nothing changes for an existing deployment unless you opt in.** The semantic-search model runs
+  in a **separate, optional `ml` sidecar** that the default stack never starts. A new migration
+  (`0037`) applies automatically on upgrade and is inert until the feature is enabled.
+- To turn it on: `docker compose --profile ml up -d` and set `ML_SERVICE_URL=http://ml:8001` in
+  `.env`, then enable it under Settings → Content Search. The model (~a few hundred MB) downloads
+  once into the data volume on first use.
+- The sidecar is CPU-only (no GPU needed) and intended to stay light, but it does add load — on a
+  low-power host you can simply leave it off. When it isn't deployed, Settings → Content Search
+  detects this and explains how to start it instead of offering a toggle that can't work.
+
 ## [1.0.6] - 2026-06-21
 
 ### Added

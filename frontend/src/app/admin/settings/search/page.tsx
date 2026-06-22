@@ -39,11 +39,12 @@ export default function SearchSettingsPage() {
   const cfg = settings?.semantic_search ?? DEFAULT_CFG;
   const enabled = cfg.enabled;
 
-  // Poll index progress while anything is still pending, so the bar advances live.
+  // Always check status (even while the feature is off) so we know whether the ML sidecar is
+  // actually deployed — that gates whether the feature can be turned on at all. Poll faster only
+  // while indexing is in flight.
   const { data: idx } = useQuery({
     queryKey: ["semantic-status"],
     queryFn: () => api.adminSettings.semanticStatus(),
-    enabled: enabled,
     refetchInterval: (q) => (q.state.data && q.state.data.pending > 0 ? 3000 : false),
   });
 
@@ -62,6 +63,11 @@ export default function SearchSettingsPage() {
     save({ semantic_search: { ...cfg, ...patch } });
 
   const sidecarReachable = !!idx?.sidecar;
+  // The feature can only run when the optional ML sidecar is configured AND reachable. Until the
+  // first status load (idx undefined) we don't claim it's unavailable, to avoid a flicker.
+  const statusKnown = idx !== undefined;
+  const ready = !!idx?.configured && sidecarReachable;
+  const unavailable = statusKnown && !ready;
   // picdrop-style "accuracy": present the cosine cutoff as a percentage the user nudges.
   const accuracyPct = Math.round(cfg.default_threshold * 100);
 
@@ -80,12 +86,21 @@ export default function SearchSettingsPage() {
           hint={t("enableHint")}
           checked={enabled}
           onChange={(on) => update({ enabled: on })}
+          disabled={!enabled && unavailable}
         />
 
-        {enabled && !idx?.configured && (
-          <p className="rounded-md bg-amber-500/10 text-amber-700 dark:text-amber-400 text-xs p-3">
-            {t("notConfigured")}
-          </p>
+        {/* The ML sidecar is optional and not always deployed (intentionally — it's heavier, and a
+            low-power host can skip it). When it's missing, say so plainly and show how to start it,
+            rather than letting someone flip a toggle that can't do anything. */}
+        {unavailable && (
+          <div className="space-y-2 rounded-md bg-amber-500/10 p-3 text-xs text-amber-800 dark:text-amber-300">
+            <p className="font-medium">{t("unavailableTitle")}</p>
+            <p>{idx?.configured ? t("unavailableUnreachable") : t("unavailableBody")}</p>
+            <code className="block overflow-x-auto rounded bg-background/60 px-2 py-1 font-mono text-[11px] text-foreground">
+              docker compose --profile ml up -d
+            </code>
+            <p className="text-muted-foreground">{t("unavailableEnvHint")}</p>
+          </div>
         )}
       </section>
 

@@ -51,6 +51,7 @@ are very welcome.
 - **Two gallery modes** — *Showcase* (a polished, view-only gallery) or *Review* (clients flag, like, comment).
 - **Client feedback** — color flags, per-person likes, comments, and **freehand annotations** drawn right on a photo.
 - **Collections** — multi-select photos into named, downloadable sets; admin *and* clients can build them.
+- **Content search** *(optional)* — find photos by what's *in* them ("car at sunset"), in a gallery or across your whole library, via an opt-in on-device AI model. Without it, **All Photos** still browses everything and filters by name, gallery, and IPTC keywords.
 - **Client uploads** — optionally let visitors contribute photos, with an optional **approval queue**.
 - **Nested galleries** — organize shoots to any depth, with drag-and-drop reparenting and photo moves.
 - **Sharing controls** — friendly URL slugs, optional per-gallery passwords, and expiry dates.
@@ -81,6 +82,12 @@ Open **http://localhost:8765** and the **first-run setup wizard** walks you thro
 account in the browser — no secrets needed in `.env`.
 
 > Prefer pre-built images? `docker compose pull && docker compose up -d` (multi-arch amd64/arm64).
+
+> **Optional: semantic photo search.** Leave it off and the stack is exactly the three services
+> above — recommended on low-power hosts. To turn it on, start the extra ML sidecar with
+> `docker compose --profile ml up -d` and set `ML_SERVICE_URL=http://ml:8001` in `.env`, then enable
+> it under **Settings → Content Search**. It's opt-in and changes nothing for an existing deploy
+> until you do.
 
 Environment variables, the two-volume layout, reverse-proxy/HTTPS, updating, and backups are all in
 **[Self-Hosting and Deployment](https://github.com/nielsfranke/contactsheet/wiki/Self-Hosting-and-Deployment)**.
