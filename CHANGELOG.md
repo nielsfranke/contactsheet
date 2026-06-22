@@ -14,6 +14,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Download filename lists as a file (.txt / .csv) for Lightroom & co.** The "Copy filenames" dialog
+  now offers a **Download** button alongside Copy: a plain `.txt` list (paste into Lightroom's Filename
+  filter, Capture One, Photo Mechanic) or a `.csv` review sheet with one row per photo
+  (`filename, rating, flag, likes, comments`) that opens in Excel/Sheets. Files are named after the
+  gallery; the CSV carries a UTF-8 BOM so umlauts render correctly.
+- **Include subgalleries when exporting filenames.** A new toggle in the same dialog folds in every
+  photo from nested galleries (recursively), with the current filters applied across the whole tree —
+  so "all selects" can span an entire gallery subtree in one export. Suppressed for collection and
+  search views, which are per-gallery.
 - **Star ratings as an alternative to color flags.** A new instance-wide **Rating style** setting
   (Settings → Gallery Defaults) switches every gallery between color flags and classic **1–5 stars** —
   one or the other, never both. Stars work everywhere flags did: the grid tiles, the lightbox, the

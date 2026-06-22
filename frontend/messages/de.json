@@ -490,11 +490,22 @@
       "comma": "Komma",
       "excludeExt": "Dateiendungen ausschließen",
       "excludeHint": "Exportiert <code>IMG_1234</code> statt <code>IMG_1234.jpg</code> — passt auch zu RAW-Dateien (.ARW, .CR3 …).",
+      "includeSubs": "Untergalerien einbeziehen",
+      "includeSubsHint": "Fügt auch Fotos aus {count, plural, one {# Untergalerie} other {# Untergalerien}} hinzu (gleiche Filter).",
+      "includeSubsDisabled": "Nicht verfügbar, solange eine Sammlung oder Suche aktiv ist.",
+      "includeSubsLoading": "Fotos aus Untergalerien werden geladen…",
       "emptyPlaceholder": "Keine Dateien entsprechen dem aktuellen Filter.",
       "copyToClipboard": "In Zwischenablage kopieren",
       "copied": "Kopiert",
       "copiedToast": "{count, plural, one {# Dateinamen kopiert} other {# Dateinamen kopiert}}",
-      "clipboardError": "Zugriff auf die Zwischenablage nicht möglich — markieren Sie den Text und kopieren Sie ihn manuell."
+      "clipboardError": "Zugriff auf die Zwischenablage nicht möglich — markieren Sie den Text und kopieren Sie ihn manuell.",
+      "downloadSection": "Datei herunterladen",
+      "formatTxt": "Textliste (.txt)",
+      "formatTxtHint": "Die Liste oben als Datei",
+      "formatCsv": "Tabelle (.csv)",
+      "formatCsvHint": "Dateinamen + Bewertungen, Flags, Likes, Kommentare",
+      "download": "Herunterladen",
+      "downloadedToast": "{count, plural, one {# Dateiname heruntergeladen} other {# Dateinamen heruntergeladen}}"
     },
     "headerImage": {
       "title": "Header-Bild bearbeiten",

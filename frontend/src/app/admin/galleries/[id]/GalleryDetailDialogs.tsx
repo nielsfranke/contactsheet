@@ -48,7 +48,6 @@ export function GalleryDetailDialogs({
     id,
     images,
     children,
-    filteredSorted,
     filterActive,
     activeCollection,
     flagged,
@@ -71,6 +70,12 @@ export function GalleryDetailDialogs({
     setDownloadOpen,
     copyNamesOpen,
     setCopyNamesOpen,
+    copyExportImages,
+    copyNamesIncludeSubs,
+    setCopyNamesIncludeSubs,
+    copySubsAvailable,
+    copySubsLoading,
+    subGalleryCount,
     shareOpen,
     setShareOpen,
     activityOpen,
@@ -208,9 +213,15 @@ export function GalleryDetailDialogs({
       {/* Copy filenames dialog — operates on the currently filtered + sorted grid */}
       <CopyFilenamesDialog
         open={copyNamesOpen}
-        onOpenChange={setCopyNamesOpen}
-        filenames={filteredSorted.map((img) => img.original_filename)}
-        filtered={filterActive || !!activeCollection}
+        onOpenChange={(o) => { setCopyNamesOpen(o); if (!o) setCopyNamesIncludeSubs(false); }}
+        images={copyExportImages}
+        galleryName={gallery.name}
+        filtered={filterActive || !!activeCollection || copyNamesIncludeSubs}
+        subGalleryCount={subGalleryCount}
+        subsAvailable={copySubsAvailable}
+        subsLoading={copySubsLoading}
+        includeSubs={copyNamesIncludeSubs}
+        onIncludeSubsChange={setCopyNamesIncludeSubs}
       />
 
       {/* Share dialog */}

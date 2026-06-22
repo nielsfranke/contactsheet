@@ -490,11 +490,22 @@
       "comma": "Comma",
       "excludeExt": "Exclude file extensions",
       "excludeHint": "Export <code>IMG_1234</code> instead of <code>IMG_1234.jpg</code> — matches RAW files (.ARW, .CR3 …) too.",
+      "includeSubs": "Include subgalleries",
+      "includeSubsHint": "Also add photos from {count, plural, one {# nested gallery} other {# nested galleries}} (same filters applied).",
+      "includeSubsDisabled": "Not available while a collection or search filter is active.",
+      "includeSubsLoading": "Loading subgallery photos…",
       "emptyPlaceholder": "No files match the current filter.",
       "copyToClipboard": "Copy to clipboard",
       "copied": "Copied",
       "copiedToast": "{count, plural, one {Copied # filename} other {Copied # filenames}}",
-      "clipboardError": "Couldn't access the clipboard — select the text and copy manually."
+      "clipboardError": "Couldn't access the clipboard — select the text and copy manually.",
+      "downloadSection": "Download a file",
+      "formatTxt": "Text list (.txt)",
+      "formatTxtHint": "The list above, as a file",
+      "formatCsv": "Spreadsheet (.csv)",
+      "formatCsvHint": "Filenames + ratings, flags, likes, comments",
+      "download": "Download",
+      "downloadedToast": "{count, plural, one {Downloaded # filename} other {Downloaded # filenames}}"
     },
     "headerImage": {
       "title": "Edit Header Image",

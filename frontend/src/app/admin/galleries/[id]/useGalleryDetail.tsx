@@ -5,7 +5,7 @@
 
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueries, useMutation, useQueryClient } from "@tanstack/react-query";
 import { type DragEndEvent } from "@dnd-kit/core";
 import { useTranslations } from "next-intl";
 import { api } from "@/lib/api";
@@ -52,6 +52,7 @@ export function useGalleryDetail(id: string) {
   const [moveGalleryOpen, setMoveGalleryOpen] = useState(false);
   const [downloadOpen, setDownloadOpen] = useState(false);
   const [copyNamesOpen, setCopyNamesOpen] = useState(false);
+  const [copyNamesIncludeSubs, setCopyNamesIncludeSubs] = useState(false);
   const [activityOpen, setActivityOpen] = useState(false);
   const [votingOpen, setVotingOpen] = useState(false);
   const [shareOpen, setShareOpen] = useState(false);
@@ -369,16 +370,25 @@ export function useGalleryDetail(id: string) {
   // without it the sort falls back to filename so the order is still meaningful.
   const captureSortAvailable = useMemo(() => images.some(hasCaptureDate), [images]);
 
+  // Portable per-image filters (name / flag / rating / comments) — the subset that can be
+  // re-applied across a subtree for "include subgalleries". Collection membership and semantic
+  // search ranking are per-gallery and intentionally excluded.
+  const matchesPortableFilter = useMemo(() => {
+    const q = arrange.filterName.trim().toLowerCase();
+    return (img: ImageResponse) => {
+      if (q && !img.original_filename.toLowerCase().includes(q)) return false;
+      if (arrange.flagFilters.size > 0 && !arrange.flagFilters.has(img.color_flag)) return false;
+      if (arrange.ratingFilters.size > 0 && !arrange.ratingFilters.has(img.rating)) return false;
+      if (arrange.commentsOnly && img.comment_count === 0) return false;
+      return true;
+    };
+  }, [arrange]);
+
   const filteredSorted = useMemo(() => {
     // Search mode wins: show the server's similarity ranking as-is (no client filter/sort/group).
     if (searchActive) return searchResults ?? [];
 
-    let list = images;
-    const q = arrange.filterName.trim().toLowerCase();
-    if (q) list = list.filter((img) => img.original_filename.toLowerCase().includes(q));
-    if (arrange.flagFilters.size > 0) list = list.filter((img) => arrange.flagFilters.has(img.color_flag));
-    if (arrange.ratingFilters.size > 0) list = list.filter((img) => arrange.ratingFilters.has(img.rating));
-    if (arrange.commentsOnly) list = list.filter((img) => img.comment_count > 0);
+    let list = images.filter(matchesPortableFilter);
     if (activeCollection) {
       const member = new Set(collections.find((c) => c.id === activeCollection)?.image_ids ?? []);
       list = list.filter((img) => member.has(img.id));
@@ -396,10 +406,38 @@ export function useGalleryDetail(id: string) {
       }
     });
     return sorted;
-  }, [images, arrange, activeCollection, collections, captureSortAvailable, searchActive, searchResults]);
+  }, [images, matchesPortableFilter, arrange, activeCollection, collections, captureSortAvailable, searchActive, searchResults]);
 
   const visibleIds = useMemo(() => filteredSorted.map((img) => img.id), [filteredSorted]);
   const selection = useImageSelection(visibleIds);
+
+  // "Copy filenames" → optionally fold in every descendant gallery's photos. The subtree images
+  // are fetched lazily (only while the dialog is open with the option on) and run through the same
+  // portable filter, so "selects" extend across the whole tree. Per-gallery views (an active
+  // collection or a semantic search) can't be extended, so the option is suppressed there.
+  const descendantIds = useMemo(() => {
+    const ids: string[] = [];
+    const walk = (gs: GalleryResponse[]) => gs.forEach((g) => { ids.push(g.id); walk(g.children); });
+    walk(children);
+    return ids;
+  }, [children]);
+  const copySubsAvailable = descendantIds.length > 0 && !searchActive && !activeCollection;
+  const subImageQueries = useQueries({
+    queries:
+      copyNamesOpen && copyNamesIncludeSubs && copySubsAvailable
+        ? descendantIds.map((gid) => ({
+            queryKey: ["gallery-images", gid],
+            queryFn: () => api.galleries.images(gid),
+            staleTime: 30_000,
+          }))
+        : [],
+  });
+  const copySubsLoading = subImageQueries.some((q) => q.isLoading);
+  const copyExportImages = useMemo(() => {
+    if (!copyNamesIncludeSubs || !copySubsAvailable) return filteredSorted;
+    const subs = subImageQueries.flatMap((q) => q.data ?? []).filter(matchesPortableFilter);
+    return [...filteredSorted, ...subs];
+  }, [copyNamesIncludeSubs, copySubsAvailable, filteredSorted, subImageQueries, matchesPortableFilter]);
 
   // Entry points for "create / copy / move into a gallery". Each seeds the dialog with a set of
   // image ids + a sensible default name; a single active color flag names the filter set.
@@ -663,6 +701,12 @@ export function useGalleryDetail(id: string) {
     setDownloadOpen,
     copyNamesOpen,
     setCopyNamesOpen,
+    copyExportImages,
+    copyNamesIncludeSubs,
+    setCopyNamesIncludeSubs,
+    copySubsAvailable,
+    copySubsLoading,
+    subGalleryCount: descendantIds.length,
     activityOpen,
     setActivityOpen,
     votingOpen,
