@@ -91,6 +91,7 @@ export function GallerySettingsModal({
   const [opener, setOpener] = useState<OpenerValues>({
     opener_font: gallery.opener_font,
     opener_font_size: gallery.opener_font_size,
+    opener_title_position: gallery.opener_title_position,
   });
 
   // Review — client feedback interactions (Review only)

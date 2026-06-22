@@ -855,6 +855,7 @@
       "iptcHint": "Title, caption, keywords & rights in the lightbox",
       "headingFont": "Heading font",
       "headingSize": "Heading size",
+      "titlePosition": "Title position",
       "interactions": "Interactions",
       "colorFlags": "Color flags",
       "colorFlagsHint": "Clients can mark files with color flags",

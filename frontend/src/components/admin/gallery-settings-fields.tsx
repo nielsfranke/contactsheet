@@ -11,8 +11,8 @@ import type {
   FontType,
   LayoutType,
   SizeType,
+  TitlePositionType,
   WatermarkMode,
-  WatermarkPosition,
   WatermarkSettings,
   WatermarkSize,
 } from "@/lib/types";
@@ -252,6 +252,7 @@ export function LookFields({
 export interface OpenerValues {
   opener_font: FontType;
   opener_font_size: SizeType;
+  opener_title_position: TitlePositionType;
 }
 
 export function OpenerFields({
@@ -272,6 +273,12 @@ export function OpenerFields({
           value={value.opener_font_size}
           onChange={(v) => onChange({ opener_font_size: v })}
           options={SIZE_OPTS}
+        />
+      </Row>
+      <Row label={t("titlePosition")}>
+        <PositionGrid<TitlePositionType>
+          value={value.opener_title_position}
+          onChange={(v) => onChange({ opener_title_position: v })}
         />
       </Row>
     </>
@@ -351,30 +358,32 @@ const WM_SIZE_OPTS: { value: WatermarkSize; label: string }[] = [
   { value: "large", label: "L" },
 ];
 
-const WM_POSITIONS: WatermarkPosition[] = [
+// The nine anchor keys, shared by the watermark position and the opener title position
+// (their value unions are identical). The `positions.*` i18n group labels them.
+const ANCHOR_POSITIONS = [
   "top-left", "top-center", "top-right",
   "center-left", "center", "center-right",
   "bottom-left", "bottom-center", "bottom-right",
-];
+] as const;
 
-/** 3×3 grid picker for the watermark anchor. */
-function PositionGrid({
+/** 3×3 grid picker for a nine-way anchor (watermark or opener title position). */
+function PositionGrid<T extends string>({
   value,
   onChange,
 }: {
-  value: WatermarkPosition;
-  onChange: (v: WatermarkPosition) => void;
+  value: T;
+  onChange: (v: T) => void;
 }) {
   const t = useTranslations("settings.fields");
   return (
     <div className="inline-grid grid-cols-3 gap-1 rounded-lg bg-muted p-1">
-      {WM_POSITIONS.map((pos) => (
+      {ANCHOR_POSITIONS.map((pos) => (
         <button
           key={pos}
           type="button"
           aria-label={t(`positions.${pos}`)}
           title={t(`positions.${pos}`)}
-          onClick={() => onChange(pos)}
+          onClick={() => onChange(pos as T)}
           className={`h-6 w-6 rounded flex items-center justify-center transition-colors ${
             value === pos ? "bg-primary" : "bg-background hover:bg-accent"
           }`}

@@ -30,6 +30,20 @@ const HERO_SUBTITLE_SIZE: Record<string, string> = {
   large: "text-xl sm:text-2xl",
 };
 
+// Title anchor over the hero → flex placement + text alignment. Full class strings so
+// Tailwind's scanner keeps them. "center" reproduces the legacy centered layout.
+const HERO_TITLE_POSITION: Record<string, string> = {
+  "top-left": "justify-start items-start text-left",
+  "top-center": "justify-start items-center text-center",
+  "top-right": "justify-start items-end text-right",
+  "center-left": "justify-center items-start text-left",
+  center: "justify-center items-center text-center",
+  "center-right": "justify-center items-end text-right",
+  "bottom-left": "justify-end items-start text-left",
+  "bottom-center": "justify-end items-center text-center",
+  "bottom-right": "justify-end items-end text-right",
+};
+
 /**
  * Full-width layout for presentation galleries: a full-screen hero when a header image is set,
  * otherwise a standard header. Shared content (breadcrumb, sub-gallery cards, photo grid, footer)
@@ -95,8 +109,13 @@ export function GalleryPresentationLayout({
               />
             )}
 
-            {/* Title + subtitle centered over the hero */}
-            <div className="absolute inset-0 flex flex-col items-center justify-center px-8 text-center">
+            {/* Title + subtitle anchored over the hero (per-gallery position; py clears the
+                top-left masthead and bottom scroll indicator) */}
+            <div
+              className={`absolute inset-0 flex flex-col px-8 py-20 ${
+                HERO_TITLE_POSITION[gallery.opener_title_position] ?? HERO_TITLE_POSITION.center
+              }`}
+            >
               <h1
                 className={`drop-shadow-md line-clamp-2 ${HERO_TITLE_SIZE[gallery.opener_font_size] ?? HERO_TITLE_SIZE.medium} text-white`}
                 style={openerFont}

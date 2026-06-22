@@ -50,7 +50,8 @@ def _random_token(db: Session, exclude_id: str | None = None) -> str:
 # Fields copied straight from GalleryUpdate to the model when not None.
 _PASSTHROUGH_UPDATE_FIELDS = (
     "mode", "layout", "sort_order", "downloads_enabled", "enable_team_voting",
-    "opener_font", "opener_font_size", "preview_size", "preview_spacing",
+    "opener_font", "opener_font_size", "opener_title_position",
+    "preview_size", "preview_spacing",
     "preview_corners", "bg_brightness",
     "color_flags_enabled", "likes_enabled", "comments_enabled", "annotations_enabled",
     "sets_enabled", "client_upload_enabled", "client_upload_moderation",
@@ -69,7 +70,8 @@ _INHERIT_CREATE_FIELDS = _CASCADE_FIELDS - {"sort_order", "hide_parent_nav"}
 # Fields a mode preset (app_settings.preset_*) may default at gallery creation.
 # Mirrors schemas.settings.GalleryPreset.
 _PRESET_FIELDS = frozenset({
-    "layout", "opener_font", "opener_font_size", "preview_size", "preview_spacing",
+    "layout", "opener_font", "opener_font_size", "opener_title_position",
+    "preview_size", "preview_spacing",
     "preview_corners", "bg_brightness", "bg_dimmed_color",
     "downloads_enabled", "enable_team_voting", "color_flags_enabled",
     "likes_enabled", "comments_enabled", "annotations_enabled", "sets_enabled",

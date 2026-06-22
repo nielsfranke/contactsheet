@@ -855,6 +855,7 @@
       "iptcHint": "Titel, Bildunterschrift, Stichwörter & Rechte in der Lightbox",
       "headingFont": "Überschriftenschrift",
       "headingSize": "Überschriftengröße",
+      "titlePosition": "Titelposition",
       "interactions": "Interaktionen",
       "colorFlags": "Farbmarkierungen",
       "colorFlagsHint": "Kunden können Dateien mit Farbmarkierungen kennzeichnen",

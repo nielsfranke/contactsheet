@@ -50,6 +50,12 @@ FontType = Literal[
 SizeType = Literal["small", "medium", "large"]
 CornersType = Literal["round", "square"]
 BrightnessType = Literal["bright", "dark"]
+# Anchor of the title over the presentation hero image. "center" = legacy/default.
+TitlePositionType = Literal[
+    "top-left", "top-center", "top-right",
+    "center-left", "center", "center-right",
+    "bottom-left", "bottom-center", "bottom-right",
+]
 
 
 # Contact/social icon keys, in their default display order.
@@ -152,6 +158,7 @@ class GalleryUpdate(BaseModel):
     # Presentation
     opener_font: FontType | None = None
     opener_font_size: SizeType | None = None
+    opener_title_position: TitlePositionType | None = None
     preview_size: SizeType | None = None
     preview_spacing: SizeType | None = None
     preview_corners: CornersType | None = None
@@ -219,6 +226,7 @@ class GalleryResponse(BaseModel):
     # Presentation
     opener_font: str = "sans"
     opener_font_size: str = "medium"
+    opener_title_position: str = "center"
     preview_size: str = "medium"
     preview_spacing: str = "medium"
     preview_corners: str = "round"
@@ -297,6 +305,7 @@ class GalleryPublicResponse(BaseModel):
     # Presentation
     opener_font: str = "sans"
     opener_font_size: str = "medium"
+    opener_title_position: str = "center"
     preview_size: str = "medium"
     preview_spacing: str = "medium"
     preview_corners: str = "round"

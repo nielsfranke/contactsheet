@@ -57,6 +57,8 @@ class Gallery(Base):
     # Presentation (public gallery look)
     opener_font: Mapped[str] = mapped_column(String(40), nullable=False, default="sans")
     opener_font_size: Mapped[str] = mapped_column(String(10), nullable=False, default="medium")
+    # Anchor of the title over the presentation hero image (e.g. "top-left", "center").
+    opener_title_position: Mapped[str] = mapped_column(String(20), nullable=False, default="center")
     preview_size: Mapped[str] = mapped_column(String(10), nullable=False, default="medium")
     preview_spacing: Mapped[str] = mapped_column(String(10), nullable=False, default="medium")
     preview_corners: Mapped[str] = mapped_column(String(10), nullable=False, default="round")

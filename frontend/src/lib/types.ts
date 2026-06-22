@@ -49,12 +49,18 @@ export type FontType = string;
 export type SizeType = "small" | "medium" | "large";
 export type CornersType = "round" | "square";
 export type BrightnessType = "bright" | "dark";
+// Anchor of the title over the presentation hero image. "center" = legacy/default.
+export type TitlePositionType =
+  | "top-left" | "top-center" | "top-right"
+  | "center-left" | "center" | "center-right"
+  | "bottom-left" | "bottom-center" | "bottom-right";
 
 /** Per-gallery presentation + collaboration settings (Phase B). */
 export interface GallerySettings {
   // Presentation
   opener_font: FontType;
   opener_font_size: SizeType;
+  opener_title_position: TitlePositionType;
   preview_size: SizeType;
   preview_spacing: SizeType;
   preview_corners: CornersType;
@@ -218,6 +224,7 @@ export interface GalleryPreset {
   layout?: LayoutType;
   opener_font?: FontType;
   opener_font_size?: SizeType;
+  opener_title_position?: TitlePositionType;
   preview_size?: SizeType;
   preview_spacing?: SizeType;
   preview_corners?: CornersType;
