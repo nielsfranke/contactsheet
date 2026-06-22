@@ -1,9 +1,10 @@
 # SPDX-FileCopyrightText: 2026 Niels Franke
 # SPDX-License-Identifier: AGPL-3.0-or-later
 #
-# Builds and pushes the multi-arch backend + frontend images on a version tag.
+# Builds and pushes the multi-arch backend + frontend + ml images on a version tag.
 # Tags are cut on Forgejo and reach GitHub via the push-mirror, which fires this
 # workflow. GHCR is pushed with the built-in GITHUB_TOKEN (no secret needed).
+# (ml is the optional semantic-search sidecar — its own Dockerfile, opt-in at deploy.)
 
 name: Release images
 
@@ -35,7 +36,16 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        image: [backend, frontend]
+        include:
+          - image: backend
+            dockerfile: ./Dockerfile
+            target: backend
+          - image: frontend
+            dockerfile: ./Dockerfile
+            target: frontend
+          - image: ml
+            dockerfile: ./ml/Dockerfile
+            target: ml
     steps:
       - uses: actions/checkout@v4
 
@@ -75,8 +85,8 @@ jobs:
         uses: docker/build-push-action@v6
         with:
           context: .
-          file: ./Dockerfile
-          target: ${{ matrix.image }}
+          file: ${{ matrix.dockerfile }}
+          target: ${{ matrix.target }}
           platforms: linux/amd64,linux/arm64
           push: true
           tags: ${{ steps.meta.outputs.tags }}
