@@ -135,7 +135,6 @@ def client_upload_images(
     share_token: str,
     files: list[UploadFile] = File(...),
     uploader: str = Form(""),
-    background_tasks: BackgroundTasks = BackgroundTasks(),
     db: Session = Depends(get_db),
     storage: StorageProvider = Depends(get_storage),
     gallery_id_from_token: str | None = Depends(get_optional_gallery_token),
@@ -143,7 +142,7 @@ def client_upload_images(
     gallery, _ = gallery_service.get_public_gallery(db, share_token, storage)
     _require_gallery_access(gallery, gallery_id_from_token)
     ip = activity_service.resolve_ip(db, request)
-    return image_service.client_upload_images(db, gallery, files, uploader, storage, background_tasks, ip=ip)
+    return image_service.client_upload_images(db, gallery, files, uploader, storage, ip=ip)
 
 
 def _require_collections(gallery):

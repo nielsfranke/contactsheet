@@ -3,7 +3,7 @@
 
 import json
 
-from fastapi import APIRouter, BackgroundTasks, Depends, File, HTTPException, UploadFile, status
+from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
 from pydantic import BaseModel
 from fastapi.responses import Response
 from sqlalchemy.orm import Session
@@ -26,12 +26,11 @@ router = APIRouter(prefix="/api", tags=["images"])
 def upload_images(
     gallery_id: str,
     files: list[UploadFile] = File(...),
-    background_tasks: BackgroundTasks = BackgroundTasks(),
     db: Session = Depends(get_db),
     storage: StorageProvider = Depends(get_storage),
     _admin: str = Depends(get_current_admin),
 ):
-    return image_service.upload_images(db, gallery_id, files, storage, background_tasks)
+    return image_service.upload_images(db, gallery_id, files, storage)
 
 
 @router.patch("/images/{image_id}", response_model=ImageResponse)

@@ -7,7 +7,7 @@ import tempfile
 import uuid
 from datetime import datetime, timezone
 
-from fastapi import BackgroundTasks, HTTPException, UploadFile, status
+from fastapi import HTTPException, UploadFile, status
 from sqlalchemy.orm import Session
 
 from app.config import settings
@@ -19,7 +19,7 @@ from app.repositories import activity_repo, comment_repo, gallery_repo, image_re
 from app.schemas.image import ImageResponse, ImageUpdate, UploadResponse
 from app.services import notification_service
 from app.storage.base import StorageProvider
-from app.tasks.image_processing import process_image
+from app.tasks.image_processing import submit_image_processing
 
 _ALLOWED_MIMES = {
     "image/jpeg": ".jpg",
@@ -163,7 +163,6 @@ def upload_images(
     gallery_id: str,
     files: list[UploadFile],
     storage: StorageProvider,
-    background_tasks: BackgroundTasks,
     uploaded_by: str | None = None,
     moderation_status: str = "approved",
     max_image_bytes: int | None = None,
@@ -174,7 +173,7 @@ def upload_images(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Gallery not found")
 
     results = []
-    existing_count = len(image_repo.get_by_gallery(db, gallery_id))
+    existing_count = image_repo.count_by_gallery(db, gallery_id)
     image_cap = max_image_bytes or settings.max_upload_bytes
     total_bytes = 0
 
@@ -250,7 +249,7 @@ def upload_images(
         )
 
         if not is_video:
-            background_tasks.add_task(process_image, image.id, gallery_id, stored_filename)
+            submit_image_processing(image.id, gallery_id, stored_filename)
 
         results.append(UploadResponse(
             id=image.id,
@@ -270,7 +269,6 @@ def client_upload_images(
     files: list[UploadFile],
     uploader: str | None,
     storage: StorageProvider,
-    background_tasks: BackgroundTasks,
     ip: str | None = None,
 ) -> list[UploadResponse]:
     """Public client upload. Gated by the gallery's client_upload_enabled toggle; the caller is
@@ -301,7 +299,7 @@ def client_upload_images(
     # otherwise they're public the moment processing finishes (legacy behaviour).
     pending = bool(gallery.client_upload_moderation)
     results = upload_images(
-        db, gallery.id, files, storage, background_tasks,
+        db, gallery.id, files, storage,
         uploaded_by=name,
         moderation_status="pending" if pending else "approved",
         max_image_bytes=settings.client_upload_max_file_bytes,

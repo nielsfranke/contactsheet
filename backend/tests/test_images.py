@@ -22,7 +22,7 @@ def test_upload_real_png_processes(admin_client):
     assert r.status_code == 201, r.text
     body = r.json()
     assert len(body) == 1 and body[0]["is_video"] is False
-    # The background processing task runs before the TestClient call returns.
+    # Processing runs synchronously in tests (see conftest._synchronous_image_processing).
     imgs = admin_client.get(f"/api/galleries/{g['id']}/images").json()
     assert len(imgs) == 1 and imgs[0]["processing_status"] == "done"
     assert imgs[0]["thumb_url"]

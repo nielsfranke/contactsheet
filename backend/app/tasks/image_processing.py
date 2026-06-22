@@ -4,6 +4,7 @@
 import json
 import logging
 import os
+from concurrent.futures import ThreadPoolExecutor
 
 from PIL import IptcImagePlugin
 from PIL import Image as PilImage
@@ -141,8 +142,20 @@ def _save_resized(
     copy.save(dest_path, "JPEG", quality=quality, optimize=True, progressive=True)
 
 
+# Shared pool for rendition generation. Replaces FastAPI BackgroundTasks (which run serially in the
+# request's thread after the response) so a batch upload renders several images at once. Each task
+# opens its own DB session, so the pool is safe; busy_timeout (see database.py) absorbs the brief
+# write contention when several finish together.
+_executor = ThreadPoolExecutor(max_workers=settings.image_workers, thread_name_prefix="img-proc")
+
+
+def submit_image_processing(image_id: str, gallery_id: str, stored_filename: str) -> None:
+    """Enqueue thumb/small/medium generation on the worker pool (returns immediately)."""
+    _executor.submit(process_image, image_id, gallery_id, stored_filename)
+
+
 def process_image(image_id: str, gallery_id: str, stored_filename: str) -> None:
-    """BackgroundTask: generate thumb + medium, update DB record."""
+    """Worker task: generate thumb + small + medium renditions, then update the DB record."""
     from app.database import SessionLocal
     from app.repositories import image_repo, settings_repo
 

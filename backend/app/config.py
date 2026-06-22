@@ -52,6 +52,10 @@ class Settings(BaseSettings):
 
     thumb_size: int = 800
     medium_size: int = 2560
+    # Worker threads that generate thumb/small/medium renditions after upload. Pillow releases the
+    # GIL during resize/encode, so threads give real parallelism for batch uploads. Kept small so a
+    # big drop can't saturate every core or pile up SQLite writers.
+    image_workers: int = 3
     max_upload_bytes: int = 209_715_200  # 200 MB
     # Reject images whose pixel area exceeds this before decoding (decompression-bomb / giant-
     # dimension guard). Checked against the header dimensions, so a malicious file is refused

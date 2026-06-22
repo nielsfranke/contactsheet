@@ -3,7 +3,7 @@
 
 from datetime import datetime, timezone
 
-from sqlalchemy import select, update
+from sqlalchemy import func, select, update
 from sqlalchemy.orm import Session
 
 from app.models.image import Image
@@ -18,6 +18,16 @@ def get_by_gallery(db: Session, gallery_id: str, only_approved: bool = False) ->
     if only_approved:
         stmt = stmt.where(Image.moderation_status == "approved")
     return db.execute(stmt.order_by(Image.sort_order)).scalars().all()
+
+
+def count_by_gallery(db: Session, gallery_id: str, only_approved: bool = False) -> int:
+    """Live (non-deleted) image count for a gallery — a COUNT(*), not a full row load."""
+    stmt = select(func.count()).select_from(Image).where(
+        Image.gallery_id == gallery_id, Image.deleted_at.is_(None)
+    )
+    if only_approved:
+        stmt = stmt.where(Image.moderation_status == "approved")
+    return db.execute(stmt).scalar_one()
 
 
 def get_by_id(db: Session, image_id: str) -> Image | None:

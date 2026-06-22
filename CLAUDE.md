@@ -32,9 +32,17 @@ Self-hosted photo delivery app for photographers. AGPL-3.0-or-later licensed.
 npm run dev       # dev server — proxies /api/* and /uploads/* to localhost:8000
 npm run lint      # ESLint (next/core-web-vitals + TypeScript rules)
 npm run build     # production build; also runs tsc --noEmit type-check
+npm test          # Vitest unit tests (vitest run)
+
+# Tests (from backend/)
+.venv/bin/pytest                                       # backend test suite
 ```
 
-No tests exist yet for either layer.
+Tests: the backend has a pytest suite under `backend/tests/` covering the
+security-critical paths (auth/setup, factory reset, upload & content hardening,
+watermark, rate limiting, galleries/images/public/collections). The frontend
+uses Vitest — currently unit tests for the sort logic in `src/lib/`. Prefer
+adding tests alongside changes to either layer.
 
 ## Running locally
 

@@ -12,12 +12,16 @@ engine = create_engine(
 )
 
 
-# Enable WAL mode and foreign keys for every new SQLite connection
+# Enable WAL mode and foreign keys for every new SQLite connection.
+# busy_timeout makes a connection wait (instead of raising "database is locked") when another
+# connection holds the write lock — needed now that image processing runs on a worker pool, so
+# several threads may finish renditions and write their DB rows around the same time.
 @event.listens_for(engine, "connect")
 def _on_connect(dbapi_conn, _record):
     cursor = dbapi_conn.cursor()
     cursor.execute("PRAGMA journal_mode=WAL")
     cursor.execute("PRAGMA foreign_keys=ON")
+    cursor.execute("PRAGMA busy_timeout=5000")
     cursor.close()
 
 

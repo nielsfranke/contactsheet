@@ -63,6 +63,19 @@ def _fresh_db():
     Base.metadata.drop_all(bind=engine)
 
 
+@pytest.fixture(autouse=True)
+def _synchronous_image_processing(monkeypatch):
+    """Run rendition generation inline instead of on the worker pool.
+
+    Production submits `process_image` to a ThreadPoolExecutor, so it finishes a beat after the
+    upload response. Under the TestClient that would race every assertion about thumb/medium URLs or
+    `processing_status`. Patching the name imported into the service restores deterministic,
+    synchronous processing for the whole suite. (Tests that call `process_image` directly are
+    unaffected.)"""
+    from app.tasks.image_processing import process_image
+    monkeypatch.setattr("app.services.image_service.submit_image_processing", process_image)
+
+
 @pytest.fixture
 def db():
     session = SessionLocal()
