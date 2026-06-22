@@ -12,6 +12,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.1.3] - 2026-06-22
+
+### Added
+
+- **Infinite scroll on the All Photos view.** Scrolling near the end now loads the next page
+  automatically; the "Load more" button stays as a fallback.
+
+### Fixed
+
+- **Content search: self-healing model-cache permissions.** When `data/ml-cache` was created as root
+  (a common Docker bind-mount default), the ML sidecar (UID 1001) couldn't download the model, so
+  **every** image failed to index while the service still showed "online". The sidecar now fixes the
+  cache ownership on startup and drops privileges — mirroring how the backend already heals `/data`.
+  Affected operators just `docker compose pull && docker compose up -d`.
+- **Client (visitor) uploads were capped at 1 MB by the bundled nginx**, returning 413 for any real
+  photo. The public upload path now shares the same large body-size limit as the admin upload.
+
+### Deployment / upgrade notes
+
+- If you run an **extra reverse proxy in front of the bundled nginx** (e.g. an HTTPS terminator),
+  set `TRUSTED_PROXY_HOPS=2` in `.env` so rate limiting and the activity log record the real client
+  IP instead of the proxy's. Default `1` covers the bundled nginx only.
+
 ## [1.1.2] - 2026-06-22
 
 ### Added
