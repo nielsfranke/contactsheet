@@ -467,7 +467,8 @@
       "randomShort": "Random short",
       "guessableWarning": "This link is easy to guess. Add a password under Settings → Security to keep the gallery private.",
       "updated": "Share link updated",
-      "copied": "Share link copied"
+      "copied": "Share link copied",
+      "copyFailed": "Couldn't copy automatically — select the link and copy it manually."
     },
     "copyFilenames": {
       "title": "Copy filenames",

@@ -467,7 +467,8 @@
       "randomShort": "Zufällig kurz",
       "guessableWarning": "Dieser Link ist leicht zu erraten. Fügen Sie unter Einstellungen → Sicherheit ein Passwort hinzu, um die Galerie privat zu halten.",
       "updated": "Freigabelink aktualisiert",
-      "copied": "Freigabelink kopiert"
+      "copied": "Freigabelink kopiert",
+      "copyFailed": "Automatisches Kopieren nicht möglich – Link bitte markieren und manuell kopieren."
     },
     "copyFilenames": {
       "title": "Dateinamen kopieren",

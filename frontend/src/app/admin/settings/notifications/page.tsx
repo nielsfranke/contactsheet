@@ -23,6 +23,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Plus, Trash2, Send } from "lucide-react";
 import { toast } from "sonner";
+import { uid } from "@/lib/utils";
 
 const EVENT_KEYS: NotificationEventKey[] = ["comment", "annotation", "collection", "flag", "upload", "download", "view"];
 
@@ -34,7 +35,7 @@ const DEFAULTS: NotificationSettings = {
 };
 
 function newChannel(type: NotificationChannelType): NotificationChannel {
-  return { id: crypto.randomUUID(), name: "", type, url: "", params: {}, enabled: true };
+  return { id: uid(), name: "", type, url: "", params: {}, enabled: true };
 }
 
 // Loaded channels may predate the type/params fields (legacy custom URLs) — fill defaults.

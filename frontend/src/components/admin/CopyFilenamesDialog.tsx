@@ -9,6 +9,7 @@ import { Copy, Check } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
+import { copyText } from "@/lib/utils";
 import {
   Dialog,
   DialogContent,
@@ -61,12 +62,11 @@ export function CopyFilenamesDialog({ open, onOpenChange, filenames, filtered }:
   }, [filenames, separator, excludeExt]);
 
   async function copy() {
-    try {
-      await navigator.clipboard.writeText(text);
+    if (await copyText(text)) {
       setCopied(true);
       toast.success(t("copiedToast", { count: filenames.length }));
       setTimeout(() => setCopied(false), 1500);
-    } catch {
+    } else {
       toast.error(t("clipboardError"));
     }
   }

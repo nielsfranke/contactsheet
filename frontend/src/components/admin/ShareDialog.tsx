@@ -14,6 +14,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { Copy, Shuffle, Type, AlertTriangle } from "lucide-react";
+import { copyText } from "@/lib/utils";
 
 // A UUIDv4 share token means the link is unguessable; anything else is a custom slug.
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -69,9 +70,12 @@ export function ShareDialog({
     onError: (err: Error) => setError(err.message),
   });
 
-  function copyLink() {
-    navigator.clipboard.writeText(shareUrl);
-    toast.success(t("copied"));
+  async function copyLink() {
+    if (await copyText(shareUrl)) {
+      toast.success(t("copied"));
+    } else {
+      toast.error(t("copyFailed"));
+    }
   }
 
   const trimmedSlug = slug.trim();
