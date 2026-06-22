@@ -12,6 +12,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.1.4] - 2026-06-22
+
+### Fixed
+
+- **Content Search status now tells "reachable" apart from "model loaded."** The ML-service badge
+  read "online" whenever the sidecar answered its health check — even when the model failed to load
+  and every image was failing to index. It now shows **"reachable, model not loaded"** with a hint
+  (check the sidecar logs; often an unwritable model-cache dir) when the service is up but indexing
+  is erroring, so this case diagnoses itself.
+
 ## [1.1.3] - 2026-06-22
 
 ### Added

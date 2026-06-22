@@ -3,4 +3,4 @@
 
 """Single source of truth for the running app version (mirrors frontend/package.json)."""
 
-__version__ = "1.1.3"
+__version__ = "1.1.4"
