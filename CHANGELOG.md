@@ -12,8 +12,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.2.0] - 2026-06-23
+
 ### Added
 
+- **Star ratings as an alternative to color flags.** A new instance-wide **Rating style** setting
+  (Settings → Gallery Defaults) switches every gallery between color flags and classic **1–5 stars** —
+  one or the other, never both. Stars work everywhere flags did: the grid tiles, the lightbox, the
+  filter/group/sort toolbar, and per-reviewer team voting. Switching is **non-destructive** — flags and
+  stars are stored separately and neither is converted or cleared, so you can flip back and forth without
+  losing any review work.
+- **Link previews for shared galleries (Open Graph).** Pasting a gallery share link into iMessage,
+  WhatsApp, Slack, Discord, and the like now unfurls a rich preview with the gallery's name and cover
+  image (Open Graph + Twitter summary card). Password-protected galleries reveal the name but never the
+  cover. The preview is built from a dedicated, side-effect-free metadata endpoint, so a link-scraper
+  unfurl never counts as a client view or fires a notification.
+- **Instant gallery downloads — no "preparing ZIP" wait.** "Download all" and filtered selections now
+  stream the ZIP on the fly, with a real browser progress bar and no server-side prepare/poll step —
+  the archive starts downloading immediately and its size is known up front.
+- **Title position over the header image.** Presentation galleries can now anchor the gallery title to
+  any of nine positions over the full-screen hero (top-left … bottom-right) via a 3×3 picker in the
+  gallery's Look settings. Defaults to centered, exactly as before.
 - **Download filename lists as a file (.txt / .csv) for Lightroom & co.** The "Copy filenames" dialog
   now offers a **Download** button alongside Copy: a plain `.txt` list (paste into Lightroom's Filename
   filter, Capture One, Photo Mechanic) or a `.csv` review sheet with one row per photo
@@ -23,18 +42,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   photo from nested galleries (recursively), with the current filters applied across the whole tree —
   so "all selects" can span an entire gallery subtree in one export. Suppressed for collection and
   search views, which are per-gallery.
-- **Star ratings as an alternative to color flags.** A new instance-wide **Rating style** setting
-  (Settings → Gallery Defaults) switches every gallery between color flags and classic **1–5 stars** —
-  one or the other, never both. Stars work everywhere flags did: the grid tiles, the lightbox, the
-  filter/group/sort toolbar, and per-reviewer team voting. Switching is **non-destructive** — flags and
-  stars are stored separately and neither is converted or cleared, so you can flip back and forth without
-  losing any review work.
-- **Title position over the header image.** Presentation galleries can now anchor the gallery title to
-  any of nine positions over the full-screen hero (top-left … bottom-right) via a 3×3 picker in the
-  gallery's Look settings. Defaults to centered, exactly as before.
+
+### Changed
+
+- **Faster ZIP downloads.** Original photos are now stored uncompressed (`ZIP_STORED`) in the archive
+  instead of DEFLATE — they're already-compressed JPEG/RAW/video, so compressing them again only burned
+  CPU. Downloads start sooner and carry an exact `Content-Length`.
 
 ### Fixed
 
+- **Annotations are drawable again in the lightbox.** The photo was painting on top of the annotation
+  layer, so freehand drawing did nothing (the drag toggled immersive mode instead) and saved marks
+  couldn't be clicked. The layer now sits above the photo and receives pointer events.
 - **Color flag set in the lightbox now shows on the thumbnail immediately.** Flagging a photo in the
   lightbox and closing it left the grid thumbnail showing the old flag until a page refresh; the tile
   now adopts the change live (also fixes the same lag for flags set by another reviewer).
