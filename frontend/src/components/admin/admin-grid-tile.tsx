@@ -47,6 +47,14 @@ export function AdminTile({
   const tflag = useTranslations("gallery.flags");
   const qc = useQueryClient();
   const [localFlag, setLocalFlag] = useState<ColorFlag>(img.color_flag);
+  // Adopt the stored flag when it changes from outside this tile (e.g. set in the lightbox) —
+  // render-time sync, keyed on the value. An in-flight optimistic change is safe: img.color_flag
+  // only moves once the refetch lands, by which point it equals localFlag.
+  const [syncedFlag, setSyncedFlag] = useState<ColorFlag>(img.color_flag);
+  if (img.color_flag !== syncedFlag) {
+    setSyncedFlag(img.color_flag);
+    setLocalFlag(img.color_flag);
+  }
   const draggable = !!dragProps;
   const selected = !!isSelected?.(img.id);
 
