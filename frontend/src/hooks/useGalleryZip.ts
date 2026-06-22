@@ -76,16 +76,31 @@ function useZipBuilder(ops: ZipOps) {
   return { start, startImages, preparing, error, setError };
 }
 
-/** Public client gallery: ZIP via the share-token endpoints. */
+/** Public client gallery: ZIP via the streaming endpoint — one GET the browser downloads directly,
+ *  no job/poll and no "preparing" wait. The browser's own download UI shows progress + ETA (the
+ *  response carries a real Content-Length). Mirrors the {start, startImages, preparing, error}
+ *  interface of the job-based builder so callers are unchanged. */
 export function useGalleryZip(shareToken: string, galleryToken?: string) {
-  return useZipBuilder({
-    create: ({ subIds, imageIds }) =>
-      imageIds.length
-        ? api.public.createFilteredZip(shareToken, imageIds, galleryToken)
-        : api.public.createZip(shareToken, subIds, galleryToken),
-    getStatus: (jobId) => api.public.getZip(shareToken, jobId, galleryToken),
-    downloadUrl: (jobId) => api.public.zipDownloadUrl(shareToken, jobId),
-  });
+  const [preparing, setPreparing] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  function go(url: string, onSuccess?: () => void) {
+    setError(null);
+    setPreparing(true);
+    triggerBrowserDownload(url);
+    // The browser's download manager owns it from here; clear the transient button state.
+    setTimeout(() => setPreparing(false), 1200);
+    onSuccess?.();
+  }
+
+  function start(subIds: string[], onSuccess?: () => void) {
+    go(api.public.zipStreamUrl(shareToken, { subs: subIds, galleryToken }), onSuccess);
+  }
+  function startImages(imageIds: string[], onSuccess?: () => void) {
+    go(api.public.zipStreamUrl(shareToken, { images: imageIds, galleryToken }), onSuccess);
+  }
+
+  return { start, startImages, preparing, error, setError };
 }
 
 /** Admin gallery: ZIP via the admin-authenticated endpoints. */

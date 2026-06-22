@@ -3,9 +3,18 @@
 
 """Public gallery access: password gate, expiration, moderation hiding, collaboration gating."""
 
+import io
+import zipfile
 from datetime import datetime, timedelta, timezone
 
-from .helpers import make_gallery, add_image
+from .helpers import make_gallery, add_image, png_bytes
+
+
+def _upload(admin_client, gallery_id, name="p.png"):
+    return admin_client.post(
+        f"/api/galleries/{gallery_id}/images",
+        files=[("files", (name, png_bytes(), "image/png"))],
+    )
 
 
 def test_public_gallery_visible_without_password(admin_client):
@@ -185,3 +194,95 @@ def test_annotation_requires_toggle(admin_client):
         },
     )
     assert r.status_code == 403 and r.json()["code"] == "annotations_disabled"
+
+
+# --- Streaming ZIP download -------------------------------------------------
+
+def _pub():
+    from fastapi.testclient import TestClient
+    from app.main import app
+    return TestClient(app)
+
+
+def test_stream_zip_whole_gallery(admin_client):
+    g = make_gallery(admin_client, "Stream")
+    _upload(admin_client, g["id"], "a.png")
+    _upload(admin_client, g["id"], "b.png")
+    r = _pub().get(f"/api/public/g/{g['share_token']}/zip/stream")
+    assert r.status_code == 200
+    assert r.headers["content-type"] == "application/zip"
+    # Content-Length is exact — what gives the browser a real progress bar.
+    assert int(r.headers["content-length"]) == len(r.content)
+    z = zipfile.ZipFile(io.BytesIO(r.content))
+    assert z.testzip() is None
+    assert sorted(z.namelist()) == ["a.png", "b.png"]
+    assert {i.compress_type for i in z.infolist()} == {zipfile.ZIP_STORED}
+
+
+def test_stream_zip_subgalleries_use_folders(admin_client):
+    parent = make_gallery(admin_client, "Parent")
+    child = make_gallery(admin_client, "Child", parent_id=parent["id"])
+    _upload(admin_client, parent["id"], "root.png")
+    _upload(admin_client, child["id"], "kid.png")
+    r = _pub().get(f"/api/public/g/{parent['share_token']}/zip/stream?subs={child['share_token']}")
+    assert r.status_code == 200
+    z = zipfile.ZipFile(io.BytesIO(r.content))
+    assert set(z.namelist()) == {"Parent/root.png", "Child/kid.png"}
+
+
+def test_stream_zip_filtered_selection(admin_client):
+    g = make_gallery(admin_client, "Sel")
+    a = _upload(admin_client, g["id"], "a.png").json()[0]["id"]
+    _upload(admin_client, g["id"], "b.png")
+    r = _pub().get(f"/api/public/g/{g['share_token']}/zip/stream?images={a}")
+    assert r.status_code == 200
+    z = zipfile.ZipFile(io.BytesIO(r.content))
+    assert z.namelist() == ["a.png"]
+
+
+def test_stream_zip_password_requires_token(admin_client):
+    g = make_gallery(admin_client, "Locked")
+    _upload(admin_client, g["id"])
+    admin_client.patch(f"/api/galleries/{g['id']}", json={"password": "secret"})
+    pub = _pub()
+    assert pub.get(f"/api/public/g/{g['share_token']}/zip/stream").status_code == 401
+    tok = pub.post(f"/api/public/g/{g['share_token']}/auth", json={"password": "secret"}).json()["access_token"]
+    assert pub.get(f"/api/public/g/{g['share_token']}/zip/stream?token={tok}").status_code == 200
+
+
+def test_stream_zip_excludes_pending_moderation(admin_client, db):
+    from app.models.image import Image
+    g = make_gallery(admin_client, "Mod")
+    _upload(admin_client, g["id"], "ok.png")
+    _upload(admin_client, g["id"], "pending.png")
+    for im in db.query(Image).filter(Image.gallery_id == g["id"]).all():
+        if im.original_filename == "pending.png":
+            im.moderation_status = "pending"
+    db.commit()
+    r = _pub().get(f"/api/public/g/{g['share_token']}/zip/stream")
+    assert r.status_code == 200
+    assert zipfile.ZipFile(io.BytesIO(r.content)).namelist() == ["ok.png"]
+
+
+def test_stream_zip_blocked_when_downloads_disabled(admin_client):
+    g = make_gallery(admin_client, "NoDl")
+    _upload(admin_client, g["id"])
+    admin_client.patch(f"/api/galleries/{g['id']}", json={"downloads_enabled": False})
+    assert _pub().get(f"/api/public/g/{g['share_token']}/zip/stream").status_code == 403
+
+
+def test_stream_zip_fires_download_notification(admin_client, db):
+    """Option B must still notify downloads (skipping the photographer's own — here the public
+    client has no admin cookie, so the download is a client one)."""
+    from app.repositories import notification_repo
+    admin_client.patch("/api/admin/settings", json={
+        "notifications": {
+            "enabled": True,
+            "events": {"download": True},
+            "channels": [{"id": "c1", "type": "custom", "url": "json://localhost", "enabled": True}],
+        },
+    })
+    g = make_gallery(admin_client, "Notif")
+    _upload(admin_client, g["id"])
+    _pub().get(f"/api/public/g/{g['share_token']}/zip/stream")
+    assert any(r.event_type == "download" for r in notification_repo.list_pending(db))

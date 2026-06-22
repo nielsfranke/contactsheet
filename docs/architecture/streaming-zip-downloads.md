@@ -1,9 +1,21 @@
 # Streaming ZIP downloads — kill the "preparing" wait
 
-Status: **proposed** (2026-06-22). Follow-up to the STORED-compression quick win (already shipped —
-see below). Triggered by photographer feedback: "Download All Files" on a gallery with sub-galleries
-(~525 originals across 4 sub-galleries) sits in **Preparing…** for a long time before anything
-downloads — painful on a low-end server.
+Status: **implemented** (2026-06-22). Follow-up to the STORED-compression quick win. Triggered by
+photographer feedback: "Download All Files" on a gallery with sub-galleries (~525 originals across 4
+sub-galleries) sits in **Preparing…** for a long time before anything downloads — painful on a
+low-end server.
+
+**Shipped:** `GET /api/public/g/{share_token}/zip/stream` (`zipstream-ng`, sized/STORED → exact
+`Content-Length`, no temp file). Member assembly shared via `zip_task.collect_members`
+(`only_approved`-aware); legacy job builders refactored onto it and the public job path now passes
+`only_approved=True` (closes a latent moderation leak). Gallery JWT accepted via `?token=`
+(navigation can't set a header) through `gallery_id_from_token_value`. Download notification +
+activity log fire on stream start, still skipping the photographer's own. Frontend `useGalleryZip`
+streams directly (no poll); admin export stays on the job flow. **Verified:** backend suite + 7 new
+streaming tests (exact Content-Length, sub-gallery folders, filtered selection, password `?token=`,
+pending-moderation excluded, downloads-disabled 403, download notification fires); a real-server
+download of a 17-image gallery returned `Content-Length` matching the byte count exactly, a valid
+all-STORED archive; frontend lint/tsc/vitest/build green.
 
 ## What already shipped (the prerequisite)
 

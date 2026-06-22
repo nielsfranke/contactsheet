@@ -13,6 +13,9 @@ Pillow==11.0.0
 rawpy==0.24.0
 slowapi==0.1.9
 apprise==1.9.0
+# Streaming ZIP downloads: generates the archive on the fly (no temp file) and, in sized mode with
+# STORED, exposes the exact total length up front so the response can set a real Content-Length.
+zipstream-ng==1.9.2
 # Semantic search: NumPy powers the brute-force cosine ranking over stored embeddings; httpx is
 # the client for the optional ML sidecar. The encoder model itself lives in the sidecar image, not
 # here — the backend stays free of any ML runtime.

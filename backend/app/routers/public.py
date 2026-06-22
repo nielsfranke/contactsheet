@@ -5,11 +5,11 @@ import json
 import os
 import re
 
-from fastapi import APIRouter, BackgroundTasks, Depends, File, Form, HTTPException, Request, UploadFile, status
-from fastapi.responses import FileResponse
+from fastapi import APIRouter, BackgroundTasks, Depends, File, Form, HTTPException, Query, Request, UploadFile, status
+from fastapi.responses import FileResponse, StreamingResponse
 from sqlalchemy.orm import Session
 
-from app.auth.dependencies import get_optional_admin, get_optional_gallery_token
+from app.auth.dependencies import gallery_id_from_token_value, get_optional_admin, get_optional_gallery_token
 from app.auth.jwt import create_gallery_token
 from app.auth.password import verify_password
 from app.config import settings as app_settings
@@ -28,7 +28,7 @@ from app.schemas.vote import VoteCreate, VoteResponse
 from app.schemas.zip_job import PublicZipCreate, ZipJobResponse
 from app.services import activity_service, collection_service, comment_service, gallery_service, image_service, notification_service, watermark_service
 from app.storage.base import StorageProvider
-from app.tasks.zip_task import build_zip_for_images, build_zip_multi, safe_folder
+from app.tasks.zip_task import build_zip_for_images, build_zip_multi, collect_members, open_zip_stream, safe_folder
 
 router = APIRouter(prefix="/api/public", tags=["public"])
 
@@ -529,22 +529,23 @@ def create_public_zip(
 
     # Filtered download: a specific selection of this gallery's own images (sub-galleries ignored).
     if body.image_ids:
-        gallery_image_ids = {img.id for img in image_repo.get_by_gallery(db, gallery.id)}
+        gallery_image_ids = {img.id for img in image_repo.get_by_gallery(db, gallery.id, only_approved=True)}
         wanted = [iid for iid in body.image_ids if iid in gallery_image_ids]
         if not wanted:
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Nothing to download in the current selection")
         zip_job_repo.purge_expired(db)
         job = zip_job_repo.create(db, gallery.id, "all")
-        background_tasks.add_task(build_zip_for_images, job.id, gallery.id, wanted)
+        background_tasks.add_task(build_zip_for_images, job.id, gallery.id, wanted, only_approved=True)
         _record_download(len(wanted))
         return _public_zip_response(job, share_token)
 
     children = gallery_repo.get_children(db, gallery.id)
     selected = [c for c in children if c.share_token in set(body.subgallery_share_tokens)]
 
-    # Image counts to validate the selection actually holds files.
+    # Image counts to validate the selection actually holds files (only_approved: pending client
+    # uploads don't count and never enter a public download).
     ids = [gallery.id] + [c.id for c in selected]
-    counts = gallery_repo.batch_image_counts(db, ids)
+    counts = gallery_repo.batch_image_counts(db, ids, only_approved=True)
     root_count = counts.get(gallery.id, 0)
 
     # Build (gallery_id, folder) entries. With no sub-galleries selected the archive is flat;
@@ -564,9 +565,68 @@ def create_public_zip(
 
     zip_job_repo.purge_expired(db)
     job = zip_job_repo.create(db, gallery.id, "all")
-    background_tasks.add_task(build_zip_multi, job.id, entries)
+    background_tasks.add_task(build_zip_multi, job.id, entries, only_approved=True)
     _record_download(total)
     return _public_zip_response(job, share_token)
+
+
+@router.get("/g/{share_token}/zip/stream")
+def stream_public_zip(
+    request: Request,
+    share_token: str,
+    subs: str = Query("", description="Comma-separated sub-gallery share tokens to include"),
+    images: str = Query("", description="Comma-separated image ids (filtered single-gallery download)"),
+    token: str | None = Query(None, description="Gallery JWT (browsers can't set an auth header on a download)"),
+    db: Session = Depends(get_db),
+    storage: StorageProvider = Depends(get_storage),
+    is_admin: bool = Depends(get_optional_admin),
+):
+    """Stream the gallery (+ selected sub-galleries, or a filtered image selection) as a ZIP, built
+    on the fly with no temp file and a real Content-Length — no "preparing" step. STORED makes the
+    archive size exact and computable up front. See docs/architecture/streaming-zip-downloads.md."""
+    gallery, _ = gallery_service.get_public_gallery(db, share_token, storage)
+    # A browser navigation can't carry an Authorization header, so the gallery JWT rides in ?token=.
+    _require_gallery_access(gallery, gallery_id_from_token_value(token))
+    if not gallery.downloads_enabled:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Downloads are disabled for this gallery")
+
+    image_ids = {i for i in images.split(",") if i}
+    if image_ids:
+        members = collect_members(db, [(gallery.id, "")], only_approved=True, image_ids=image_ids)
+    else:
+        sub_tokens = {t for t in subs.split(",") if t}
+        children = gallery_repo.get_children(db, gallery.id)
+        selected = [c for c in children if c.share_token in sub_tokens]
+        counts = gallery_repo.batch_image_counts(db, [gallery.id] + [c.id for c in selected], only_approved=True)
+        entries: list[tuple[str, str]] = []
+        if not selected:
+            entries.append((gallery.id, ""))
+        else:
+            if counts.get(gallery.id, 0) > 0:
+                entries.append((gallery.id, safe_folder(gallery.name)))
+            entries.extend((c.id, safe_folder(c.name)) for c in selected)
+        members = collect_members(db, entries, only_approved=True)
+
+    if not members:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Nothing to download in the current selection")
+
+    zs = open_zip_stream(members)
+    content_length = len(zs)
+
+    # Same notify + log as the job path, fired as the stream starts; skip the photographer's own.
+    if not is_admin:
+        activity_service.log_download(db, gallery.id, request, len(members))
+        notification_service.enqueue(db, gallery.id, "download", meta={"count": len(members)})
+
+    filename = f"{safe_folder(gallery.name)}.zip"
+    return StreamingResponse(
+        iter(zs),
+        media_type="application/zip",
+        headers={
+            "Content-Disposition": f'attachment; filename="{filename}"',
+            "Content-Length": str(content_length),
+        },
+    )
 
 
 @router.get("/g/{share_token}/zip/{job_id}", response_model=ZipJobResponse)

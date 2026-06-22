@@ -55,11 +55,9 @@ def get_optional_admin(
         return False
 
 
-def get_optional_gallery_token(
-    authorization: str | None = Header(default=None),
-) -> str | None:
-    """Returns the gallery JWT payload dict, or None if no token provided."""
-    token = _extract_bearer(authorization)
+def gallery_id_from_token_value(token: str | None) -> str | None:
+    """Decode a gallery JWT supplied as a raw value (e.g. a ?token= query param — browsers can't set
+    an Authorization header on a navigation/download). Returns the gallery_id, or None."""
     if not token:
         return None
     try:
@@ -69,6 +67,13 @@ def get_optional_gallery_token(
         return payload.get("gallery_id")
     except InvalidTokenError:
         return None
+
+
+def get_optional_gallery_token(
+    authorization: str | None = Header(default=None),
+) -> str | None:
+    """Returns the gallery JWT payload dict, or None if no token provided."""
+    return gallery_id_from_token_value(_extract_bearer(authorization))
 
 
 def require_gallery_token(

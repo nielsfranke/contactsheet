@@ -568,5 +568,18 @@ export const api = {
       }),
     zipDownloadUrl: (token: string, jobId: string) =>
       `/api/public/g/${token}/zip/${jobId}/download`,
+    // Streaming download: one GET the browser navigates to — no job, no poll, no "preparing".
+    // The gallery JWT rides in ?token= because a navigation can't set an Authorization header.
+    zipStreamUrl: (
+      token: string,
+      opts: { subs?: string[]; images?: string[]; galleryToken?: string },
+    ) => {
+      const p = new URLSearchParams();
+      if (opts.subs?.length) p.set("subs", opts.subs.join(","));
+      if (opts.images?.length) p.set("images", opts.images.join(","));
+      if (opts.galleryToken) p.set("token", opts.galleryToken);
+      const qs = p.toString();
+      return `/api/public/g/${token}/zip/stream${qs ? `?${qs}` : ""}`;
+    },
   },
 };
