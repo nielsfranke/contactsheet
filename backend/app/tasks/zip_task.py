@@ -16,6 +16,13 @@ from app.database import SessionLocal
 
 logger = logging.getLogger(__name__)
 
+# Originals are already-compressed formats (JPEG, camera RAW, MP4/MOV), so DEFLATE burns CPU for
+# ~0% size gain — the dominant cost when zipping a large gallery, and brutal on a low-end server.
+# STORED just copies bytes, making the build disk-I/O bound instead of CPU bound (much faster), and
+# its predictable per-entry overhead is what later lets a streaming download set a real
+# Content-Length. See docs/architecture/streaming-zip-downloads.md.
+_ZIP_COMPRESSION = zipfile.ZIP_STORED
+
 
 def safe_folder(name: str) -> str:
     """Filesystem-safe folder name for a gallery inside a ZIP."""
@@ -43,7 +50,7 @@ def build_zip_for_images(job_id: str, gallery_id: str, image_ids: list[str]) -> 
 
         name_counts: dict[str, int] = defaultdict(int)
         total = 0
-        with zipfile.ZipFile(zip_path, "w", zipfile.ZIP_DEFLATED) as zf:
+        with zipfile.ZipFile(zip_path, "w", _ZIP_COMPRESSION) as zf:
             for img in images:
                 src = os.path.join(settings.upload_dir, gallery_id, "original", img.stored_filename)
                 if not os.path.exists(src):
@@ -89,7 +96,7 @@ def build_zip_multi(job_id: str, entries: list[tuple[str, str]]) -> None:
         zip_path = os.path.join(settings.exports_dir, job.gallery_id, f"{job_id}.zip")
 
         total = 0
-        with zipfile.ZipFile(zip_path, "w", zipfile.ZIP_DEFLATED) as zf:
+        with zipfile.ZipFile(zip_path, "w", _ZIP_COMPRESSION) as zf:
             for gallery_id, folder in entries:
                 images = image_repo.get_by_gallery(db, gallery_id)
                 name_counts: dict[str, int] = defaultdict(int)
@@ -148,7 +155,7 @@ def build_zip(job_id: str, gallery_id: str, filter_type: str) -> None:
         zip_path = os.path.join(settings.exports_dir, gallery_id, f"{job_id}.zip")
 
         name_counts: dict[str, int] = defaultdict(int)
-        with zipfile.ZipFile(zip_path, "w", zipfile.ZIP_DEFLATED) as zf:
+        with zipfile.ZipFile(zip_path, "w", _ZIP_COMPRESSION) as zf:
             for img in images:
                 src = os.path.join(settings.upload_dir, gallery_id, "original", img.stored_filename)
                 if not os.path.exists(src):
