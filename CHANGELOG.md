@@ -12,6 +12,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.2.1] - 2026-06-24
+
+### Security
+
+- **Backend dependencies updated to clear known CVEs.** PyJWT 2.10.1 → 2.13.0, python-multipart
+  0.0.18 → 0.0.31, Pillow 11.0.0 → 12.2.0, and FastAPI 0.115.6 → 0.138.0 (Starlette pinned to 1.3.1).
+  `pip-audit` now reports zero known vulnerabilities across the backend. No behaviour change — image
+  processing, EXIF extraction, authentication, uploads, watermarking, streaming ZIP downloads and the
+  realtime WebSocket were all verified end-to-end against a freshly built stack.
+- **Longer share-link tokens.** Newly created galleries now use 12-character share tokens (~62 bits of
+  entropy) instead of 8, so an unlisted gallery URL can't be feasibly enumerated. **Existing share
+  links are unaffected and keep working** — only generation changed.
+- **Content-Security-Policy on the app.** The bundled nginx now sends a CSP header (alongside the
+  existing X-Frame-Options / nosniff / Referrer-Policy), restricting the app to same-origin scripts,
+  styles, images and connections (including the realtime WebSocket) and blocking framing — defense in
+  depth against content injection.
+
+### Added
+
+- **Automated dependency scanning in CI.** A new workflow runs `pip-audit` (backend) and `npm audit`
+  (frontend) on a weekly schedule and whenever a dependency manifest changes, so a CVE published
+  against a pinned version surfaces without waiting for a code change.
+
 ### Fixed
 
 - **Link previews now work out of the box on a standard deploy.** When `BACKEND_INTERNAL_URL` is
