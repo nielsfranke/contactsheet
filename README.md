@@ -120,6 +120,13 @@ Environment variables, the two-volume layout, reverse-proxy/HTTPS, updating, and
 | 🏗️ **[Architecture](ARCHITECTURE.md)** | Full technical design |
 | 🌍 **[Translating](TRANSLATING.md)** | Help translate the app (no code required) |
 
+## Support
+
+ContactSheet is free, open-source, and built in my spare time. If it's useful to you and
+you'd like to help keep it going, you can buy me a coffee — every bit is appreciated. ☕
+
+[![Support me on Ko-fi](https://img.shields.io/badge/Support%20me-Ko--fi-FF5E5B?logo=kofi&logoColor=white)](https://ko-fi.com/nielsfranke)
+
 ## License
 
 [GNU AGPL-3.0-or-later](LICENSE). ContactSheet is free software — use, modify, and self-host it freely.
