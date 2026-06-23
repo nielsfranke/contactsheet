@@ -7,8 +7,14 @@ import { headers } from "next/headers";
 // The Next *server* (not the browser) fetches preview metadata here, so it needs an absolute
 // backend URL — the relative `/api` proxy only exists in the browser. In Docker this is the
 // backend service name; in dev it mirrors next.config.ts's NEXT_PUBLIC_API_BASE fallback.
+// The production default is the compose service name (`backend:8000`), not `localhost`, so a
+// standard deploy still unfurls link previews even if BACKEND_INTERNAL_URL was never set
+// (e.g. an older docker-compose.yml carried across an upgrade) — `localhost:8000` can never
+// reach the backend from inside the frontend container.
 const BACKEND =
-  process.env.BACKEND_INTERNAL_URL ?? process.env.NEXT_PUBLIC_API_BASE ?? "http://localhost:8000";
+  process.env.BACKEND_INTERNAL_URL ??
+  process.env.NEXT_PUBLIC_API_BASE ??
+  (process.env.NODE_ENV === "production" ? "http://backend:8000" : "http://localhost:8000");
 
 type GalleryMeta = {
   name: string;

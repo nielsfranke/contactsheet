@@ -12,6 +12,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **Link previews now work out of the box on a standard deploy.** When `BACKEND_INTERNAL_URL` is
+  unset, the frontend now defaults to the compose service name (`http://backend:8000`) in production
+  instead of `localhost:8000` (which can never reach the backend from inside the frontend container).
+  This silently broke link-preview unfurls for anyone who upgraded to 1.2.0 while keeping an older
+  `docker-compose.yml`. **Upgrading from < 1.2.0:** if you maintain your own `docker-compose.yml`,
+  either pull the latest one or add `BACKEND_INTERNAL_URL: "http://backend:8000"` to the `frontend`
+  service's `environment:` (only needed if your backend service is named something other than
+  `backend`).
+
 ## [1.2.0] - 2026-06-23
 
 ### Added
