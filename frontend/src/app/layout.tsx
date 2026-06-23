@@ -5,6 +5,7 @@ import type { Metadata, Viewport } from "next";
 import { Montserrat, Geist_Mono } from "next/font/google";
 import { NextIntlClientProvider } from "next-intl";
 import { getLocale } from "next-intl/server";
+import { headers } from "next/headers";
 import "./globals.css";
 import { Providers } from "./providers";
 import { Toaster } from "@/components/ui/sonner";
@@ -42,6 +43,9 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   // Locale comes from the cookie / Accept-Language (see src/i18n/request.ts); messages are
   // inherited by NextIntlClientProvider from the request config (no explicit prop needed).
   const locale = await getLocale();
+  // Per-request CSP nonce set by src/proxy.ts — stamped on our inline theme script so it runs under
+  // the strict (no 'unsafe-inline') script-src. Next stamps its own scripts automatically.
+  const nonce = (await headers()).get("x-nonce") ?? undefined;
   return (
     <html lang={locale} className={`${montserrat.variable} ${geistMono.variable} ${GALLERY_FONT_VARIABLES} h-full antialiased dark`} suppressHydrationWarning>
       <head>
@@ -52,6 +56,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
             screens follow the instance theme (default light) before first paint. Keys mirror
             src/lib/theme.ts. */}
         <script
+          nonce={nonce}
           dangerouslySetInnerHTML={{
             __html: `(function(){try{var p=location.pathname;var d=document.documentElement;if(p.indexOf("/g/")===0){d.classList.remove("dark");return;}if(p.indexOf("/admin")!==0&&p.indexOf("/login")!==0&&p.indexOf("/setup")!==0)return;if(localStorage.getItem("cs-admin-theme")!=="dark")d.classList.remove("dark");var a=localStorage.getItem("cs-admin-accent");if(a){d.style.setProperty("--primary",a);d.style.setProperty("--ring",a);var f=localStorage.getItem("cs-admin-accent-fg");if(f)d.style.setProperty("--primary-foreground",f)}if(localStorage.getItem("cs-admin-accent-gradient")==="1")d.classList.add("accent-gradient")}catch(e){}})()`,
           }}
