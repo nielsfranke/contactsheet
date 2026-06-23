@@ -106,7 +106,7 @@ def run(state: dict) -> None:
             # 02 — admin galleries
             try:
                 go("/admin/galleries")
-                page.get_by_text("All Galleries").first.wait_for()
+                page.get_by_role("button", name="New Gallery").first.wait_for()
                 shot(page, "02-admin-galleries")
             except Exception as e:
                 print(f"  ! 02: {e}")
