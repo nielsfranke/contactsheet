@@ -155,12 +155,21 @@ jobs:
 
       - name: Assemble release notes
         id: notes
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           set -euo pipefail
           TAG="$GITHUB_REF_NAME"
           VERSION="${TAG#v}"
-          # Title from the annotated tag subject ("ContactSheet vX.Y.Z — …" → "vX.Y.Z — …").
-          SUBJECT="$(git tag -l "$TAG" --format='%(contents:subject)')"
+          # Title from the ANNOTATED tag's message subject ("ContactSheet vX.Y.Z — …" → "vX.Y.Z — …").
+          # Read it from the API, NOT local git: actions/checkout materializes the triggering tag as
+          # a *lightweight* ref in the runner, so `git tag --format='%(contents:subject)'` returns the
+          # commit subject instead of the tag message. The API always has the real annotated object.
+          SUBJECT=""
+          if [ "$(gh api "repos/$REPO/git/refs/tags/$TAG" --jq '.object.type')" = "tag" ]; then
+            OBJ_SHA="$(gh api "repos/$REPO/git/refs/tags/$TAG" --jq '.object.sha')"
+            SUBJECT="$(gh api "repos/$REPO/git/tags/$OBJ_SHA" --jq '.message' | head -n1)"
+          fi
           TITLE="${SUBJECT#ContactSheet }"
           [ -n "$TITLE" ] || TITLE="$TAG"
           PREV="$(git describe --tags --abbrev=0 "$TAG^" 2>/dev/null || true)"
