@@ -9,7 +9,7 @@ from concurrent.futures import ThreadPoolExecutor
 
 from PIL import IptcImagePlugin
 from PIL import Image as PilImage
-from PIL.ExifTags import TAGS
+from PIL.ExifTags import IFD, TAGS
 
 from app.config import settings
 from app.storage import format_detect, psd_thumbnail
@@ -90,7 +90,18 @@ def preview_targets(high_res: bool) -> dict[str, tuple[int, int]]:
 
 def _extract_exif(img: PilImage.Image) -> dict | None:
     try:
-        raw = img._getexif()  # type: ignore[attr-defined]
+        exif = img.getexif()
+        if not exif:
+            return None
+        # getexif() exposes only the base IFD0 tags at the top level; the photographic fields we
+        # whitelist (FNumber, ISOSpeedRatings, ExposureTime, LensModel, FocalLength,
+        # DateTimeOriginal) live in the Exif sub-IFD. Merge both so the lookup below sees the same
+        # flat tag space the removed _getexif() did (Pillow 12 dropped _getexif).
+        raw = dict(exif)
+        try:
+            raw.update(exif.get_ifd(IFD.Exif))
+        except Exception:
+            pass
         if not raw:
             return None
         result = {}
@@ -225,9 +236,10 @@ def process_image(image_id: str, gallery_id: str, stored_filename: str) -> None:
         if w * h > max_pixels:
             raise ValueError(f"Image exceeds the {max_pixels}px area limit ({w}x{h})")
         # Read metadata from the as-opened image: exif_transpose() (in _auto_rotate) returns a
-        # plain transposed copy that no longer carries _getexif / IPTC, so extracting after the
-        # rotate silently dropped all EXIF and IPTC.
-        exif_dict = _extract_exif(img) if hasattr(img, "_getexif") else None
+        # plain transposed copy that no longer carries the EXIF / IPTC blocks, so extracting after
+        # the rotate silently dropped all EXIF and IPTC. getexif() exists on every image and is
+        # empty for formats without EXIF, so _extract_exif gates the empty case itself.
+        exif_dict = _extract_exif(img)
         # ensure_ascii=False stores literal UTF-8 so non-ASCII IPTC values (umlauts in keywords,
         # places, names) survive as real characters — the "All Photos" filter substring-matches the
         # extracted JSON, and SQLite's json_extract of an *array* otherwise keeps \uXXXX escapes.
