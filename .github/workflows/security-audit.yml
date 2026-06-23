@@ -1,0 +1,58 @@
+# SPDX-FileCopyrightText: 2026 Niels Franke
+# SPDX-License-Identifier: AGPL-3.0-or-later
+#
+# Scans the pinned backend (pip) and frontend (npm) dependencies for known CVEs.
+# Runs when a dependency manifest changes, on a weekly schedule (so advisories
+# published against an unchanged pin still surface), and on demand.
+
+name: Security audit
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "backend/requirements.txt"
+      - "frontend/package-lock.json"
+      - ".github/workflows/security-audit.yml"
+  pull_request:
+    paths:
+      - "backend/requirements.txt"
+      - "frontend/package-lock.json"
+      - ".github/workflows/security-audit.yml"
+  schedule:
+    - cron: "0 6 * * 1" # Mondays 06:00 UTC
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  pip-audit:
+    # Only run on GitHub Actions; the Forgejo mirror has no runner today (mirrors the release workflow).
+    if: ${{ github.server_url == 'https://github.com' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      # Match the runtime image (python:3.12-slim) so pinned wheels (e.g. rawpy) resolve — pip-audit
+      # builds a venv from requirements.txt and a mismatched Python would fail the install step.
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Audit Python dependencies
+        uses: pypa/gh-action-pip-audit@v1.1.0
+        with:
+          inputs: backend/requirements.txt
+
+  npm-audit:
+    if: ${{ github.server_url == 'https://github.com' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+      - name: Audit npm dependencies (production, high+ severity)
+        working-directory: frontend
+        # Production deps only: a dev-only transitive advisory shouldn't gate the app. The lockfile
+        # alone is enough — no install needed.
+        run: npm audit --omit=dev --audit-level=high
