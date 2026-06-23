@@ -37,12 +37,16 @@ from app.storage.base import StorageProvider
 # URL-safe slug: 3–80 chars, lowercase alphanumerics + hyphens, no leading/trailing hyphen.
 _SLUG_RE = re.compile(r"^[a-z0-9](?:[a-z0-9-]{1,78}[a-z0-9])?$")
 _RANDOM_ALPHABET = string.ascii_lowercase + string.digits
+# 12 chars over a 36-symbol alphabet ≈ 62 bits of entropy — enough that an unlisted (password-less)
+# gallery URL can't be brute-force-enumerated. Lookups match the token string verbatim and the
+# column holds up to 80 chars, so older 8-char tokens already issued keep working unchanged.
+_TOKEN_LENGTH = 12
 
 
 def _random_token(db: Session, exclude_id: str | None = None) -> str:
-    """A short, unique, URL-safe share token (8 chars)."""
+    """A short, unique, URL-safe share token (12 chars)."""
     while True:
-        token = "".join(secrets.choice(_RANDOM_ALPHABET) for _ in range(8))
+        token = "".join(secrets.choice(_RANDOM_ALPHABET) for _ in range(_TOKEN_LENGTH))
         if not gallery_repo.share_token_exists(db, token, exclude_id):
             return token
 

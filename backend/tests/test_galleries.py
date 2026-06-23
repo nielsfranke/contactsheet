@@ -22,6 +22,27 @@ def test_create_requires_name(admin_client):
     assert admin_client.post("/api/galleries", json={"name": ""}).status_code == 422
 
 
+def test_share_token_is_12_url_safe_chars(admin_client):
+    """New galleries get a 12-char lowercase-alphanumeric token (~62 bits of entropy)."""
+    token = make_gallery(admin_client, "Entropy")["share_token"]
+    assert len(token) == 12
+    assert all(c in "abcdefghijklmnopqrstuvwxyz0123456789" for c in token)
+
+
+def test_legacy_8_char_token_still_resolves(admin_client):
+    """Existing 8-char tokens (issued before the length bump) must keep working after an update —
+    the lookup matches the token string verbatim, with no length check."""
+    g = make_gallery(admin_client, "Legacy")
+    db = SessionLocal()
+    try:
+        gallery = gallery_repo.get_by_id(db, g["id"])
+        gallery.share_token = "abcd1234"  # 8 chars, the old format
+        db.commit()
+    finally:
+        db.close()
+    assert admin_client.get("/api/public/g/abcd1234").status_code == 200
+
+
 def test_nested_gallery_tree(admin_client):
     parent = make_gallery(admin_client, "Parent")
     child = make_gallery(admin_client, "Child", parent_id=parent["id"])
