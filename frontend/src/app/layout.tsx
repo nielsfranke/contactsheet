@@ -57,6 +57,10 @@ export default async function RootLayout({ children }: { children: React.ReactNo
             src/lib/theme.ts. */}
         <script
           nonce={nonce}
+          // The browser strips the nonce value from the DOM after parsing (CSP spec), so the client
+          // sees an empty nonce while the server-rendered HTML carried it — a benign, dev-only
+          // hydration mismatch. Suppress it on this one element (the <html> already does the same).
+          suppressHydrationWarning
           dangerouslySetInnerHTML={{
             __html: `(function(){try{var p=location.pathname;var d=document.documentElement;if(p.indexOf("/g/")===0){d.classList.remove("dark");return;}if(p.indexOf("/admin")!==0&&p.indexOf("/login")!==0&&p.indexOf("/setup")!==0)return;if(localStorage.getItem("cs-admin-theme")!=="dark")d.classList.remove("dark");var a=localStorage.getItem("cs-admin-accent");if(a){d.style.setProperty("--primary",a);d.style.setProperty("--ring",a);var f=localStorage.getItem("cs-admin-accent-fg");if(f)d.style.setProperty("--primary-foreground",f)}if(localStorage.getItem("cs-admin-accent-gradient")==="1")d.classList.add("accent-gradient")}catch(e){}})()`,
           }}
