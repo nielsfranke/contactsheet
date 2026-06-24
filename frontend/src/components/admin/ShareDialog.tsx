@@ -63,6 +63,10 @@ export function ShareDialog({
       api.galleries.setShareToken(gallery.id, body),
     onSuccess: (updated) => {
       qc.invalidateQueries({ queryKey: ["galleries"] });
+      // Also refresh the open gallery detail (keyed ["gallery", id]) so the copy-paste "Current
+      // link" row above reflects the new custom slug immediately — without this it stays the old
+      // token and the custom link can't be copied from there.
+      qc.invalidateQueries({ queryKey: ["gallery", gallery.id] });
       setSlug(updated.share_token);
       setError(null);
       toast.success(t("updated"));
