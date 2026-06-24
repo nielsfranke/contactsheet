@@ -147,9 +147,13 @@ export function AnnotationLayer({
     .filter((c) => c.anchor)
     .sort((a, b) => a.created_at.localeCompare(b.created_at));
 
-  // Marks are interactive (hover, badge) only when not actively drawing, so a stroke can be drawn
-  // freely over existing ones without intercepting.
-  const interactive = !drawing && !pending;
+  // Marks (stroke/rect hit-areas, number badges, delete affordance) stay selectable even while
+  // drawing, so an annotation can be tapped and deleted without first leaving annotation mode —
+  // matching view mode. Only suppressed while a note popover is open (pending). The stroke/rect hit
+  // areas do NOT stopPropagation, so a *drag* starting on a mark still draws a new stroke (the
+  // pointerdown bubbles to the surface) while a *tap* — ignored as a 1-point stroke — highlights it.
+  // The precise badge + trash targets DO stopPropagation, since a tap there should never draw.
+  const marksInteractive = !pending;
 
   function frac(e: React.PointerEvent): AnchorPoint {
     const s = surfaceRef.current!.getBoundingClientRect();
@@ -281,7 +285,7 @@ export function AnnotationLayer({
                   stroke="transparent"
                   strokeWidth={Math.max(22, sw + 16)}
                   vectorEffect="non-scaling-stroke"
-                  style={{ pointerEvents: interactive ? "stroke" : "none", cursor: "pointer" }}
+                  style={{ pointerEvents: marksInteractive ? "stroke" : "none", cursor: "pointer" }}
                   onMouseEnter={() => onHover?.(c.id)}
                   onMouseLeave={() => onHover?.(null)}
                   onClick={() => onHover?.(c.id)}
@@ -307,9 +311,10 @@ export function AnnotationLayer({
                 stroke={mc}
                 strokeWidth={hot ? 3 : 2}
                 vectorEffect="non-scaling-stroke"
-                style={{ pointerEvents: interactive ? "all" : "none", cursor: "pointer" }}
+                style={{ pointerEvents: marksInteractive ? "all" : "none", cursor: "pointer" }}
                 onMouseEnter={() => onHover?.(c.id)}
                 onMouseLeave={() => onHover?.(null)}
+                onClick={() => onHover?.(c.id)}
               />
             );
           })}
@@ -358,9 +363,10 @@ export function AnnotationLayer({
               title={`${c.author_name}: ${c.text}`}
               onMouseEnter={() => onHover?.(c.id)}
               onMouseLeave={() => onHover?.(null)}
+              onPointerDown={(e) => e.stopPropagation()}
               onClick={() => onHover?.(c.id)}
               className={`absolute w-5 h-5 -ml-2.5 -mt-2.5 rounded-full text-[11px] font-bold text-white flex items-center justify-center shadow transition-transform ${
-                interactive ? "pointer-events-auto" : "pointer-events-none"
+                marksInteractive ? "pointer-events-auto" : "pointer-events-none"
               } ${hot ? "scale-125 ring-2 ring-white" : "hover:scale-110"}`}
               style={{ left: `${o.x * 100}%`, top: `${o.y * 100}%`, backgroundColor: mc }}
             >
@@ -369,8 +375,9 @@ export function AnnotationLayer({
           );
         })}
 
-        {/* Delete affordance — floats next to the highlighted mark's badge when deletable */}
-        {showMarks && interactive && onDelete && anchored.map((c) => {
+        {/* Delete affordance — floats next to the highlighted mark's badge when deletable. Shown even
+            while drawing so an annotation can be deleted without leaving annotation mode. */}
+        {showMarks && marksInteractive && onDelete && anchored.map((c) => {
           if (c.id !== highlightId || !canDelete?.(c.author_name)) return null;
           const o = originOf(c.anchor!);
           return (
@@ -380,6 +387,7 @@ export function AnnotationLayer({
               title={t("delete")}
               onMouseEnter={() => onHover?.(c.id)}
               onMouseLeave={() => onHover?.(null)}
+              onPointerDown={(e) => e.stopPropagation()}
               onClick={(e) => {
                 e.stopPropagation();
                 onDelete(c.id);
