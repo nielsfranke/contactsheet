@@ -23,38 +23,11 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { LogOut, Settings, ChevronLeft, SlidersHorizontal, Palette, Images, LayoutGrid, PanelBottom, Menu, Bell, KeyRound, ScanSearch } from "lucide-react";
+import { LogOut, Settings, ChevronLeft, Menu } from "lucide-react";
 import Link from "next/link";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
-
-// Settings nav, grouped by audience: what only the admin sees vs. what reaches clients.
-// labelKey resolves against the `settings.nav` catalog at render.
-const SETTINGS_NAV = [
-  {
-    labelKey: "brandingGroup",
-    items: [
-      { href: "/admin/settings/branding", labelKey: "branding", icon: Palette },
-      { href: "/admin/settings/footer", labelKey: "footer", icon: PanelBottom },
-    ],
-  },
-  {
-    labelKey: "clientGalleriesGroup",
-    items: [
-      { href: "/admin/settings/gallery-defaults", labelKey: "galleryDefaults", icon: Images },
-    ],
-  },
-  {
-    labelKey: "workspaceGroup",
-    items: [
-      { href: "/admin/settings/workspace", labelKey: "workspace", icon: LayoutGrid },
-      { href: "/admin/settings/search", labelKey: "search", icon: ScanSearch },
-      { href: "/admin/settings/account", labelKey: "account", icon: KeyRound },
-      { href: "/admin/settings/notifications", labelKey: "notifications", icon: Bell },
-      { href: "/admin/settings/general", labelKey: "general", icon: SlidersHorizontal },
-    ],
-  },
-] as const;
+import { SETTINGS_NAV } from "./settings/settings-nav";
 
 /** Closes the mobile drawer on any navigation (path or ?folder= change). Isolated in a
  *  Suspense boundary because useSearchParams opts the subtree out of prerendering. */
@@ -146,6 +119,9 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const isGalleryDetail = /^\/admin\/galleries\/[^/]+$/.test(pathname);
   // On settings pages the sidebar shows the settings sections instead.
   const isSettings = pathname.startsWith("/admin/settings");
+  // A settings *section* (not the mobile index list) — drives the mobile header back-arrow to the
+  // section list, so the other settings are reachable without opening the drawer.
+  const isSettingsSection = isSettings && pathname !== "/admin/settings";
 
   const instanceName = appSettings?.instance_name ?? "ContactSheet";
   // Masthead branding (top-left box). With no logo uploaded we always fall back to the name so the
@@ -310,6 +286,12 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             <Link href={mobileHeaderNav.href} className="flex items-center gap-1 min-w-0">
               <ChevronLeft size={20} className="shrink-0 text-muted-foreground" />
               <span className="font-semibold truncate">{mobileHeaderNav.label}</span>
+            </Link>
+          ) : isSettingsSection ? (
+            // Settings section: back to the mobile settings list (the sidebar nav is in the drawer).
+            <Link href="/admin/settings" className="flex items-center gap-1 min-w-0">
+              <ChevronLeft size={20} className="shrink-0 text-muted-foreground" />
+              <span className="font-semibold truncate">{tShell("settings")}</span>
             </Link>
           ) : (
             <Link href="/admin/galleries" className="flex items-center gap-2 min-w-0">
