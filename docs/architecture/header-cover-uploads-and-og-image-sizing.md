@@ -124,9 +124,12 @@ into an image. Consequences for operators upgrading:
   `contactsheet-backend`; arrives automatically with `docker compose pull` + `up -d`. No config
   change.
 - **nginx body-size fix** (header/cover > 1 MB) → lives in the host's `nginx.conf`. An image pull
-  does **not** deliver it. The operator must update the host file from the release and reload:
-  `docker compose up -d` (or `docker compose restart nginx`). Without this, the WhatsApp/og:image
-  fix still arrives via the backend image, but "can't upload a header > 1 MB" persists.
+  does **not** deliver it. The operator must update the host file from the release **and run
+  `docker compose restart nginx`** — `docker compose up -d` alone does **not** reload it (Compose
+  recreates the container only when the service *definition* changes, not when the bind-mounted file's
+  contents change; verified in prod — nginx kept running the old config after `up -d`). Without the
+  restart, the WhatsApp/og:image fix still arrives via the backend image, but "can't upload a header
+  > 1 MB" persists.
 - **docker-compose.yml**: no change required (services, volume mount, `BACKEND_INTERNAL_URL`
   unchanged). The new og-image endpoint is under `/api/…`, already proxied by `location /api/` — no
   new nginx location.

@@ -50,10 +50,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Upgrade notes
 
-- **Update the host-mounted `nginx.conf`.** The header/cover upload size fix lives in `nginx.conf`,
-  which is bind-mounted from the host — an image pull alone does **not** deliver it. After upgrading,
-  copy the new `nginx.conf` and run `docker compose up -d` (or `docker compose restart nginx`).
-  Without this, header/cover uploads over 1 MB keep returning 413.
+- **The WhatsApp / og:image fix needs no nginx changes.** It ships in the backend image and is served
+  through the existing `/api/` proxy, so a normal `docker compose pull` + `docker compose up -d` is
+  enough for link previews to start working (existing oversized headers included).
+- **The header/cover upload size fix requires updating the host-mounted `nginx.conf` *and* reloading
+  nginx.** The file is bind-mounted from the host, so an image pull doesn't deliver it — copy the new
+  `nginx.conf` next to your `docker-compose.yml`, then run **`docker compose restart nginx`**. Note
+  that `docker compose up -d` alone does **not** reload it: Compose only recreates the nginx container
+  when the service definition changes, not when the mounted file's contents change. Without the
+  restart, header/cover uploads over 1 MB keep returning 413.
 
 ## [1.2.1] - 2026-06-24
 
