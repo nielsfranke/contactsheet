@@ -186,3 +186,12 @@ def test_empty_gallery_cascades_to_grandchildren(admin_client):
         assert image_repo.get_by_id(db, img_c) is None
     finally:
         db.close()
+
+
+def test_use_video_as_header_rejected(admin_client):
+    """A video has no Pillow-readable rendition; setting it as the header must 400, not write a
+    broken header file (the resize step would otherwise fail on the video bytes)."""
+    g = make_gallery(admin_client, "Vid")
+    vid = add_image(g["id"], is_video=True, filename="clip.mp4")
+    r = admin_client.post(f"/api/galleries/{g['id']}/header-image/from-image", json={"image_id": vid})
+    assert r.status_code == 400, r.text

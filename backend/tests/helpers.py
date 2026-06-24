@@ -68,7 +68,7 @@ def psb_bytes(with_thumbnail: bool = True) -> bytes:
 
 
 def add_image(gallery_id: str, *, status="done", filename="photo.jpg", sort_order=0,
-              moderation_status="approved", uploaded_by=None) -> str:
+              moderation_status="approved", uploaded_by=None, is_video=False) -> str:
     """Insert an Image row directly (no processing pipeline). Returns its id."""
     db = SessionLocal()
     try:
@@ -79,7 +79,8 @@ def add_image(gallery_id: str, *, status="done", filename="photo.jpg", sort_orde
             original_filename=filename,
             stored_filename=f"{uuid.uuid4()}.jpg",
             file_size=1234,
-            mime_type="image/jpeg",
+            mime_type="video/mp4" if is_video else "image/jpeg",
+            is_video=is_video,
             sort_order=sort_order,
             processing_status=status,
             moderation_status=moderation_status,

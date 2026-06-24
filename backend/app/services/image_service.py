@@ -503,6 +503,10 @@ def use_image_as_header(
     image = image_repo.get_by_id(db, image_id)
     if not image or image.gallery_id != gallery_id:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Image not found")
+    if image.is_video:
+        # A video has no Pillow-readable rendition; resize_bytes below would fail on it. Reject
+        # cleanly instead of writing a broken header.
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Cannot use a video as the header image")
     if image.processing_status != "done":
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Image not yet processed")
 
