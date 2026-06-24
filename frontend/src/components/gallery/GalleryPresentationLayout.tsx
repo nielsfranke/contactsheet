@@ -189,7 +189,7 @@ export function GalleryPresentationLayout({
                 textClassName={bright ? "text-zinc-700" : "text-zinc-300"}
               />
             )}
-            <div className="flex items-start justify-between gap-4">
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
               <div>
                 <h1
                   className={`${OPENER_SIZE[gallery.opener_font_size] ?? "text-3xl"} ${bright ? "text-zinc-900" : "text-zinc-100"}`}
@@ -202,7 +202,7 @@ export function GalleryPresentationLayout({
                 )}
                 <p className={`text-xs mt-2 ${bright ? "text-zinc-500" : "text-zinc-600"}`}>{t("photoCount", { count: gallery.image_count })}</p>
               </div>
-              <div className="flex items-center gap-2 shrink-0">
+              <div className="flex items-center gap-2 sm:shrink-0">
                 {gallery.client_upload_enabled && (
                   <ClientUploadButton
                     shareToken={shareToken}
