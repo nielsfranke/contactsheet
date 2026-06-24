@@ -366,6 +366,7 @@
       "galleryFromFilter": "Create gallery from filter",
       "galleryFromSelection": "Create gallery from selection",
       "moveToGallery": "Move to gallery…",
+      "deleteSelection": "Delete selected",
       "preview": "Preview"
     },
     "detail": {
@@ -404,6 +405,10 @@
       "emptyBody": "All files and sub-galleries will be deleted. The empty gallery and its settings will remain.",
       "clearGallery": "Clear Gallery",
       "clearing": "Clearing…",
+      "deleteSelectionTitle": "Delete selected photos?",
+      "deleteSelectionBody": "{count, plural, one {# selected photo will be} other {# selected photos will be}} permanently deleted. This cannot be undone.",
+      "deleteSelectionConfirm": "Delete",
+      "deletingSelection": "Deleting…",
       "renameTitle": "Rename Gallery",
       "renamePlaceholder": "Gallery name",
       "rename": "Rename",
@@ -460,6 +465,7 @@
         "fileRenamed": "File renamed",
         "imageMoved": "Image moved",
         "imagesMoved": "{count, plural, one {# image} other {# images}} moved",
+        "imagesDeleted": "{count, plural, one {# image} other {# images}} deleted",
         "headerUpdated": "Header image updated — set your focus point",
         "photoMoved": "Photo moved",
         "photosMoved": "{count, plural, one {# photo} other {# photos}} moved"

@@ -83,6 +83,7 @@ export default function GalleryDetailPage() {
     setRenameImageTarget,
     setMoveImageTarget,
     setMoveSelectionOpen,
+    setDeleteSelectionConfirm,
     setRenameCollectionTarget,
     setRenameCollectionValue,
     addSelectionToCollection,
@@ -206,6 +207,7 @@ export default function GalleryDetailPage() {
           onRenameCollection={(c) => { setRenameCollectionValue(c.name); setRenameCollectionTarget(c); }}
           onAddSelectionToCollection={addSelectionToCollection}
           onMoveSelection={() => setMoveSelectionOpen(true)}
+          onDeleteSelection={() => setDeleteSelectionConfirm(true)}
           onCreateGalleryFromCollection={d.startGalleryFromCollection}
           onCreateGalleryFromFilter={d.startGalleryFromFilter}
           onCreateGalleryFromSelection={d.startGalleryFromSelection}

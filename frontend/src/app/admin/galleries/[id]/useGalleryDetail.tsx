@@ -48,6 +48,7 @@ export function useGalleryDetail(id: string) {
   const [renameImageValue, setRenameImageValue] = useState("");
   const [moveImageTarget, setMoveImageTarget] = useState<import("@/lib/types").ImageResponse | null>(null);
   const [moveSelectionOpen, setMoveSelectionOpen] = useState(false);
+  const [deleteSelectionConfirm, setDeleteSelectionConfirm] = useState(false);
   const [moveFilter, setMoveFilter] = useState("");
   const [moveGalleryOpen, setMoveGalleryOpen] = useState(false);
   const [downloadOpen, setDownloadOpen] = useState(false);
@@ -325,6 +326,26 @@ export function useGalleryDetail(id: string) {
       selection.clear();
       selection.setMode(false);
       toast.success(t("toast.imagesMoved", { count }));
+    },
+    onError: (err: Error) => toast.error(err.message),
+  });
+
+  // Bulk delete: soft-delete every currently selected image, then exit select mode. Sequential so
+  // a failure stops cleanly and surfaces one error (mirrors the bulk-move pattern).
+  const deleteSelectionMutation = useMutation({
+    mutationFn: async () => {
+      const ids = [...selection.selected];
+      for (const imgId of ids) await api.images.delete(imgId);
+      return ids.length;
+    },
+    onSuccess: (count) => {
+      qc.invalidateQueries({ queryKey: ["gallery", id] });
+      qc.invalidateQueries({ queryKey: ["gallery-images", id] });
+      qc.invalidateQueries({ queryKey: ["galleries"] });
+      setDeleteSelectionConfirm(false);
+      selection.clear();
+      selection.setMode(false);
+      toast.success(t("toast.imagesDeleted", { count }));
     },
     onError: (err: Error) => toast.error(err.message),
   });
@@ -693,6 +714,8 @@ export function useGalleryDetail(id: string) {
     setMoveImageTarget,
     moveSelectionOpen,
     setMoveSelectionOpen,
+    deleteSelectionConfirm,
+    setDeleteSelectionConfirm,
     moveFilter,
     setMoveFilter,
     moveGalleryOpen,
@@ -759,6 +782,7 @@ export function useGalleryDetail(id: string) {
     renameImageMutation,
     moveImageMutation,
     moveSelectionMutation,
+    deleteSelectionMutation,
     moveGalleryMutation,
     setHeaderFromImageMutation,
   };

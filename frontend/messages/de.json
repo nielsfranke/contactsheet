@@ -366,6 +366,7 @@
       "galleryFromFilter": "Galerie aus Filter erstellen",
       "galleryFromSelection": "Galerie aus Auswahl erstellen",
       "moveToGallery": "In Galerie verschieben…",
+      "deleteSelection": "Auswahl löschen",
       "preview": "Vorschau"
     },
     "detail": {
@@ -404,6 +405,10 @@
       "emptyBody": "Alle Dateien und Untergalerien werden gelöscht. Die leere Galerie und ihre Einstellungen bleiben erhalten.",
       "clearGallery": "Galerie leeren",
       "clearing": "Wird geleert…",
+      "deleteSelectionTitle": "Ausgewählte Fotos löschen?",
+      "deleteSelectionBody": "{count, plural, one {# ausgewähltes Foto wird} other {# ausgewählte Fotos werden}} endgültig gelöscht. Das kann nicht rückgängig gemacht werden.",
+      "deleteSelectionConfirm": "Löschen",
+      "deletingSelection": "Wird gelöscht…",
       "renameTitle": "Galerie umbenennen",
       "renamePlaceholder": "Galeriename",
       "rename": "Umbenennen",
@@ -460,6 +465,7 @@
         "fileRenamed": "Datei umbenannt",
         "imageMoved": "Bild verschoben",
         "imagesMoved": "{count, plural, one {# Bild} other {# Bilder}} verschoben",
+        "imagesDeleted": "{count, plural, one {# Bild} other {# Bilder}} gelöscht",
         "headerUpdated": "Header-Bild aktualisiert — legen Sie Ihren Fokuspunkt fest",
         "photoMoved": "Foto verschoben",
         "photosMoved": "{count, plural, one {# Foto} other {# Fotos}} verschoben"

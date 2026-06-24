@@ -123,6 +123,9 @@ export function GalleryDetailDialogs({
     setMoveFilter,
     moveImageMutation,
     moveSelectionMutation,
+    deleteSelectionConfirm,
+    setDeleteSelectionConfirm,
+    deleteSelectionMutation,
     moveGalleryOpen,
     setMoveGalleryOpen,
     moveGalleryMutation,
@@ -334,6 +337,24 @@ export function GalleryDetailDialogs({
             <Button variant="outline" size="sm" onClick={() => setEmptyConfirm(false)}>{tc("cancel")}</Button>
             <Button size="sm" variant="destructive" onClick={() => emptyMutation.mutate()} disabled={emptyMutation.isPending}>
               {emptyMutation.isPending ? t("clearing") : t("clearGallery")}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete selected photos confirm */}
+      <Dialog open={deleteSelectionConfirm} onOpenChange={setDeleteSelectionConfirm}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{t("deleteSelectionTitle")}</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground">
+            {t("deleteSelectionBody", { count: selection.count })}
+          </p>
+          <div className="flex gap-2 justify-end pt-2">
+            <Button variant="outline" size="sm" onClick={() => setDeleteSelectionConfirm(false)}>{tc("cancel")}</Button>
+            <Button size="sm" variant="destructive" onClick={() => deleteSelectionMutation.mutate()} disabled={deleteSelectionMutation.isPending}>
+              {deleteSelectionMutation.isPending ? t("deletingSelection") : t("deleteSelectionConfirm")}
             </Button>
           </div>
         </DialogContent>
