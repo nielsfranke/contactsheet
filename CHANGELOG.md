@@ -12,6 +12,49 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.2.2] - 2026-06-24
+
+### Added
+
+- **Bulk-delete selected photos.** The gallery selection bar gains a "Delete selected" action, so
+  Select all → delete is possible.
+- **Delete annotations without leaving annotation mode.** Tap an annotation (its number badge or the
+  stroke) to reveal its trash button while the pen is still active.
+- **Native settings list on mobile.** `/admin/settings` now shows a tappable section list instead of
+  jumping straight into Branding (which hid every other section behind the drawer); each section page
+  has a "← Settings" back arrow. Desktop is unchanged.
+
+### Fixed
+
+- **WhatsApp link previews.** The Open Graph image is now a bounded variant (≤ 1200 px) served from a
+  new side-effect-free `GET /api/public/g/{token}/og-image` endpoint, instead of the raw header —
+  a multi-MB header made WhatsApp (which has a strict image-size cap) drop the preview while Telegram,
+  Apple Mail and Instagram showed it. Existing oversized headers are covered retroactively.
+- **Header/cover uploads over 1 MB.** nginx capped these admin uploads at the 1 MB server default
+  (only photo uploads were raised); lifted to 12 MB. Header/cover images are now also resized
+  server-side to a bounded JPEG (≤ 3840 px) on upload, and the "set header from a gallery image" path
+  never copies a full-size original.
+- **Custom short link is now copy-pasteable.** Saving a custom slug refreshes the "Current link" row
+  immediately, so the new link can be copied from there.
+- **Mobile annotation.** The whole page no longer pinch/double-tap-zooms while annotating, and the
+  stroke-width tools no longer push Download/Fullscreen/Close off the screen edge.
+- **A video can no longer be set as the gallery header** (it has no Pillow-readable rendition).
+- **Suppressed a benign dev-only CSP nonce hydration warning** on the theme script.
+
+### Changed
+
+- **Pinned the Turbopack workspace root to the repo root** (dev only). A stray lockfile above the
+  repo made `next dev` infer the home directory as root and scan all of it — minutes-long route
+  compiles and Node OOMs. Compiles drop back to ~15 ms.
+- **Bounded the in-process og:image cache** (FIFO, 256 entries).
+
+### Upgrade notes
+
+- **Update the host-mounted `nginx.conf`.** The header/cover upload size fix lives in `nginx.conf`,
+  which is bind-mounted from the host — an image pull alone does **not** deliver it. After upgrading,
+  copy the new `nginx.conf` and run `docker compose up -d` (or `docker compose restart nginx`).
+  Without this, header/cover uploads over 1 MB keep returning 413.
+
 ## [1.2.1] - 2026-06-24
 
 ### Security
