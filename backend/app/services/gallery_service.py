@@ -596,6 +596,9 @@ def render_og_image(path: str, etag: str) -> bytes:
     with open(path, "rb") as f:
         raw = f.read()
     data = resize_bytes(raw, app_config.og_image_max_px, app_config.og_image_quality)
+    # Bound the cache (FIFO) so churn over many galleries / header changes can't grow it unbounded.
+    if len(_OG_CACHE) >= 256:
+        _OG_CACHE.pop(next(iter(_OG_CACHE)))
     _OG_CACHE[etag] = data
     return data
 
