@@ -20,7 +20,7 @@ from app.schemas.image import GlobalSearchResult, ImageResponse, ImageUpdate, Ph
 from app.services import notification_service
 from app.storage import format_detect
 from app.storage.base import StorageProvider
-from app.tasks.image_processing import submit_image_processing
+from app.tasks.image_processing import resize_bytes, submit_image_processing
 
 # Number of leading bytes sniffed to detect the file format (covers every magic in format_detect).
 _HEADER_BYTES = 32
@@ -508,10 +508,13 @@ def use_image_as_header(
 
     src_path = f"{gallery_id}/medium/{image.stored_filename}"
     if not storage.exists(src_path):
+        # Renditions not ready (or none for this format) → fall back to the original. Bound it below
+        # so a missing `medium` can't make the header a multi-MB original (which broke WhatsApp link
+        # previews). See docs/architecture/header-cover-uploads-and-og-image-sizing.md.
         src_path = f"{gallery_id}/original/{image.stored_filename}"
 
-    ext = os.path.splitext(image.stored_filename)[1]
-    filename = f"{_uuid.uuid4()}{ext}"
+    # Header is stored as a bounded JPEG regardless of source.
+    filename = f"{_uuid.uuid4()}.jpg"
     dst_dir = os.path.join(header_dir, gallery_id)
     os.makedirs(dst_dir, exist_ok=True)
 
@@ -523,7 +526,9 @@ def use_image_as_header(
         except FileNotFoundError:
             pass
 
-    data = storage.read_bytes(src_path)
+    data = resize_bytes(
+        storage.read_bytes(src_path), settings.header_max_px, settings.header_quality
+    )
     with open(os.path.join(dst_dir, filename), "wb") as f:
         f.write(data)
 

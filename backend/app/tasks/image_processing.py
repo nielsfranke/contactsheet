@@ -151,13 +151,8 @@ def _auto_rotate(img: PilImage.Image) -> PilImage.Image:
         return img
 
 
-def _save_resized(
-    img: PilImage.Image,
-    max_px: int,
-    dest_path: str,
-    quality: int,
-) -> None:
-    os.makedirs(os.path.dirname(dest_path), exist_ok=True)
+def _flatten_to_rgb(img: PilImage.Image) -> PilImage.Image:
+    """Return an RGB copy, compositing any alpha onto white (JPEG has no alpha channel)."""
     copy = img.copy()
     if copy.mode in ("RGBA", "P", "LA"):
         bg = PilImage.new("RGB", copy.size, (255, 255, 255))
@@ -167,13 +162,40 @@ def _save_resized(
         copy = bg
     elif copy.mode != "RGB":
         copy = copy.convert("RGB")
+    return copy
 
-    if max(copy.size) > max_px:
-        copy.thumbnail((max_px, max_px), PilImage.LANCZOS)
 
+def _encode_jpeg(img: PilImage.Image, max_px: int, quality: int) -> bytes:
+    """Shrink (never upscale) to a long edge of max_px and encode a progressive JPEG."""
+    if max(img.size) > max_px:
+        img.thumbnail((max_px, max_px), PilImage.LANCZOS)
+    buf = io.BytesIO()
     # progressive=True so the browser paints the whole frame coarse→sharp instead of scanning
     # top-to-bottom (baseline), which looked like the photo "loading from the top" in the lightbox.
-    copy.save(dest_path, "JPEG", quality=quality, optimize=True, progressive=True)
+    img.save(buf, "JPEG", quality=quality, optimize=True, progressive=True)
+    return buf.getvalue()
+
+
+def resize_bytes(data: bytes, max_px: int, quality: int) -> bytes:
+    """Re-encode raw image bytes to a bounded, EXIF-stripped progressive JPEG.
+
+    Used to bound header/cover uploads on store and to derive the link-preview og:image, so neither
+    serves a multi-MB original. EXIF is dropped (Pillow doesn't carry it without `exif=`). The
+    module-level MAX_IMAGE_PIXELS ceiling guards against a decompression bomb on open."""
+    with PilImage.open(io.BytesIO(data)) as img:
+        rgb = _flatten_to_rgb(img)
+    return _encode_jpeg(rgb, max_px, quality)
+
+
+def _save_resized(
+    img: PilImage.Image,
+    max_px: int,
+    dest_path: str,
+    quality: int,
+) -> None:
+    os.makedirs(os.path.dirname(dest_path), exist_ok=True)
+    with open(dest_path, "wb") as f:
+        f.write(_encode_jpeg(_flatten_to_rgb(img), max_px, quality))
 
 
 # Shared pool for rendition generation. Replaces FastAPI BackgroundTasks (which run serially in the

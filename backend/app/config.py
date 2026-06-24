@@ -62,6 +62,17 @@ class Settings(BaseSettings):
     # without ever allocating its full bitmap. 100 MP comfortably covers real cameras.
     max_image_pixels: int = 100_000_000
 
+    # Gallery header/cover images are re-encoded to a bounded JPEG on store (not written raw): 3840 px
+    # keeps a full-width banner sharp on 4K + Retina at a fraction of an unbounded original. They are
+    # a single non-srcset <img>, so one size serves every screen.
+    header_max_px: int = 3840
+    header_quality: int = 82
+    # Link-preview (Open Graph) image: small + universally accepted so WhatsApp (the only unfurler
+    # with a strict ~600 KB–1 MB cap) renders the card. Derived on the fly from the header/cover/
+    # first photo. See docs/architecture/header-cover-uploads-and-og-image-sizing.md.
+    og_image_max_px: int = 1200
+    og_image_quality: int = 80
+
     # Client (public) uploads get tighter caps than admin uploads: a smaller per-file size and a
     # per-request total, to bound attacker-controlled disk use on galleries with client upload on.
     client_upload_max_file_bytes: int = 26_214_400    # 25 MB per file

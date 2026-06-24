@@ -28,6 +28,7 @@ from app.schemas.gallery import (
 from app.schemas.image import ImageResponse, ImageTransfer, ReorderRequest, TransferResult
 from app.services import comment_service, gallery_service, image_service, semantic_search_service
 from app.storage.base import StorageProvider
+from app.tasks import image_processing
 
 router = APIRouter(prefix="/api/galleries", tags=["galleries"])
 
@@ -287,8 +288,8 @@ def upload_header_image(
     if mime not in _HEADER_IMG_MIMES:
         raise HTTPException(status_code=status.HTTP_415_UNSUPPORTED_MEDIA_TYPE, detail="PNG, JPEG, or WebP required")
 
-    ext = {"image/png": ".png", "image/jpeg": ".jpg", "image/webp": ".webp"}[mime]
-    filename = f"{uuid.uuid4()}{ext}"
+    # Always stored as a bounded JPEG (re-encoded below), so the extension is fixed.
+    filename = f"{uuid.uuid4()}.jpg"
     header_dir = os.path.join(app_settings.branding_dir, "gallery-headers", gallery_id)
     os.makedirs(header_dir, exist_ok=True)
 
@@ -298,6 +299,12 @@ def upload_header_image(
 
     data = read_limited(file)
     assert_image_magic(data, mime)
+    # Bound the stored header so 4 MB+ originals don't bloat page loads or the og:image. A single
+    # non-srcset banner, so one 3840 px copy serves every screen. See docs/architecture/.
+    try:
+        data = image_processing.resize_bytes(data, app_settings.header_max_px, app_settings.header_quality)
+    except Exception:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Could not process image")
 
     # Delete old header image
     if gallery.header_image_filename:
@@ -360,8 +367,8 @@ def upload_cover_image(
     if mime not in _HEADER_IMG_MIMES:
         raise HTTPException(status_code=status.HTTP_415_UNSUPPORTED_MEDIA_TYPE, detail="PNG, JPEG, or WebP required")
 
-    ext = {"image/png": ".png", "image/jpeg": ".jpg", "image/webp": ".webp"}[mime]
-    filename = f"{uuid.uuid4()}{ext}"
+    # Always stored as a bounded JPEG (re-encoded below), so the extension is fixed.
+    filename = f"{uuid.uuid4()}.jpg"
     cover_dir = os.path.join(app_settings.branding_dir, "gallery-covers", gallery_id)
     os.makedirs(cover_dir, exist_ok=True)
 
@@ -371,6 +378,10 @@ def upload_cover_image(
 
     data = read_limited(file)
     assert_image_magic(data, mime)
+    try:
+        data = image_processing.resize_bytes(data, app_settings.header_max_px, app_settings.header_quality)
+    except Exception:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Could not process image")
 
     if gallery.cover_image_filename:
         old = os.path.join(cover_dir, gallery.cover_image_filename)

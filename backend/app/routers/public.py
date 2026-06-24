@@ -5,7 +5,7 @@ import json
 import os
 import re
 
-from fastapi import APIRouter, BackgroundTasks, Depends, File, Form, HTTPException, Query, Request, UploadFile, status
+from fastapi import APIRouter, BackgroundTasks, Depends, File, Form, HTTPException, Query, Request, Response, UploadFile, status
 from fastapi.responses import FileResponse, StreamingResponse
 from sqlalchemy.orm import Session
 
@@ -89,6 +89,35 @@ def get_public_gallery_meta(
     """Open Graph preview metadata for a share link. Read-only and side-effect-free: a link-unfurl
     by a chat app must not enqueue a view notification or log an activity."""
     return gallery_service.get_gallery_meta(db, share_token, storage)
+
+
+_OG_CACHE_CONTROL = "public, max-age=300, must-revalidate"
+
+
+@router.get("/g/{share_token}/og-image")
+def get_public_gallery_og_image(
+    share_token: str,
+    request: Request,
+    db: Session = Depends(get_db),
+    storage: StorageProvider = Depends(get_storage),
+) -> Response:
+    """Bounded Open Graph preview image for a share link, derived on the fly from the gallery's
+    header/cover/first photo (never the raw multi-MB original, which breaks WhatsApp's preview).
+    Side-effect-free, ETag-cached. 404s for unknown/expired/password-protected galleries so the
+    unfurl falls back to the generic preview."""
+    src = gallery_service.get_og_image_source(db, share_token, storage)
+    if src is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="No preview image")
+    path, sig = src
+    etag = f'"{sig}"'
+    if request.headers.get("if-none-match") == etag:
+        return Response(status_code=304, headers={"ETag": etag, "Cache-Control": _OG_CACHE_CONTROL})
+    data = gallery_service.render_og_image(path, sig)
+    return Response(
+        content=data,
+        media_type="image/jpeg",
+        headers={"ETag": etag, "Cache-Control": _OG_CACHE_CONTROL},
+    )
 
 
 @router.post("/g/{share_token}/auth", response_model=GalleryAuthResponse)

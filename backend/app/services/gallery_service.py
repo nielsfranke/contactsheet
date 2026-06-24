@@ -1,6 +1,7 @@
 # SPDX-FileCopyrightText: 2026 Niels Franke
 # SPDX-License-Identifier: AGPL-3.0-or-later
 
+import hashlib
 import json
 import os
 import re
@@ -12,6 +13,7 @@ from datetime import datetime, timezone
 from fastapi import HTTPException, status
 from sqlalchemy.orm import Session
 
+from app.config import settings as app_config
 from app.errors import CodedHTTPException
 
 from app.auth.password import hash_password
@@ -535,20 +537,67 @@ def get_public_gallery(
     return gallery, public
 
 
-def _meta_image_url(gallery: Gallery, db: Session, storage: StorageProvider) -> str | None:
-    """A large-ish preview image for link unfurls: header → uploaded cover → first photo (medium).
+def _meta_image_path(gallery: Gallery, db: Session, storage: StorageProvider) -> str | None:
+    """Filesystem path of the link-preview source: header → uploaded cover → first photo (medium).
 
-    Prefers full-size branding uploads over the small grid thumbnail used by cover cards."""
-    header = _header_image_url(gallery)
-    if header:
-        return header
-    uploaded = _uploaded_cover_url(gallery)
-    if uploaded:
-        return uploaded
+    The og:image is *derived* from this (bounded small) rather than serving it raw — a multi-MB
+    header otherwise breaks WhatsApp's link preview. Returns None when the file is absent on disk."""
+    if gallery.header_image_filename:
+        p = os.path.join(app_config.branding_dir, "gallery-headers", gallery.id, gallery.header_image_filename)
+        return p if os.path.exists(p) else None
+    if gallery.cover_image_filename:
+        p = os.path.join(app_config.branding_dir, "gallery-covers", gallery.id, gallery.cover_image_filename)
+        return p if os.path.exists(p) else None
     photo = gallery_repo.get_cover_image(db, gallery)
     if photo and photo.processing_status == "done":
-        return storage.get_url(f"{gallery.id}/medium/{photo.stored_filename}")
+        rel = f"{gallery.id}/medium/{photo.stored_filename}"
+        if storage.exists(rel):
+            return os.path.join(app_config.upload_dir, gallery.id, "medium", photo.stored_filename)
     return None
+
+
+# In-process cache of rendered og:images, keyed on the ETag (source path + mtime + og params), like
+# branding_icon. Small JPEGs; bounded in practice by the number of galleries with a preview image.
+_OG_CACHE: dict[str, bytes] = {}
+
+
+def get_og_image_source(
+    db: Session, share_token: str, storage: StorageProvider
+) -> tuple[str, str] | None:
+    """(filesystem path, ETag) for a share link's preview image, or None when there's no controlled
+    preview — unknown/expired token, password-protected gallery, or no image on disk. Cheap (a stat
+    only), so a conditional 304 needn't read or resize the file."""
+    gallery = gallery_repo.get_by_share_token(db, share_token)
+    if not gallery:
+        return None
+    if gallery.expires_at:
+        expires = gallery.expires_at
+        if expires.tzinfo is None:
+            expires = expires.replace(tzinfo=timezone.utc)
+        if expires < datetime.now(timezone.utc):
+            return None
+    if gallery.password_hash is not None:
+        return None
+    path = _meta_image_path(gallery, db, storage)
+    if not path:
+        return None
+    sig = f"{path}|{os.path.getmtime(path)}|{app_config.og_image_max_px}|{app_config.og_image_quality}"
+    return path, hashlib.sha1(sig.encode()).hexdigest()[:16]
+
+
+def render_og_image(path: str, etag: str) -> bytes:
+    """Bounded JPEG for the link preview (≤ og_image_max_px), cached on the ETag. Imported lazily to
+    avoid pulling the Pillow pipeline into modules that only need gallery CRUD."""
+    cached = _OG_CACHE.get(etag)
+    if cached is not None:
+        return cached
+    from app.tasks.image_processing import resize_bytes
+
+    with open(path, "rb") as f:
+        raw = f.read()
+    data = resize_bytes(raw, app_config.og_image_max_px, app_config.og_image_quality)
+    _OG_CACHE[etag] = data
+    return data
 
 
 def _absolutize(rel: str | None, base: str | None) -> str | None:
@@ -582,8 +631,12 @@ def get_gallery_meta(
     app_settings = settings_repo.get(db)
     password_protected = gallery.password_hash is not None
     image_url = None
-    if not password_protected:
-        image_url = _absolutize(_meta_image_url(gallery, db, storage), app_settings.public_base_url)
+    if not password_protected and _meta_image_path(gallery, db, storage):
+        # Point at the bounded og:image endpoint (not the raw header/cover), so WhatsApp's strict
+        # image-size cap is always satisfied. See docs/architecture/.
+        image_url = _absolutize(
+            f"/api/public/g/{share_token}/og-image", app_settings.public_base_url
+        )
 
     return GalleryMetaResponse(
         name=gallery.name,

@@ -77,9 +77,25 @@ def test_expired_gallery_returns_410(admin_client):
 
 # --- Link-preview metadata (Open Graph) -------------------------------------
 
-def test_meta_returns_name_and_image(admin_client):
+def _jpeg(size=(64, 48), color=(200, 120, 40)) -> bytes:
+    from PIL import Image as PilImage
+    buf = io.BytesIO()
+    PilImage.new("RGB", size, color).save(buf, format="JPEG")
+    return buf.getvalue()
+
+
+def _set_header(admin_client, gallery_id, size=(64, 48)):
+    r = admin_client.post(
+        f"/api/galleries/{gallery_id}/header-image",
+        files={"file": ("h.jpg", _jpeg(size), "image/jpeg")},
+    )
+    assert r.status_code == 200, r.text
+    return r.json()
+
+
+def test_meta_image_url_points_to_og_endpoint(admin_client):
     g = make_gallery(admin_client, "Wedding", mode="presentation")
-    add_image(g["id"])
+    _set_header(admin_client, g["id"])
     from fastapi.testclient import TestClient
     from app.main import app
     pub = TestClient(app)
@@ -88,7 +104,74 @@ def test_meta_returns_name_and_image(admin_client):
     body = r.json()
     assert body["name"] == "Wedding"
     assert body["password_protected"] is False
-    assert body["image_url"] and "/medium/" in body["image_url"]
+    # The og:image is the bounded endpoint, not the raw header/medium file.
+    assert body["image_url"] and body["image_url"].endswith(f"/api/public/g/{g['share_token']}/og-image")
+
+
+def test_meta_image_url_none_without_preview_source(admin_client):
+    # A gallery with only a DB-inserted image (no rendition on disk) has no controlled preview.
+    g = make_gallery(admin_client, "Bare", mode="presentation")
+    add_image(g["id"])
+    from fastapi.testclient import TestClient
+    from app.main import app
+    pub = TestClient(app)
+    body = pub.get(f"/api/public/g/{g['share_token']}/meta").json()
+    assert body["image_url"] is None
+
+
+def test_header_upload_over_1mb_is_accepted_and_bounded(admin_client):
+    # nginx caps body size in prod; the backend itself must accept >1 MB and store it bounded.
+    from PIL import Image as PilImage
+    import os as _os
+    from app.config import settings as cfg
+    g = make_gallery(admin_client, "Big")
+    res = _set_header(admin_client, g["id"], size=(5000, 3333))
+    fn = res["header_image_url"].rsplit("/", 1)[-1]
+    assert fn.endswith(".jpg")
+    path = _os.path.join(cfg.branding_dir, "gallery-headers", g["id"], fn)
+    with PilImage.open(path) as im:
+        assert max(im.size) <= cfg.header_max_px        # downscaled to the 3840 cap
+        assert im.format == "JPEG"
+        assert "exif" not in im.info                     # EXIF stripped on re-encode
+
+
+def test_og_image_is_small_jpeg(admin_client):
+    from PIL import Image as PilImage
+    g = make_gallery(admin_client, "Preview")
+    _set_header(admin_client, g["id"], size=(5000, 3333))
+    from fastapi.testclient import TestClient
+    from app.main import app
+    from app.config import settings as cfg
+    pub = TestClient(app)
+    r = pub.get(f"/api/public/g/{g['share_token']}/og-image")
+    assert r.status_code == 200
+    assert r.headers["content-type"] == "image/jpeg"
+    with PilImage.open(io.BytesIO(r.content)) as im:
+        assert max(im.size) <= cfg.og_image_max_px       # ≤ 1200, well under WhatsApp's cap
+
+
+def test_og_image_etag_conditional_304(admin_client):
+    g = make_gallery(admin_client, "Etag")
+    _set_header(admin_client, g["id"])
+    from fastapi.testclient import TestClient
+    from app.main import app
+    pub = TestClient(app)
+    r1 = pub.get(f"/api/public/g/{g['share_token']}/og-image")
+    etag = r1.headers["etag"]
+    assert etag
+    r2 = pub.get(f"/api/public/g/{g['share_token']}/og-image", headers={"If-None-Match": etag})
+    assert r2.status_code == 304
+
+
+def test_og_image_404_for_password_and_unknown(admin_client):
+    g = make_gallery(admin_client, "Locked")
+    _set_header(admin_client, g["id"])
+    admin_client.patch(f"/api/galleries/{g['id']}", json={"password": "secret"})
+    from fastapi.testclient import TestClient
+    from app.main import app
+    pub = TestClient(app)
+    assert pub.get(f"/api/public/g/{g['share_token']}/og-image").status_code == 404
+    assert pub.get("/api/public/g/nope/og-image").status_code == 404
 
 
 def test_meta_password_protected_hides_image(admin_client):
