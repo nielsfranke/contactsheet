@@ -234,7 +234,13 @@ export function AnnotationLayer({
       <div
         ref={surfaceRef}
         className={`absolute ${drawing && !pending ? "pointer-events-auto" : "pointer-events-none"}`}
-        style={{ ...surfaceStyle, cursor: drawing && !pending ? PENCIL_CURSOR : undefined }}
+        style={{
+          ...surfaceStyle,
+          cursor: drawing && !pending ? PENCIL_CURSOR : undefined,
+          // The pen owns the gesture while drawing — disable the browser's native pan/zoom so a
+          // stroke (or stray touch) can't pinch/double-tap-zoom the page on mobile.
+          touchAction: drawing ? "none" : undefined,
+        }}
         onPointerDown={handlePointerDown}
         onPointerMove={handlePointerMove}
         onPointerUp={handlePointerUp}

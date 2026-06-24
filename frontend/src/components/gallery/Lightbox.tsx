@@ -655,6 +655,10 @@ export function Lightbox({
   // Flag/like toolbar: public collaboration reviewers (share token) or the admin reviewing their
   // own gallery (adminGalleryId — flags only; likes stay public-side).
   const showToolbar = ((collabMode && !!shareToken) || !!adminGalleryId) && (flagsEnabled || likesEnabled);
+  // On a phone in annotation mode the top bar must stay compact (stroke widths + Done + Close), so
+  // the annotation tools don't push Download/Fullscreen/Close off the right edge. Hide the
+  // non-annotation actions then; they're not needed mid-drawing and return on "Done".
+  const annoCompact = compact && annotating;
 
   // The inner content of a slide — shared by the desktop transform carousel and the mobile scroll-snap
   // carousel, so the two never drift. `showThumb`/`showPhoto` let the mobile path window which slides
@@ -748,7 +752,7 @@ export function Lightbox({
           {currentIndex + 1} / {images.length}
         </span>
         <div className="flex items-center gap-2">
-          {showCommentToggle && (
+          {showCommentToggle && !annoCompact && (
             <Button
               variant="ghost"
               size="sm"
@@ -807,7 +811,7 @@ export function Lightbox({
               <PenLine size={16} />
             </Button>
           )}
-          {exif && exifEnabled && (
+          {exif && exifEnabled && !annoCompact && (
             <Button
               variant="ghost"
               size="sm"
@@ -820,7 +824,7 @@ export function Lightbox({
               <Info size={16} />
             </Button>
           )}
-          {hasIptc && iptcEnabled && (
+          {hasIptc && iptcEnabled && !annoCompact && (
             <Button
               variant="ghost"
               size="sm"
@@ -833,7 +837,7 @@ export function Lightbox({
               <Tags size={16} />
             </Button>
           )}
-          {downloadsEnabled && (image.is_video ? image.video_url : image.original_url) && (
+          {downloadsEnabled && !annoCompact && (image.is_video ? image.video_url : image.original_url) && (
             <a
               href={(image.is_video ? image.video_url : image.original_url) ?? undefined}
               download={image.original_filename}
@@ -844,16 +848,18 @@ export function Lightbox({
               <Download size={16} />
             </a>
           )}
-          <Button
-            variant="ghost"
-            size="sm"
-            className={`${muted} ${hoverStrong}`}
-            onClick={toggleFullscreen}
-            title={isFullscreen ? t("exitFullscreen") : t("enterFullscreen")}
-            aria-label={isFullscreen ? t("exitFullscreen") : t("enterFullscreen")}
-          >
-            {isFullscreen ? <Minimize size={16} /> : <Maximize size={16} />}
-          </Button>
+          {!annoCompact && (
+            <Button
+              variant="ghost"
+              size="sm"
+              className={`${muted} ${hoverStrong}`}
+              onClick={toggleFullscreen}
+              title={isFullscreen ? t("exitFullscreen") : t("enterFullscreen")}
+              aria-label={isFullscreen ? t("exitFullscreen") : t("enterFullscreen")}
+            >
+              {isFullscreen ? <Minimize size={16} /> : <Maximize size={16} />}
+            </Button>
+          )}
           <Button
             variant="ghost"
             size="sm"
@@ -911,7 +917,10 @@ export function Lightbox({
               // — chains to the document and scrolls the gallery page behind the translucent backdrop,
               // revealing the grid thumbnails underneath. `pan-x` stops that scroll-chaining at the
               // source; `overscroll-contain` is a belt-and-suspenders against any residual chaining.
-              touchAction: annotating ? "auto" : "pan-x",
+              // While annotating: "none" — the pen owns the gesture and the browser must NOT
+              // pinch/double-tap-zoom the whole page (that zoom was the bug). Normal viewing keeps
+              // pan-x for the horizontal carousel (also no zoom).
+              touchAction: annotating ? "none" : "pan-x",
               overscrollBehavior: "contain",
             }}
           >
