@@ -363,6 +363,9 @@ export const api = {
         method: "POST",
         body: JSON.stringify({ password }),
       }),
+    // Rebuild missing/outdated image previews (thumb/small/medium) from originals, in the background.
+    regeneratePreviews: () =>
+      request<{ ok: boolean }>("/api/admin/settings/regenerate-previews", { method: "POST" }),
     // Backup & restore (see docs/architecture/backup-restore.md).
     backupCreate: (scope: "full" | "metadata", include_renditions: boolean) =>
       request<BackupJob>("/api/admin/settings/backup", {

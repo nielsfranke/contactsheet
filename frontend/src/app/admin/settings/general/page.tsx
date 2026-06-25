@@ -14,6 +14,7 @@ import { Toggle } from "@/components/admin/gallery-settings-fields";
 import { SaveStatus } from "@/components/admin/SaveStatus";
 import { ResetDangerZone } from "@/components/admin/ResetDangerZone";
 import { BackupRestore } from "@/components/admin/BackupRestore";
+import { PreviewMaintenance } from "@/components/admin/PreviewMaintenance";
 import { useSettingsAutosave } from "@/hooks/useSettingsAutosave";
 
 /**
@@ -145,6 +146,8 @@ export default function GeneralSettingsPage() {
       </section>
 
       <BackupRestore />
+
+      <PreviewMaintenance />
 
       <ResetDangerZone />
     </div>

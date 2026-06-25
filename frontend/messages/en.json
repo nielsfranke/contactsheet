@@ -802,6 +802,14 @@
         "restoring": "Restoring…",
         "restoreSuccess": "Restore complete — please sign in again.",
         "restoreFailed": "Couldn't restore from this backup."
+      },
+      "maintenance": {
+        "title": "Image previews",
+        "description": "Rebuild missing or outdated thumbnails and previews from the original photos. Useful if some images show as broken. Runs in the background and is safe to run anytime.",
+        "button": "Rebuild previews",
+        "regenerating": "Starting…",
+        "started": "Rebuilding previews in the background.",
+        "failed": "Couldn't start the rebuild."
       }
     },
     "branding": {

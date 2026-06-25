@@ -264,6 +264,21 @@ def delete_logo(
         settings_repo.update(db, logo_filename=None)
 
 
+@router.post("/regenerate-previews")
+@limiter.limit("2/minute")
+def regenerate_previews(
+    request: Request,
+    _admin: str = Depends(get_current_admin),
+):
+    """Rebuild any missing/outdated image previews (thumb/small/medium) from the originals, in
+    the background. A manual nudge for the rare cases renditions go missing — interrupted
+    processing, manual file edits, a corrupt thumbnail, or a backup restored before previews
+    were regenerated on restore. Idempotent and cheap when everything is already in sync."""
+    from app.tasks.preview_upgrade import upgrade_previews_async
+    upgrade_previews_async()
+    return {"ok": True}
+
+
 @router.post("/reset")
 @limiter.limit("3/minute")
 def factory_reset(

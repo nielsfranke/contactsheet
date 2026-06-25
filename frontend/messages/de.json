@@ -802,6 +802,14 @@
         "restoring": "Wird wiederhergestellt…",
         "restoreSuccess": "Wiederherstellung abgeschlossen — bitte erneut anmelden.",
         "restoreFailed": "Wiederherstellung aus dieser Sicherung fehlgeschlagen."
+      },
+      "maintenance": {
+        "title": "Bildvorschauen",
+        "description": "Fehlende oder veraltete Vorschaubilder aus den Originalfotos neu erstellen. Nützlich, wenn Bilder fehlerhaft angezeigt werden. Läuft im Hintergrund und kann jederzeit gefahrlos ausgeführt werden.",
+        "button": "Vorschauen neu erstellen",
+        "regenerating": "Wird gestartet…",
+        "started": "Vorschauen werden im Hintergrund neu erstellt.",
+        "failed": "Neuerstellung konnte nicht gestartet werden."
       }
     },
     "branding": {

@@ -64,6 +64,13 @@ def test_backup_requires_auth():
     assert anon.get(BACKUP).status_code == 401
 
 
+def test_regenerate_previews_endpoint(admin_client):
+    anon = TestClient(app)
+    assert anon.post("/api/admin/settings/regenerate-previews").status_code == 401
+    r = admin_client.post("/api/admin/settings/regenerate-previews")
+    assert r.status_code == 200 and r.json()["ok"] is True
+
+
 # --- backup build --------------------------------------------------------------------------
 
 def test_full_backup_contains_db_uploads_and_manifest(admin_client):
