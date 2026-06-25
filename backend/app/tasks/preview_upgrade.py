@@ -14,6 +14,14 @@ from app.tasks.image_processing import _auto_rotate, _save_resized, preview_targ
 logger = logging.getLogger(__name__)
 
 
+def regenerate_missing_previews() -> None:
+    """Synchronously (re)generate any missing/stale renditions from the originals.
+
+    Same work as ``upgrade_previews_async`` but blocking — for callers that can't rely on a
+    daemon thread outliving them (the CLI restore, where the process exits right after)."""
+    _sync_previews()
+
+
 def upgrade_previews_async() -> None:
     """Bring every rendition into line with the configured targets in a background thread.
 
@@ -62,10 +70,15 @@ def _sync_previews() -> None:
                 expected = min(expected, max(width, height))
             try:
                 if os.path.exists(path):
-                    with PilImage.open(path) as current:
-                        if max(current.size) == expected:
-                            continue
-                # Missing entirely (e.g. a newly-added tier) or wrong size → (re)generate.
+                    try:
+                        with PilImage.open(path) as current:
+                            if max(current.size) == expected:
+                                continue
+                    except Exception:
+                        # An existing rendition that won't open is corrupt/truncated → fall
+                        # through and regenerate it (don't let it skip the rebuild below).
+                        pass
+                # Missing entirely (e.g. a newly-added tier), wrong size, or corrupt → (re)generate.
                 with PilImage.open(original_path) as orig:
                     _save_resized(_auto_rotate(orig), max_px, path, quality=quality)
                 resized[variant] += 1

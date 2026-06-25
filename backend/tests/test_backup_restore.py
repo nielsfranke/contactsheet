@@ -108,7 +108,8 @@ def test_exclude_renditions_drops_thumb_medium(admin_client):
     with tarfile.open(fileobj=io.BytesIO(data)) as tar:
         names = tar.getnames()
     assert any("/original/" in n for n in names)
-    assert not any("/thumb/" in n or "/medium/" in n for n in names)
+    # all three derived tiers are excluded (thumb/small/medium), originals kept
+    assert not any(f"/{v}/" in n for n in names for v in ("thumb", "small", "medium"))
 
 
 # --- restore guardrails --------------------------------------------------------------------
@@ -196,3 +197,34 @@ def test_restore_roundtrip_brings_gallery_back(admin_client, monkeypatch):
     back = admin_client.get(f"/api/galleries/{g['id']}")
     assert back.status_code == 200
     assert back.json()["name"] == "Wedding"
+
+
+def test_restore_regenerates_missing_previews(admin_client, monkeypatch):
+    """A renditions-excluded backup must restore to working previews, not broken thumbs:
+    restore regenerates the missing thumb/small/medium from the restored originals."""
+    import os
+    import tempfile
+
+    from app import migrations
+    from app.config import settings as cfg
+    from app.services import restore_service
+
+    _stamp_revision()
+    g = make_gallery(admin_client, "G")
+    _upload(admin_client, g["id"])  # sync processing makes original + thumb/small/medium
+
+    status = _build_backup(admin_client, "full", include_renditions=False)
+    archive = _download(admin_client, status["id"])
+
+    monkeypatch.setattr(migrations, "upgrade_to_head", lambda: None)
+    fd, path = tempfile.mkstemp(suffix=".tar")
+    os.write(fd, archive)
+    os.close(fd)
+    # CLI/blocking path → previews regenerated synchronously before returning
+    restore_service.restore(path, password=None, verify_admin=False)
+
+    gdir = os.path.join(cfg.upload_dir, g["id"])
+    assert os.listdir(os.path.join(gdir, "original")), "originals missing after restore"
+    for variant in ("thumb", "medium"):
+        vdir = os.path.join(gdir, variant)
+        assert os.path.isdir(vdir) and os.listdir(vdir), f"{variant} not regenerated after restore"

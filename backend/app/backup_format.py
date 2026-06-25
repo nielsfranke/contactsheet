@@ -22,9 +22,10 @@ MEDIA_DIRS: dict[str, str] = {
     "watermarks_dir": "watermarks",
 }
 
-# In a "full" backup, the upload subtree (`<gallery>/original|thumb|medium|*-wm/`)
-# can drop its regenerable renditions when the operator opts out. Any path segment
-# matching one of these is a derived rendition; `original` is always kept.
-RENDITION_DIR_NAMES = ("thumb", "medium")
+# In a "full" backup, the upload subtree can drop its regenerable renditions when the
+# operator opts out. Any path segment matching one of these is a derived rendition;
+# `original` is always kept. Must match the variants written by
+# image_processing.preview_targets (thumb/small/medium) — restore regenerates them all.
+RENDITION_DIR_NAMES = ("thumb", "small", "medium")
 # Cached on-the-fly watermark variants live in `<variant>-wm/` dirs.
 RENDITION_DIR_SUFFIX = "-wm"

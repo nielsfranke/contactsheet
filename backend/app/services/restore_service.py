@@ -185,11 +185,25 @@ def _swap_in(extract_dir: str, manifest: dict) -> None:
             _replace_dir_contents(getattr(settings, attr), src)
 
 
+def _regenerate_previews(blocking: bool) -> None:
+    """Rebuild renditions the backup omitted (``include_renditions=False``) or that are
+    otherwise missing — from the restored originals. Without this a renditions-excluded
+    backup restores to a library of broken thumbnails. Blocking on the CLI path (a daemon
+    thread wouldn't survive the process exiting); background on the web path."""
+    from app.tasks.preview_upgrade import regenerate_missing_previews, upgrade_previews_async
+
+    if blocking:
+        regenerate_missing_previews()
+    else:
+        upgrade_previews_async()
+
+
 def restore(archive_path: str, *, password: str | None, verify_admin: bool) -> dict:
     """Validate ``archive_path`` and swap its contents over the live instance.
 
     `verify_admin` is True on the web path (requires the current admin password) and
-    False on the CLI path (the operator already owns the host)."""
+    False on the CLI path (the operator already owns the host). On the CLI path previews
+    are regenerated synchronously so the work finishes before the process exits."""
     if verify_admin:
         _verify_admin(password)
 
@@ -203,6 +217,9 @@ def restore(archive_path: str, *, password: str | None, verify_admin: bool) -> d
         manifest = _read_manifest(extract_dir)
         _validate(manifest, extract_dir)
         _swap_in(extract_dir, manifest)
+
+    # Rebuild any missing renditions from the restored originals (see _regenerate_previews).
+    _regenerate_previews(blocking=not verify_admin)
 
     logger.info("Restore complete from %s (scope=%s)", archive_path, manifest.get("scope"))
     return {"ok": True, "restored": manifest.get("counts", {})}

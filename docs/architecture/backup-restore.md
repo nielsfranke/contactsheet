@@ -207,7 +207,11 @@ fragile. Offer both:
        respects). Media can't be rolled back transactionally, so it runs *last*:
        a mid-media failure leaves the restored DB beside partially-swapped media,
        which a re-run (CLI) completes — strictly better than a half-migrated DB.
-  5. Return `{ok, restored_counts}`. Client clears the auth flag and
+  5. **Regenerate missing renditions** from the restored originals
+     (`preview_upgrade`) — so a `include_renditions=false` backup restores to a
+     working library, not broken thumbnails. Blocking on the CLI path (a daemon
+     thread wouldn't survive the process exiting); background on the web path.
+  6. Return `{ok, restored_counts}`. Client clears the auth flag and
      hard-redirects to `/login` (or `/setup` if the restored DB itself predates
      setup, though a real backup never will).
 
