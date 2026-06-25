@@ -27,3 +27,6 @@ httpx==0.28.1
 # Optional error tracking: dormant unless SENTRY_DSN is set (see app/observability.py). Pure-Python,
 # its transitive deps (certifi/urllib3) are already present. Works against self-hosted Sentry/GlitchTip.
 sentry-sdk==2.63.0
+# Optional vector search: ~160 KB native SQLite extension, loaded only when SEMANTIC_SEARCH_VEC is on
+# (see app/vector_index.py). Accelerates instance-wide KNN; NumPy remains the default + fallback.
+sqlite-vec==0.1.9

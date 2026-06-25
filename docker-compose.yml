@@ -25,6 +25,10 @@ services:
       # Semantic search (optional): URL of the ML sidecar. Empty = feature unavailable. Set to
       # http://ml:8001 and start the stack with `--profile ml` to enable Content Search.
       ML_SERVICE_URL: "${ML_SERVICE_URL:-}"
+      # Optional: accelerate *instance-wide* semantic search with the sqlite-vec extension once a
+      # library grows past ~tens of thousands of images. Off by default (NumPy ranking, which stays
+      # the fallback). See docs/architecture/semantic-search-scale.md.
+      SEMANTIC_SEARCH_VEC: "${SEMANTIC_SEARCH_VEC:-false}"
       # Observability (all optional — see docs/architecture/observability.md). LOG_FORMAT=json emits
       # structured one-line-per-record logs for a log shipper; text is the human-readable default.
       LOG_FORMAT: "${LOG_FORMAT:-text}"

@@ -97,6 +97,12 @@ class Settings(BaseSettings):
     # never starves HTTP or the image-rendering pool on a modest CPU box.
     embed_workers: int = 2
 
+    # Optional sqlite-vec acceleration for *instance-wide* semantic search (see app/vector_index.py
+    # + docs/architecture/semantic-search-scale.md). Off by default: the brute-force NumPy ranking
+    # handles up to ~tens of thousands of vectors, and a default deploy never loads the extension.
+    # Turn on (with semantic search already enabled) to lift the global-search ceiling to 100k+.
+    semantic_search_vec: bool = False
+
     # Observability (see docs/architecture/observability.md). All optional, safe-by-default.
     # log_format=json emits one JSON object per line (request_id + access fields) for log shippers;
     # text keeps human-readable console output. log_level applies to the app + uvicorn loggers.

@@ -57,6 +57,17 @@ def on_settings_change(db: Session, before: dict | None, after: dict | None) -> 
         logger.info("Encoder changed %s → %s: dropped %d vector(s), re-queueing library",
                     old_model, new_model, removed)
 
+    # If the sqlite-vec backend is on, (re)build its index from the authoritative BLOBs so existing
+    # vectors are queryable immediately (and a changed model's dim is picked up). Best-effort: a
+    # failure leaves the NumPy path in charge.
+    from app import vector_index
+
+    if vector_index.enabled():
+        try:
+            vector_index.rebuild(db, new_model)
+        except Exception:
+            logger.warning("sqlite-vec rebuild failed; relying on the NumPy path", exc_info=True)
+
     embed_task.run_backfill()
 
 

@@ -23,6 +23,13 @@ def _on_connect(dbapi_conn, _record):
     cursor.execute("PRAGMA foreign_keys=ON")
     cursor.execute("PRAGMA busy_timeout=5000")
     cursor.close()
+    # Optional: load the sqlite-vec extension when the operator opted into the vector backend.
+    # Off by default → a normal deploy loads nothing here. Import is local to keep import-time cost
+    # at zero when the feature is off. See app/vector_index.py.
+    from app import vector_index
+
+    if vector_index.enabled():
+        vector_index.load_into(dbapi_conn)
 
 
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)

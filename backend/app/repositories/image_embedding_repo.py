@@ -14,6 +14,8 @@ pays nothing at startup.
 
 from __future__ import annotations
 
+import logging
+
 from sqlalchemy import delete as sa_delete
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
@@ -21,6 +23,8 @@ from sqlalchemy.orm import Session
 from app.models.gallery import Gallery
 from app.models.image import Image
 from app.models.image_embedding import ImageEmbedding
+
+logger = logging.getLogger(__name__)
 
 
 def _pack(vector: list[float]):
@@ -31,6 +35,21 @@ def _pack(vector: list[float]):
     if norm > 0:
         arr = arr / norm
     return arr.astype(np.float32)
+
+
+def _mirror_to_vec(db: Session, fn) -> None:
+    """Run a best-effort vec0 index update (when the sqlite-vec backend is enabled). The BLOB table
+    is the source of truth, so a vec failure is logged and swallowed — the NumPy path still works."""
+    from app import vector_index
+
+    if not vector_index.enabled():
+        return
+    try:
+        fn(vector_index)
+        db.commit()
+    except Exception:
+        logger.warning("sqlite-vec index update failed; relying on the BLOB/NumPy path", exc_info=True)
+        db.rollback()
 
 
 def upsert(db: Session, image_id: str, model: str, vector: list[float]) -> ImageEmbedding:
@@ -45,12 +64,14 @@ def upsert(db: Session, image_id: str, model: str, vector: list[float]) -> Image
         row.dim = int(arr.shape[0])
         row.vector = arr.tobytes()
     db.commit()
+    _mirror_to_vec(db, lambda vi: vi.upsert(db, image_id, arr))
     return row
 
 
 def delete(db: Session, image_id: str) -> None:
     db.execute(sa_delete(ImageEmbedding).where(ImageEmbedding.image_id == image_id))
     db.commit()
+    _mirror_to_vec(db, lambda vi: vi.delete(db, image_id))
 
 
 def delete_for_model_mismatch(db: Session, model: str) -> int:
@@ -80,6 +101,22 @@ def search(
     by descending similarity. Soft-deleted images are excluded. When `gallery_ids` is given the
     scan is limited to those galleries (the caller passes a gallery + its subtree)."""
     import numpy as np
+
+    # Instance-wide search (no gallery scope) is the 100k+ pain point — route it through the
+    # sqlite-vec index when enabled, falling back to the NumPy scan on any error. Gallery-scoped
+    # search stays on NumPy (a subtree's vectors are few; scoping vec0's KNN would over-fetch).
+    if gallery_ids is None:
+        from app import vector_index
+
+        if vector_index.enabled():
+            try:
+                q = np.asarray(query, dtype=np.float32)
+                norm = float(np.linalg.norm(q))
+                if norm > 0:
+                    q = q / norm
+                return vector_index.search_global(db, q.tolist(), limit)
+            except Exception:
+                logger.warning("sqlite-vec search failed; falling back to NumPy", exc_info=True)
 
     stmt = (
         select(ImageEmbedding.image_id, ImageEmbedding.vector)
