@@ -44,9 +44,9 @@ export default function InstanceAnalyticsPage() {
 
           <div className="grid gap-3 sm:grid-cols-2">
             {data.views_available && (
-              <BarTimeseries data={data.views_series} label={t("viewsOverTime")} colorClass="bg-muted-foreground/60" totalLabel={t("total")} />
+              <BarTimeseries data={data.views_series} label={t("viewsOverTime")} totalLabel={t("total")} />
             )}
-            <BarTimeseries data={data.downloads_series} label={t("downloadsOverTime")} colorClass="bg-sky-400" totalLabel={t("total")} />
+            <BarTimeseries data={data.downloads_series} label={t("downloadsOverTime")} totalLabel={t("total")} />
           </div>
 
           <div>
