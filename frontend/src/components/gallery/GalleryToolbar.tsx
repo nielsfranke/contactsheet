@@ -310,17 +310,9 @@ export function GalleryToolbar({
         </div>
       )}
 
-      {/* Sort + group — pushed right on wide screens. Hidden while actively searching. In content-
-          search mode group moves to the sheet, keeping only Sort inline. */}
-      {!searching && (
-        <div className={`hidden sm:flex flex-wrap items-center gap-2 ${searchMode ? "" : "sm:ml-auto"}`}>
-          {sortSelect(selectCls)}
-          {sortDirButton("h-8 w-8")}
-          {!searchMode && features.colorFlags && groupSelect(selectCls)}
-        </div>
-      )}
-
-      {/* Result count + clear (only while filtering, and not while a content search is active) */}
+      {/* Result count + clear — sits in the left cluster (before the ml-auto sort block) so it
+          appears/disappears into the flexible gap without nudging the chips or the right-pinned
+          sort controls. Only while filtering, and not while a content search is active. */}
       {filterActive && !searching && (
         <div className="hidden sm:flex items-center gap-1.5 text-xs text-muted-foreground">
           <span className="tabular-nums">{t("resultCount", { shown: shownCount, total: totalCount })}</span>
@@ -331,6 +323,16 @@ export function GalleryToolbar({
           >
             <X size={12} /> {t("clear")}
           </button>
+        </div>
+      )}
+
+      {/* Sort + group — pushed right on wide screens. Hidden while actively searching. In content-
+          search mode group moves to the sheet, keeping only Sort inline. */}
+      {!searching && (
+        <div className={`hidden sm:flex flex-wrap items-center gap-2 ${searchMode ? "" : "sm:ml-auto"}`}>
+          {sortSelect(selectCls)}
+          {sortDirButton("h-8 w-8")}
+          {!searchMode && features.colorFlags && groupSelect(selectCls)}
         </div>
       )}
 
