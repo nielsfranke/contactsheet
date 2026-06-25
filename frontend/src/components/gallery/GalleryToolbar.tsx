@@ -279,9 +279,11 @@ export function GalleryToolbar({
 
       {/* ── Desktop inline controls (sm+) ───────────────────────────────────────────────────── */}
 
-      {/* Flag chips + comments — inline only when NOT in content-search mode (else they live in the
-          sheet, behind the Filter trigger). */}
-      {!searchMode && (features.colorFlags || features.comments) && (
+      {/* Flag/rating chips + comments — inline at sm+ whenever not actively searching. Shown in
+          content-search mode too (admin), so the photographer can triage by flag/star with one
+          click without opening the sheet; the sheet keeps them as well (it also hosts the filename
+          filter + grouping there). While a query is active the whole filter row steps aside. */}
+      {!searching && (features.colorFlags || features.comments) && (
         <div className="hidden sm:flex items-center gap-1.5">
           {features.colorFlags && (stars ? ratingChips("h-6 px-1.5") : flagChips("w-5 h-5"))}
           {features.comments && (
@@ -290,8 +292,10 @@ export function GalleryToolbar({
               title={t("hasComments")}
               aria-label={t("hasComments")}
               aria-pressed={arrange.commentsOnly}
-              className={`ml-1 p-1 rounded transition-colors outline-none focus-visible:ring-2 focus-visible:ring-ring ${
-                arrange.commentsOnly ? "text-primary" : "text-muted-foreground hover:text-foreground"
+              className={`ml-1 inline-flex h-6 w-6 items-center justify-center rounded-md border transition-colors outline-none focus-visible:ring-2 focus-visible:ring-ring ${
+                arrange.commentsOnly
+                  ? "border-primary bg-primary text-primary-foreground"
+                  : "border-transparent text-muted-foreground hover:text-foreground hover:bg-accent"
               }`}
             >
               <MessageCircle size={14} />
