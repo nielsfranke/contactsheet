@@ -22,7 +22,7 @@ interface Props {
  * Canvas upload affordance (Phase C). On md+ it's a dashed drag-and-drop panel with an aggregate
  * progress bar; below md — where drag-and-drop is irrelevant and screen space is precious — it
  * collapses to a single compact button. Both share the parent's hidden file input (also used by
- * the sidebar "Upload New Files" button): clicking calls `onClick`.
+ * the sidebar "Add Files" button): clicking calls `onClick`.
  */
 export function UploadZone({ uploading, progress, onFiles, onClick, onCancel }: Props) {
   const t = useTranslations("admin.uploadZone");
