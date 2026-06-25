@@ -1,0 +1,17 @@
+# SPDX-FileCopyrightText: 2026 Niels Franke
+# SPDX-License-Identifier: AGPL-3.0-or-later
+#
+# Test-only dependencies (NOT installed into the runtime image — that uses requirements.txt).
+# Install with: pip install -r requirements.txt -r requirements-dev.txt
+#
+# Unit suite (backend/tests/) runs under FastAPI's TestClient; the end-to-end suite (../e2e/)
+# drives a real browser via Playwright against live backend + frontend servers. After installing,
+# fetch the browser once with: playwright install chromium
+
+# Pinned to 8.x because pytest-playwright 0.7.1 caps pytest <9.
+pytest==8.4.2
+# Playwright's pytest plugin brings the `page`/`context`/`browser` fixtures. The `playwright`
+# wheel is a transitive dep (already present in this venv for screenshot verification).
+pytest-playwright==0.7.1
+# httpx is also a runtime dep (pinned in requirements.txt); the e2e harness uses it to poll the
+# backend/frontend health endpoints while booting the servers.

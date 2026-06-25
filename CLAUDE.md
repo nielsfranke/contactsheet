@@ -34,15 +34,24 @@ npm run lint      # ESLint (next/core-web-vitals + TypeScript rules)
 npm run build     # production build; also runs tsc --noEmit type-check
 npm test          # Vitest unit tests (vitest run)
 
-# Tests (from backend/)
-.venv/bin/pytest                                       # backend test suite
+# Tests
+.venv/bin/pytest                                       # backend unit suite (from backend/)
+.venv/bin/pytest e2e/                                  # Playwright E2E smoke (from repo root)
 ```
 
 Tests: the backend has a pytest suite under `backend/tests/` covering the
 security-critical paths (auth/setup, factory reset, upload & content hardening,
-watermark, rate limiting, galleries/images/public/collections). The frontend
-uses Vitest — currently unit tests for the sort logic in `src/lib/`. Prefer
-adding tests alongside changes to either layer.
+watermark, rate limiting, galleries/images/public/collections, backup/restore,
+observability). The frontend uses Vitest — currently unit tests for the sort
+logic in `src/lib/`. Prefer adding tests alongside changes to either layer.
+
+End-to-end: `e2e/` holds a Playwright smoke test (Python, `pytest-playwright` in
+`backend/requirements-dev.txt`) that drives the core photographer→client loop
+through a real browser against live backend + frontend on ephemeral ports — it
+boots its own isolated stack, so it won't touch the dev servers. CI runs all
+three (backend unit, frontend lint/vitest/build, E2E) via
+`.github/workflows/tests.yml`. See `e2e/README.md` +
+`docs/architecture/e2e-smoke-tests.md`.
 
 ## Running locally
 

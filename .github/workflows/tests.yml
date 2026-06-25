@@ -1,0 +1,90 @@
+# SPDX-FileCopyrightText: 2026 Niels Franke
+# SPDX-License-Identifier: AGPL-3.0-or-later
+#
+# Runs the test suites on every push to main and on PRs: backend pytest, frontend lint + Vitest +
+# build, and the Playwright end-to-end smoke (a real browser against live backend + frontend).
+# See docs/architecture/e2e-smoke-tests.md.
+
+name: Tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  backend-unit:
+    # Only run on GitHub Actions; the Forgejo mirror has no runner today (mirrors release.yml).
+    if: ${{ github.server_url == 'https://github.com' }}
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+      # Match the runtime image (python:3.12-slim) so pinned wheels (e.g. rawpy) resolve.
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: backend/requirements*.txt
+      - run: pip install -r requirements.txt -r requirements-dev.txt
+      - run: pytest
+
+  frontend-unit:
+    if: ${{ github.server_url == 'https://github.com' }}
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - run: npm ci
+      - run: npm run lint
+      - run: npm test
+      - run: npm run build
+
+  e2e:
+    if: ${{ github.server_url == 'https://github.com' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: backend/requirements*.txt
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - name: Install backend deps
+        working-directory: backend
+        run: pip install -r requirements.txt -r requirements-dev.txt
+      - name: Install Playwright Chromium
+        run: python -m playwright install --with-deps chromium
+      - name: Install frontend deps
+        working-directory: frontend
+        run: npm ci
+      # The e2e conftest builds the frontend + boots both servers on ephemeral ports.
+      - name: Run end-to-end smoke
+        run: pytest e2e/ -o addopts=""
+      - name: Upload Playwright artifacts on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-results
+          path: |
+            test-results/
+            **/trace.zip
+          if-no-files-found: ignore
