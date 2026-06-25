@@ -163,10 +163,14 @@ export function GalleryToolbar({
       );
     });
 
+  // Star-rating filter tokens, styled to match the colour-flag chips: solid filled pills (amber for
+  // a rating, neutral for "unrated"), dimmed when off, ringed + scaled-up when active — the same
+  // visual language as flagChips, just carrying a number + star instead of a colour.
   const ratingChips = (sizeCls: string) =>
     RATING_CHIPS.map((r) => {
       const active = arrange.ratingFilters.has(r);
       const label = r === 0 ? ts("unrated") : ts("nStars", { count: r });
+      const unrated = r === 0;
       return (
         <button
           key={r}
@@ -174,11 +178,11 @@ export function GalleryToolbar({
           title={label}
           aria-label={label}
           aria-pressed={active}
-          className={`${sizeCls} rounded-md flex items-center justify-center gap-0.5 border transition-all outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 focus-visible:ring-offset-background ${
-            active ? "border-primary ring-1 ring-primary text-foreground" : "border-input text-muted-foreground hover:text-foreground"
-          }`}
+          className={`${sizeCls} rounded-full inline-flex items-center justify-center gap-0.5 font-medium transition-all outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 focus-visible:ring-offset-background ${
+            unrated ? "bg-muted-foreground/40 text-background" : "bg-amber-400 text-amber-950"
+          } ${active ? "ring-2 ring-foreground/50 scale-110" : "opacity-40 hover:opacity-80"}`}
         >
-          {r === 0 ? <Ban size={12} /> : <><span className="text-xs tabular-nums">{r}</span><Icons.rating size={11} className="text-amber-400" fill="currentColor" /></>}
+          {unrated ? <Ban size={12} /> : <><span className="text-xs tabular-nums">{r}</span><Icons.rating size={10} fill="currentColor" /></>}
         </button>
       );
     });
@@ -285,7 +289,7 @@ export function GalleryToolbar({
           filter + grouping there). While a query is active the whole filter row steps aside. */}
       {!searching && (features.colorFlags || features.comments) && (
         <div className="hidden sm:flex items-center gap-1.5">
-          {features.colorFlags && (stars ? ratingChips("h-6 px-1.5") : flagChips("w-5 h-5"))}
+          {features.colorFlags && (stars ? ratingChips("h-6 px-2") : flagChips("w-5 h-5"))}
           {features.comments && (
             <button
               onClick={() => setArrange({ ...arrange, commentsOnly: !arrange.commentsOnly })}
@@ -381,7 +385,7 @@ export function GalleryToolbar({
             {features.colorFlags && (
               <div className="space-y-2">
                 <p className="text-xs font-medium text-muted-foreground">{stars ? t("ratingLabel") : t("flagsLabel")}</p>
-                <div className="flex items-center gap-2 flex-wrap">{stars ? ratingChips("h-9 px-2.5") : flagChips("w-8 h-8")}</div>
+                <div className="flex items-center gap-2 flex-wrap">{stars ? ratingChips("h-9 px-3") : flagChips("w-8 h-8")}</div>
               </div>
             )}
 
