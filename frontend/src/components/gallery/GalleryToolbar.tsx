@@ -273,12 +273,14 @@ export function GalleryToolbar({
           onClick={() => setSheetOpen(true)}
           aria-haspopup="dialog"
           aria-expanded={sheetOpen}
-          className={`${searchMode ? "" : "sm:hidden "}inline-flex items-center gap-1.5 h-8 shrink-0 rounded-lg border border-input bg-background px-2.5 text-sm text-foreground transition-colors hover:bg-accent outline-none focus-visible:ring-2 focus-visible:ring-ring`}
+          className={`${searchMode ? "" : "sm:hidden "}relative inline-flex items-center gap-1.5 h-8 shrink-0 rounded-lg border border-input bg-background px-2.5 text-sm text-foreground transition-colors hover:bg-accent outline-none focus-visible:ring-2 focus-visible:ring-ring`}
         >
           <SlidersHorizontal size={14} />
           {t("filterSort")}
+          {/* Count overlays the corner (absolute) so the button's width never changes when filters
+              toggle — otherwise this trigger sits before the chips and would shove them sideways. */}
           {sheetFilterCount > 0 && (
-            <span className="ml-0.5 inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-primary px-1 text-[10px] font-semibold leading-none text-primary-foreground tabular-nums">
+            <span className="absolute -top-1.5 -right-1.5 inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-primary px-1 text-[10px] font-semibold leading-none text-primary-foreground tabular-nums ring-2 ring-background">
               {sheetFilterCount}
             </span>
           )}
