@@ -233,7 +233,8 @@
       "loggedOutEverywhere": "Auf allen Geräten abgemeldet",
       "signOutBody": "Beende die Sitzung auf diesem Gerät, oder melde dich auf allen Geräten ab, um alle aktiven Sitzungen zu widerrufen (andere Browser, Geräte oder ein geleaktes Login).",
       "signOutThisDevice": "Dieses Gerät",
-      "signOutAllDevices": "Alle Geräte"
+      "signOutAllDevices": "Alle Geräte",
+      "analytics": "Statistiken"
     },
     "dnd": {
       "movedInto": "{name} verschoben",
@@ -493,7 +494,8 @@
         "headerUpdated": "Header-Bild aktualisiert — legen Sie Ihren Fokuspunkt fest",
         "photoMoved": "Foto verschoben",
         "photosMoved": "{count, plural, one {# Foto} other {# Fotos}} verschoben"
-      }
+      },
+      "insights": "Einblicke"
     },
     "share": {
       "title": "Freigabelink",
@@ -641,6 +643,34 @@
       "button": "Dateien hochladen",
       "cancel": "Abbrechen",
       "uploading": "Wird hochgeladen… {progress} %"
+    },
+    "analytics": {
+      "views": "Aufrufe",
+      "downloads": "Downloads",
+      "uploads": "Uploads",
+      "likes": "Likes",
+      "flags": "Markierungen",
+      "ratings": "Bewertungen",
+      "comments": "Kommentare",
+      "engagement": "Interaktion",
+      "total": "gesamt",
+      "viewsOverTime": "Aufrufe im Zeitverlauf",
+      "downloadsOverTime": "Downloads im Zeitverlauf",
+      "topPhotos": "Top-Fotos",
+      "noEngagement": "Noch keine Foto-Interaktion — Markierungen, Likes, Bewertungen und Kommentare erscheinen hier.",
+      "recentVisitors": "Letzte Besucher",
+      "viewsDisabled": "Besucheraufrufe werden nicht aufgezeichnet.",
+      "viewsDisabledLink": "IP-Protokollierung aktivieren",
+      "rangeDays": "{days}T",
+      "tab": {
+        "analytics": "Statistiken",
+        "activity": "Aktivität"
+      },
+      "instanceTitle": "Statistiken",
+      "instanceSubtitle": "Interaktion über alle Galerien hinweg.",
+      "busiestGalleries": "Aktivste Galerien",
+      "noActivity": "Noch keine Aktivität aufgezeichnet.",
+      "colGallery": "Galerie"
     }
   },
   "settings": {

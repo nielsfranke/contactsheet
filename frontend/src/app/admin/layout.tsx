@@ -23,7 +23,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { LogOut, Settings, ChevronLeft, Menu } from "lucide-react";
+import { LogOut, Settings, ChevronLeft, Menu, BarChart3 } from "lucide-react";
 import Link from "next/link";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -205,6 +205,19 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         )}
       </div>
       <div className="px-3 py-3 border-t border-sidebar-border space-y-1">
+        <Link href="/admin/analytics">
+          <Button
+            variant="ghost"
+            size="sm"
+            className={`w-full justify-start ${
+              pathname === "/admin/analytics"
+                ? "bg-sidebar-accent text-sidebar-accent-foreground"
+                : "text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            <BarChart3 size={16} className="mr-2" /> {tShell("analytics")}
+          </Button>
+        </Link>
         <Link href="/admin/settings">
           <Button
             variant="ghost"

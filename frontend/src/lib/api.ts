@@ -4,6 +4,8 @@
 import { clearAuthenticated } from "./auth";
 import type {
   ActivityPage,
+  GalleryAnalytics,
+  InstanceAnalytics,
   AppSettings,
   AppSettingsUpdate,
   BackupJob,
@@ -641,5 +643,16 @@ export const api = {
       const qs = p.toString();
       return `/api/public/g/${token}/zip/stream${qs ? `?${qs}` : ""}`;
     },
+  },
+
+  analytics: {
+    gallery: (id: string, days = 30) =>
+      request<GalleryAnalytics>(
+        `/api/galleries/${id}/analytics?days=${days}&tz_offset_minutes=${-new Date().getTimezoneOffset()}`,
+      ),
+    instance: (days = 30) =>
+      request<InstanceAnalytics>(
+        `/api/admin/analytics?days=${days}&tz_offset_minutes=${-new Date().getTimezoneOffset()}`,
+      ),
   },
 };

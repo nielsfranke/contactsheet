@@ -564,6 +564,62 @@ export interface ActivityPage {
   limit: number;
 }
 
+export interface TimeseriesPoint {
+  date: string;
+  count: number;
+}
+
+export interface EngagementTotals {
+  views: number;
+  downloads: number;
+  uploads: number;
+  flags: number;
+  likes: number;
+  ratings: number;
+  votes: number;
+  comments: number;
+  annotations: number;
+}
+
+export interface TopImage {
+  image: ImageResponse;
+  score: number;
+  breakdown: Record<string, number>;
+}
+
+export interface VisitorEntry {
+  ip: string | null;
+  at: string;
+}
+
+export interface GalleryAnalytics {
+  gallery_id: string;
+  days: number;
+  /** False when IP logging is off: views/visitors are unavailable, not zero. */
+  views_available: boolean;
+  totals: EngagementTotals;
+  views_series: TimeseriesPoint[];
+  downloads_series: TimeseriesPoint[];
+  top_images: TopImage[];
+  recent_visitors: VisitorEntry[];
+}
+
+export interface GalleryRollup {
+  gallery_id: string;
+  name: string;
+  totals: EngagementTotals;
+  score: number;
+}
+
+export interface InstanceAnalytics {
+  days: number;
+  views_available: boolean;
+  totals: EngagementTotals;
+  views_series: TimeseriesPoint[];
+  downloads_series: TimeseriesPoint[];
+  busiest_galleries: GalleryRollup[];
+}
+
 export type ZipFilterType = "all" | "flagged" | "green" | "red" | "yellow" | "blue";
 
 export interface ZipJob {

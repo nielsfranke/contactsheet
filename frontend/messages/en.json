@@ -233,7 +233,8 @@
       "loggedOutEverywhere": "Signed out on all devices",
       "signOutBody": "End your session on this device, or sign out on all devices to revoke every active session (other browsers, devices, or a leaked login).",
       "signOutThisDevice": "This device",
-      "signOutAllDevices": "All devices"
+      "signOutAllDevices": "All devices",
+      "analytics": "Analytics"
     },
     "dnd": {
       "movedInto": "Moved {name}",
@@ -493,7 +494,8 @@
         "headerUpdated": "Header image updated — set your focus point",
         "photoMoved": "Photo moved",
         "photosMoved": "{count, plural, one {# photo} other {# photos}} moved"
-      }
+      },
+      "insights": "Insights"
     },
     "share": {
       "title": "Share link",
@@ -641,6 +643,34 @@
       "button": "Upload files",
       "cancel": "Cancel",
       "uploading": "Uploading… {progress}%"
+    },
+    "analytics": {
+      "views": "Views",
+      "downloads": "Downloads",
+      "uploads": "Uploads",
+      "likes": "Likes",
+      "flags": "Flags",
+      "ratings": "Ratings",
+      "comments": "Comments",
+      "engagement": "Engagement",
+      "total": "total",
+      "viewsOverTime": "Views over time",
+      "downloadsOverTime": "Downloads over time",
+      "topPhotos": "Top photos",
+      "noEngagement": "No photo engagement yet — flags, likes, ratings and comments will show up here.",
+      "recentVisitors": "Recent visitors",
+      "viewsDisabled": "Visitor views aren't being recorded.",
+      "viewsDisabledLink": "Enable IP logging",
+      "rangeDays": "{days}d",
+      "tab": {
+        "analytics": "Analytics",
+        "activity": "Activity"
+      },
+      "instanceTitle": "Analytics",
+      "instanceSubtitle": "Engagement across all galleries.",
+      "busiestGalleries": "Busiest galleries",
+      "noActivity": "No activity recorded yet.",
+      "colGallery": "Gallery"
     }
   },
   "settings": {

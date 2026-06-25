@@ -7,7 +7,7 @@ import { useTranslations } from "next-intl";
 import type { GalleryResponse } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { GallerySettingsModal } from "@/components/admin/GallerySettingsModal";
-import { ActivityFeed } from "@/components/admin/ActivityFeed";
+import { GalleryInsights } from "@/components/admin/analytics/GalleryInsights";
 import { VotingSummary } from "@/components/admin/VotingSummary";
 import { ShareDialog } from "@/components/admin/ShareDialog";
 import { CreateSubGalleryDialog } from "@/components/admin/CreateSubGalleryDialog";
@@ -235,14 +235,14 @@ export function GalleryDetailDialogs({
       {/* Share dialog */}
       <ShareDialog gallery={gallery} open={shareOpen} onOpenChange={setShareOpen} />
 
-      {/* Activity dialog */}
+      {/* Insights dialog: analytics dashboard + raw activity feed */}
       <Dialog open={activityOpen} onOpenChange={setActivityOpen}>
-        <DialogContent className="sm:max-w-lg">
+        <DialogContent className="sm:max-w-3xl">
           <DialogHeader>
-            <DialogTitle>{t("activityLog")}</DialogTitle>
+            <DialogTitle>{t("insights")}</DialogTitle>
           </DialogHeader>
-          <div className="max-h-[60vh] overflow-y-auto">
-            <ActivityFeed galleryId={id} embedded />
+          <div className="max-h-[70vh] overflow-y-auto">
+            <GalleryInsights galleryId={id} />
           </div>
         </DialogContent>
       </Dialog>
