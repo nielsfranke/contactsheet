@@ -91,6 +91,18 @@ async def _lifespan(app: FastAPI):
         if zip_result.rowcount:
             _log.warning("Marked %d unfinished ZIP job(s) as error on startup", zip_result.rowcount)
 
+        # Same for backup builds: an in-process BackgroundTask interrupted by a restart
+        # leaves a job un-terminal forever, so the settings panel polls indefinitely.
+        from app.models.backup_job import BackupJob
+        backup_result = db.execute(
+            sa_update(BackupJob)
+            .where(BackupJob.status.not_in(["ready", "error"]))
+            .values(status="error", error_message="Interrupted by server restart")
+        )
+        db.commit()
+        if backup_result.rowcount:
+            _log.warning("Marked %d unfinished backup job(s) as error on startup", backup_result.rowcount)
+
         cutoff_naive = (datetime.now(timezone.utc) - timedelta(days=7)).replace(tzinfo=None)
         stale = db.execute(
             sa_select(Gallery).where(

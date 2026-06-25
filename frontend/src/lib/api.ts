@@ -6,6 +6,7 @@ import type {
   ActivityPage,
   AppSettings,
   AppSettingsUpdate,
+  BackupJob,
   Collection,
   Comment,
   CommentCreate,
@@ -361,6 +362,50 @@ export const api = {
       request<{ ok: boolean }>("/api/admin/settings/reset", {
         method: "POST",
         body: JSON.stringify({ password }),
+      }),
+    // Backup & restore (see docs/architecture/backup-restore.md).
+    backupCreate: (scope: "full" | "metadata", include_renditions: boolean) =>
+      request<BackupJob>("/api/admin/settings/backup", {
+        method: "POST",
+        body: JSON.stringify({ scope, include_renditions }),
+      }),
+    backupGet: (id: string) => request<BackupJob>(`/api/admin/settings/backup/${id}`),
+    backupList: () => request<BackupJob[]>("/api/admin/settings/backup"),
+    backupDownloadUrl: (id: string) => `${API_BASE}/api/admin/settings/backup/${id}/download`,
+    backupDelete: (id: string) =>
+      request<void>(`/api/admin/settings/backup/${id}`, { method: "DELETE" }),
+    // Restore streams a (potentially large) archive upload; XHR gives progress + a typed
+    // error code. On success the server has rotated the runtime key, so the caller must
+    // re-login (hard redirect) — this session's cookie is already dead.
+    restore: (file: File, password: string, onProgress?: (pct: number) => void): Promise<{ ok: boolean }> =>
+      new Promise((resolve, reject) => {
+        const form = new FormData();
+        form.append("file", file);
+        form.append("password", password);
+        const xhr = new XMLHttpRequest();
+        xhr.open("POST", `${API_BASE}/api/admin/settings/restore`);
+        xhr.withCredentials = true;
+        if (onProgress) {
+          xhr.upload.onprogress = (e) => {
+            if (e.lengthComputable) onProgress(Math.round((e.loaded / e.total) * 100));
+          };
+        }
+        xhr.onload = () => {
+          if (xhr.status >= 200 && xhr.status < 300) {
+            resolve(JSON.parse(xhr.responseText || "{}"));
+          } else {
+            let detail = xhr.statusText;
+            let code: string | undefined;
+            try {
+              const parsed = JSON.parse(xhr.responseText || "{}");
+              detail = parsed.detail ?? detail;
+              code = typeof parsed.code === "string" ? parsed.code : undefined;
+            } catch { /* non-JSON error body */ }
+            reject(Object.assign(new Error(detail), { status: xhr.status, code }));
+          }
+        };
+        xhr.onerror = () => reject(new Error("Network error"));
+        xhr.send(form);
       }),
   },
 

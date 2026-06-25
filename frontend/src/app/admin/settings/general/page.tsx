@@ -13,6 +13,7 @@ import { Label } from "@/components/ui/label";
 import { Toggle } from "@/components/admin/gallery-settings-fields";
 import { SaveStatus } from "@/components/admin/SaveStatus";
 import { ResetDangerZone } from "@/components/admin/ResetDangerZone";
+import { BackupRestore } from "@/components/admin/BackupRestore";
 import { useSettingsAutosave } from "@/hooks/useSettingsAutosave";
 
 /**
@@ -142,6 +143,8 @@ export default function GeneralSettingsPage() {
           <p className="text-xs text-muted-foreground">{t("sourceUrlHint")}</p>
         </div>
       </section>
+
+      <BackupRestore />
 
       <ResetDangerZone />
     </div>

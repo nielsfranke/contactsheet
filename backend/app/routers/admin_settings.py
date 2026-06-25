@@ -2,9 +2,12 @@
 # SPDX-License-Identifier: AGPL-3.0-or-later
 
 import os
+import shutil
+import tempfile
 import uuid
 
-from fastapi import APIRouter, Depends, File, HTTPException, Request, UploadFile, status
+from fastapi import APIRouter, BackgroundTasks, Depends, File, Form, HTTPException, Request, UploadFile, status
+from fastapi.responses import FileResponse
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
@@ -13,11 +16,13 @@ from app.config import settings
 from app.database import get_db
 from app.notifications import presets, url_guard
 from app.rate_limit import limiter
-from app.repositories import settings_repo
+from app.repositories import backup_job_repo, settings_repo
+from app.schemas.backup import BackupJobResponse, BackupRequest
 from app.schemas.notifications import mask_settings, merge_incoming
 from app.schemas.settings import AppSettingsResponse, AppSettingsUpdate, ResetRequest
+from app.tasks.backup_task import build_backup
 from app.version import __version__
-from app.services import notification_service, reset_service
+from app.services import notification_service, reset_service, restore_service
 from app.utils import assert_image_magic, read_limited
 
 router = APIRouter(prefix="/api/admin/settings", tags=["admin-settings"])
@@ -272,3 +277,125 @@ def factory_reset(
     request lands on the setup wizard. See docs/architecture/factory-reset.md."""
     reset_service.factory_reset(body.password, db)
     return {"ok": True}
+
+
+# --- Backup & restore (see docs/architecture/backup-restore.md) ---
+
+
+def _backup_to_response(job) -> BackupJobResponse:
+    download_url = None
+    if job.status == "ready":
+        download_url = f"/api/admin/settings/backup/{job.id}/download"
+    return BackupJobResponse(
+        id=job.id,
+        status=job.status,
+        scope=job.scope,
+        include_renditions=job.include_renditions,
+        size_bytes=job.size_bytes,
+        error_message=job.error_message,
+        created_at=job.created_at,
+        ready_at=job.ready_at,
+        download_url=download_url,
+    )
+
+
+@router.post("/backup", response_model=BackupJobResponse, status_code=202)
+def create_backup(
+    body: BackupRequest,
+    background_tasks: BackgroundTasks,
+    db: Session = Depends(get_db),
+    _admin: str = Depends(get_current_admin),
+):
+    """Kick off an async full-instance backup build (mirrors the ZIP-export job flow)."""
+    backup_job_repo.purge_expired(db)
+    job = backup_job_repo.create(db, body.scope, body.include_renditions)
+    background_tasks.add_task(build_backup, job.id, body.scope, body.include_renditions)
+    return _backup_to_response(job)
+
+
+@router.get("/backup", response_model=list[BackupJobResponse])
+def list_backups(
+    db: Session = Depends(get_db),
+    _admin: str = Depends(get_current_admin),
+):
+    return [_backup_to_response(j) for j in backup_job_repo.list_all(db)]
+
+
+@router.get("/backup/{job_id}", response_model=BackupJobResponse)
+def get_backup(
+    job_id: str,
+    db: Session = Depends(get_db),
+    _admin: str = Depends(get_current_admin),
+):
+    job = backup_job_repo.get(db, job_id)
+    if not job:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Backup not found")
+    return _backup_to_response(job)
+
+
+@router.get("/backup/{job_id}/download")
+def download_backup(
+    job_id: str,
+    db: Session = Depends(get_db),
+    _admin: str = Depends(get_current_admin),
+):
+    job = backup_job_repo.get(db, job_id)
+    if not job:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Backup not found")
+    if job.status != "ready" or not job.file_path:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Backup not ready")
+    if not os.path.exists(job.file_path):
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Backup file missing")
+    filename = os.path.basename(job.file_path)
+    return FileResponse(
+        job.file_path,
+        media_type="application/octet-stream",
+        filename=filename,
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
+
+
+@router.delete("/backup/{job_id}", status_code=204)
+def delete_backup(
+    job_id: str,
+    db: Session = Depends(get_db),
+    _admin: str = Depends(get_current_admin),
+):
+    job = backup_job_repo.get(db, job_id)
+    if not job:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Backup not found")
+    if job.file_path and os.path.exists(job.file_path):
+        try:
+            os.unlink(job.file_path)
+        except OSError:
+            pass
+    db.delete(job)
+    db.commit()
+
+
+@router.post("/restore")
+@limiter.limit("3/minute")
+def restore_backup(
+    request: Request,
+    file: UploadFile = File(...),
+    password: str = Form(...),
+    _admin: str = Depends(get_current_admin),
+):
+    """Replace the entire instance from an uploaded backup archive. Password-confirmed and
+    destructive — the restored secret key invalidates this session, so the client must
+    re-login afterwards. Deliberately holds no DB session across the file swap.
+
+    For very large instances, prefer the CLI path (``python -m app.restore <archive>``)
+    rather than pushing tens of GB back through nginx. See docs/architecture/backup-restore.md."""
+    os.makedirs(settings.exports_dir, exist_ok=True)
+    fd, tmp_path = tempfile.mkstemp(dir=settings.exports_dir, suffix=".tar")
+    try:
+        with os.fdopen(fd, "wb") as out:
+            shutil.copyfileobj(file.file, out)
+        return restore_service.restore(tmp_path, password=password, verify_admin=True)
+    finally:
+        if os.path.exists(tmp_path):
+            try:
+                os.remove(tmp_path)
+            except OSError:
+                pass

@@ -11,7 +11,8 @@ from app.models.like import ImageLike
 from app.models.activity import Activity
 from app.models.app_settings import AppSettings
 from app.models.zip_job import ZipJob
+from app.models.backup_job import BackupJob
 from app.models.collection import Collection, CollectionImage
 from app.models.notification import NotificationOutbox
 
-__all__ = ["Gallery", "Image", "ImageEmbedding", "Comment", "Annotation", "ImageVote", "ImageLike", "Activity", "AppSettings", "ZipJob", "Collection", "CollectionImage", "NotificationOutbox"]
+__all__ = ["Gallery", "Image", "ImageEmbedding", "Comment", "Annotation", "ImageVote", "ImageLike", "Activity", "AppSettings", "ZipJob", "BackupJob", "Collection", "CollectionImage", "NotificationOutbox"]

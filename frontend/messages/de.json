@@ -771,6 +771,37 @@
         "resetting": "Wird zurückgesetzt…",
         "success": "ContactSheet wurde zurückgesetzt.",
         "failed": "ContactSheet konnte nicht zurückgesetzt werden."
+      },
+      "backup": {
+        "title": "Sicherung & Wiederherstellung",
+        "description": "Sichere die gesamte Instanz in einem herunterladbaren Archiv oder stelle sie daraus wieder her. Praktisch vor Updates und beim Umzug auf einen neuen Server.",
+        "scopeLabel": "Was einbeziehen",
+        "scopeFull": "Vollständig (Datenbank + Fotos)",
+        "scopeMetadata": "Nur Einstellungen & Metadaten",
+        "scopeFullHint": "Alles für eine vollständige Wiederherstellung: Datenbank, Originale, Branding und Wasserzeichen.",
+        "scopeMetadataHint": "Datenbank, Branding und Wasserzeichen — keine Originalfotos. Kleiner, wenn deine Fotos anderswo gesichert sind.",
+        "includeRenditions": "Generierte Vorschauen einbeziehen",
+        "includeRenditionsHint": "Vorschaubilder im Archiv behalten. Für eine kleinere Datei deaktivieren — sie werden nach einer Wiederherstellung neu erzeugt.",
+        "createButton": "Sicherung erstellen",
+        "building": "Wird erstellt…",
+        "download": "Sicherung herunterladen",
+        "buildSuccess": "Sicherung steht zum Download bereit.",
+        "buildFailed": "Sicherung konnte nicht erstellt werden.",
+        "securityWarning": "Bewahre diese Datei sicher auf: Sie enthält deine Fotos, den Passwort-Hash und Sicherheitsschlüssel. Wer sie besitzt, kann eine Kopie deiner Instanz aufsetzen.",
+        "restoreTitle": "Aus einer Sicherung wiederherstellen",
+        "restoreDescription": "Ersetze diese Instanz durch den Inhalt eines Sicherungsarchivs. Am besten auf einer frischen Installation.",
+        "restoreButton": "Aus Sicherung wiederherstellen…",
+        "restoreDialogTitle": "Aus Sicherung wiederherstellen?",
+        "restoreDialogBody": "Dies überschreibt die aktuelle Datenbank und Medien mit dem Inhalt des Archivs und meldet dich ab. Das kann nicht rückgängig gemacht werden.",
+        "fileLabel": "Sicherungsarchiv",
+        "confirmLabel": "Tippe {word} zum Bestätigen",
+        "passwordLabel": "Dein Passwort",
+        "uploading": "Wird hochgeladen… {pct}%",
+        "cancel": "Abbrechen",
+        "restoreConfirmButton": "Wiederherstellen",
+        "restoring": "Wird wiederhergestellt…",
+        "restoreSuccess": "Wiederherstellung abgeschlossen — bitte erneut anmelden.",
+        "restoreFailed": "Wiederherstellung aus dieser Sicherung fehlgeschlagen."
       }
     },
     "branding": {
@@ -1076,6 +1107,10 @@
     "rate_limited": "Zu viele Aktionen in kurzer Zeit – bitte warte einen Moment und versuche es erneut.",
     "invalid_current_password": "Dein aktuelles Passwort ist falsch.",
     "password_unchanged": "Dein neues Passwort muss sich vom aktuellen unterscheiden.",
-    "username_unchanged": "Dein neuer Benutzername muss sich vom aktuellen unterscheiden."
+    "username_unchanged": "Dein neuer Benutzername muss sich vom aktuellen unterscheiden.",
+    "backup_invalid": "Diese Datei ist keine gültige ContactSheet-Sicherung.",
+    "backup_corrupt": "Diese Sicherung hat die Integritätsprüfung nicht bestanden und ist möglicherweise beschädigt.",
+    "backup_schema_newer": "Diese Sicherung stammt aus einer neueren ContactSheet-Version. Aktualisiere vor dem Wiederherstellen.",
+    "backup_format_unsupported": "Diese Sicherung wurde mit einer neueren ContactSheet-Version erstellt. Aktualisiere vor dem Wiederherstellen."
   }
 }

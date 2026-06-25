@@ -578,6 +578,18 @@ export interface ZipJob {
   download_url: string | null;
 }
 
+export interface BackupJob {
+  id: string;
+  status: "pending" | "running" | "ready" | "error";
+  scope: "full" | "metadata";
+  include_renditions: boolean;
+  size_bytes: number | null;
+  error_message: string | null;
+  created_at: string;
+  ready_at: string | null;
+  download_url: string | null;
+}
+
 export interface LoginRequest {
   username: string;
   password: string;

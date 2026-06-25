@@ -165,6 +165,7 @@ Migrations live in `backend/alembic/versions/`. Always create a new file — nev
 0037 — semantic search: image_embeddings table + images.embedding_status + app_settings.semantic_search
 0038 — opener title position: galleries.opener_title_position
 0039 — star ratings: app_settings.rating_mode + images.rating + image_votes.rating
+0040 — backup_jobs table (async full-instance backup builds)
 ```
 
 ## Feature invariants
@@ -257,6 +258,12 @@ Key non-obvious constraints — full details in `docs/architecture/`.
 - Originals are zipped **`ZIP_STORED`** (no DEFLATE) — they're already-compressed formats, so DEFLATE only burned CPU. Member assembly is shared via `zip_task.collect_members` (de-dups names per folder, skips files missing on disk, `only_approved`-aware).
 - The public "download all / selection" streams via `GET /api/public/g/{share_token}/zip/stream` — built on the fly with `zipstream-ng` (sized/STORED → exact `Content-Length`, real browser progress, no temp file, no job/poll). The gallery JWT rides in **`?token=`** (a browser navigation can't set an auth header — see `gallery_id_from_token_value`). The download notification + activity log fire on stream start, skipping the photographer's own (`is_admin`).
 - **Public paths pass `only_approved=True`** so pending client uploads never enter a download; the **admin** export (`zip_export.py`) keeps the job/file flow (resume-friendly) and `only_approved=False`. See `docs/architecture/streaming-zip-downloads.md`.
+
+### Backup & restore
+- **Full-instance** backup/restore (not per-gallery). Backup is an async job like ZIP export (`backup_jobs` table, `tasks/backup_task.py`) → tar under `exports_dir/backups/`; endpoints under `/api/admin/settings/backup…`. Restore is `POST /api/admin/settings/restore` (web) or `python -m app.restore <archive>` (CLI, blessed for large instances).
+- **DB captured via `VACUUM INTO`** (never tar the live WAL `.db`); media copied **before** the DB snapshot so the snapshot never references a missing file. `exports_dir` is never backed up (regenerable). Scopes: `full` (DB + uploads + branding + watermarks) vs `metadata` (no uploads); full can drop renditions.
+- **Forward-only restore gate:** `manifest.json` records `alembic_revision`; restore refuses a backup from a *newer* binary (unknown revision) and runs `alembic upgrade head` on older ones. Manifest also carries `db_sha256` (integrity). Restore swaps files, keeps a `.db.bak` for rollback, and reloads the runtime key from restored settings → forces re-login.
+- **No encryption / no scheduling yet** — archives are plaintext (they hold the password hash + secret key; the UI warns). Both are documented follow-ups. See `docs/architecture/backup-restore.md`.
 
 ### Link previews (Open Graph)
 - A pasted share link unfurls with the gallery's **name + cover** via a server `app/g/[share_token]/layout.tsx` (`generateMetadata`) — the gallery `page.tsx` itself stays `"use client"`.

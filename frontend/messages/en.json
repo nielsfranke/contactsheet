@@ -771,6 +771,37 @@
         "resetting": "Resetting…",
         "success": "ContactSheet has been reset.",
         "failed": "Couldn't reset ContactSheet."
+      },
+      "backup": {
+        "title": "Backup & restore",
+        "description": "Capture the whole instance to a downloadable archive, or restore one to bring everything back. Useful before upgrades and for moving to a new host.",
+        "scopeLabel": "What to include",
+        "scopeFull": "Full (database + photos)",
+        "scopeMetadata": "Settings & metadata only",
+        "scopeFullHint": "Everything needed for a complete restore: database, originals, branding and watermarks.",
+        "scopeMetadataHint": "Database, branding and watermarks — no original photos. Smaller, for when your photos are backed up elsewhere.",
+        "includeRenditions": "Include generated previews",
+        "includeRenditionsHint": "Keep thumbnails and previews in the archive. Turn off for a smaller file — they'll be regenerated after a restore.",
+        "createButton": "Create backup",
+        "building": "Building…",
+        "download": "Download backup",
+        "buildSuccess": "Backup ready to download.",
+        "buildFailed": "Couldn't build the backup.",
+        "securityWarning": "Keep this file safe: it contains your photos, password hash and security keys. Anyone with it can stand up a copy of your instance.",
+        "restoreTitle": "Restore from a backup",
+        "restoreDescription": "Replace this instance with the contents of a backup archive. Best done on a fresh install.",
+        "restoreButton": "Restore from backup…",
+        "restoreDialogTitle": "Restore from backup?",
+        "restoreDialogBody": "This overwrites the current database and media with the archive's contents, and signs you out. This cannot be undone.",
+        "fileLabel": "Backup archive",
+        "confirmLabel": "Type {word} to confirm",
+        "passwordLabel": "Your password",
+        "uploading": "Uploading… {pct}%",
+        "cancel": "Cancel",
+        "restoreConfirmButton": "Restore",
+        "restoring": "Restoring…",
+        "restoreSuccess": "Restore complete — please sign in again.",
+        "restoreFailed": "Couldn't restore from this backup."
       }
     },
     "branding": {
@@ -1076,6 +1107,10 @@
     "rate_limited": "You're doing that too fast — please wait a moment and try again.",
     "invalid_current_password": "Your current password is incorrect.",
     "password_unchanged": "Your new password must be different from the current one.",
-    "username_unchanged": "Your new username must be different from the current one."
+    "username_unchanged": "Your new username must be different from the current one.",
+    "backup_invalid": "This file isn't a valid ContactSheet backup.",
+    "backup_corrupt": "This backup failed its integrity check and may be damaged.",
+    "backup_schema_newer": "This backup is from a newer ContactSheet. Upgrade before restoring.",
+    "backup_format_unsupported": "This backup was made by a newer ContactSheet. Upgrade before restoring."
   }
 }
