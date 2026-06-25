@@ -48,6 +48,7 @@ export function useGalleryDetail(id: string) {
   const [renameImageValue, setRenameImageValue] = useState("");
   const [moveImageTarget, setMoveImageTarget] = useState<import("@/lib/types").ImageResponse | null>(null);
   const [moveSelectionOpen, setMoveSelectionOpen] = useState(false);
+  const [batchRenameOpen, setBatchRenameOpen] = useState(false);
   const [deleteSelectionConfirm, setDeleteSelectionConfirm] = useState(false);
   const [moveFilter, setMoveFilter] = useState("");
   const [moveGalleryOpen, setMoveGalleryOpen] = useState(false);
@@ -350,6 +351,24 @@ export function useGalleryDetail(id: string) {
     onError: (err: Error) => toast.error(err.message),
   });
 
+  // Bulk rename: PATCH original_filename for each changed image, then exit select mode. Sequential
+  // so a failure stops cleanly and surfaces one error (mirrors the bulk-move/delete pattern). The
+  // dialog computes the new names (extension preserved) and passes only the rows that changed.
+  const batchRenameMutation = useMutation({
+    mutationFn: async (renames: { id: string; name: string }[]) => {
+      for (const r of renames) await api.images.update(r.id, { original_filename: r.name });
+      return renames.length;
+    },
+    onSuccess: (count) => {
+      qc.invalidateQueries({ queryKey: ["gallery-images", id] });
+      setBatchRenameOpen(false);
+      selection.clear();
+      selection.setMode(false);
+      toast.success(t("toast.imagesRenamed", { count }));
+    },
+    onError: (err: Error) => toast.error(err.message),
+  });
+
   // Reparent this whole gallery (with its sub-galleries). targetParentId === null → top level.
   const moveGalleryMutation = useMutation({
     mutationFn: (targetParentId: string | null) => api.galleries.move(id, targetParentId),
@@ -431,6 +450,11 @@ export function useGalleryDetail(id: string) {
 
   const visibleIds = useMemo(() => filteredSorted.map((img) => img.id), [filteredSorted]);
   const selection = useImageSelection(visibleIds);
+  // Selected images in display order — batch rename numbers them as the admin sees them.
+  const selectedImages = useMemo(
+    () => filteredSorted.filter((img) => selection.selected.has(img.id)),
+    [filteredSorted, selection.selected],
+  );
 
   // "Copy filenames" → optionally fold in every descendant gallery's photos. The subtree images
   // are fetched lazily (only while the dialog is open with the option on) and run through the same
@@ -714,6 +738,9 @@ export function useGalleryDetail(id: string) {
     setMoveImageTarget,
     moveSelectionOpen,
     setMoveSelectionOpen,
+    batchRenameOpen,
+    setBatchRenameOpen,
+    selectedImages,
     deleteSelectionConfirm,
     setDeleteSelectionConfirm,
     moveFilter,
@@ -783,6 +810,7 @@ export function useGalleryDetail(id: string) {
     moveImageMutation,
     moveSelectionMutation,
     deleteSelectionMutation,
+    batchRenameMutation,
     moveGalleryMutation,
     setHeaderFromImageMutation,
   };

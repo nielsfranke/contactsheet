@@ -16,6 +16,7 @@ import { MoveGalleryDialog } from "@/components/admin/MoveGalleryDialog";
 import { Lightbox } from "@/components/gallery/Lightbox";
 import { DownloadGalleryDialog } from "@/components/gallery/DownloadGalleryDialog";
 import { CopyFilenamesDialog } from "@/components/admin/CopyFilenamesDialog";
+import { BatchRenameDialog } from "@/components/admin/BatchRenameDialog";
 import { HeaderImageDialog } from "@/components/admin/HeaderImageDialog";
 import { CoverImageDialog } from "@/components/admin/CoverImageDialog";
 import { Button } from "@/components/ui/button";
@@ -126,6 +127,10 @@ export function GalleryDetailDialogs({
     deleteSelectionConfirm,
     setDeleteSelectionConfirm,
     deleteSelectionMutation,
+    batchRenameOpen,
+    setBatchRenameOpen,
+    selectedImages,
+    batchRenameMutation,
     moveGalleryOpen,
     setMoveGalleryOpen,
     moveGalleryMutation,
@@ -453,6 +458,16 @@ export function GalleryDetailDialogs({
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Batch rename — renames every selected image (extension preserved) via the controller's
+          sequential PATCH mutation */}
+      <BatchRenameDialog
+        open={batchRenameOpen}
+        onOpenChange={setBatchRenameOpen}
+        images={selectedImages}
+        onApply={(renames) => batchRenameMutation.mutate(renames)}
+        busy={batchRenameMutation.isPending}
+      />
 
       {/* Move dialog — relocates a single image (moveImageTarget) or the whole selection (moveSelectionOpen) */}
       <Dialog

@@ -83,6 +83,7 @@ export default function GalleryDetailPage() {
     setRenameImageTarget,
     setMoveImageTarget,
     setMoveSelectionOpen,
+    setBatchRenameOpen,
     setDeleteSelectionConfirm,
     setRenameCollectionTarget,
     setRenameCollectionValue,
@@ -206,6 +207,7 @@ export default function GalleryDetailPage() {
           onDeleteCollection={(c) => setDeleteCollectionTarget(c)}
           onRenameCollection={(c) => { setRenameCollectionValue(c.name); setRenameCollectionTarget(c); }}
           onAddSelectionToCollection={addSelectionToCollection}
+          onRenameSelection={() => setBatchRenameOpen(true)}
           onMoveSelection={() => setMoveSelectionOpen(true)}
           onDeleteSelection={() => setDeleteSelectionConfirm(true)}
           onCreateGalleryFromCollection={d.startGalleryFromCollection}

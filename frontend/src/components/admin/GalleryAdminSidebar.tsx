@@ -72,6 +72,7 @@ interface Props {
   onDeleteCollection?: (c: Collection) => void;
   onRenameCollection?: (c: Collection) => void;
   onAddSelectionToCollection?: () => void;
+  onRenameSelection?: () => void;
   onMoveSelection?: () => void;
   onDeleteSelection?: () => void;
   // Create / copy / move images into a gallery (collection / filter / selection sources)
@@ -88,7 +89,7 @@ export function GalleryAdminSidebar({
   collections = [], selectionMode = false, selectedCount = 0,
   onToggleSelectionMode, onSelectAll, onClearSelection, onSaveSelection, onSaveFilter,
   activeCollectionId = null, onFilterCollection, onDownloadCollection, onDeleteCollection,
-  onRenameCollection, onAddSelectionToCollection, onMoveSelection, onDeleteSelection,
+  onRenameCollection, onAddSelectionToCollection, onRenameSelection, onMoveSelection, onDeleteSelection,
   onCreateGalleryFromCollection, onCreateGalleryFromFilter, onCreateGalleryFromSelection,
 }: Props) {
   const t = useTranslations("admin.sidebar");
@@ -280,6 +281,17 @@ export function GalleryAdminSidebar({
                 disabled={!selectedCount}
               >
                 <FolderPlus size={14} className="mr-1.5" /> {t("galleryFromSelection")}
+              </Button>
+            )}
+            {onRenameSelection && (
+              <Button
+                size="sm"
+                variant="outline"
+                className="w-full text-xs"
+                onClick={onRenameSelection}
+                disabled={!selectedCount}
+              >
+                <Pencil size={14} className="mr-1.5" /> {t("renameSelection")}
               </Button>
             )}
             {onMoveSelection && (
