@@ -323,11 +323,18 @@ export interface NotificationChannel {
   secrets_set?: Record<string, boolean>;
 }
 
+/** Per-event message text overrides; a blank field uses the built-in default. */
+export type NotificationTemplateKey = "title" | NotificationEventKey;
+export type NotificationTemplates = Record<NotificationTemplateKey, string>;
+
 export interface NotificationSettings {
   enabled: boolean;
   events: NotificationEvents;
   flush_seconds: number;
   channels: NotificationChannel[];
+  /** Append the public gallery link to each message (needs Public Base URL set). */
+  include_link: boolean;
+  templates: NotificationTemplates;
 }
 
 export interface AppSettings {

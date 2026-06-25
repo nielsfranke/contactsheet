@@ -72,7 +72,37 @@ def _meta(row) -> dict:
         return {}
 
 
-def _build_summary(instance_name: str, gallery_name: str, rows: list) -> tuple[str, str]:
+class _Safe(dict):
+    """format_map backing dict: an unknown placeholder renders empty, never KeyError."""
+
+    def __missing__(self, key):  # noqa: D401
+        return ""
+
+
+def _render(template: str, ctx: dict) -> str:
+    """Substitute a custom template against ``ctx``. Returns "" on any error so the caller can
+    fall back to the built-in default — a malformed template must never break delivery."""
+    try:
+        return template.format_map(_Safe(ctx)).strip()
+    except Exception:
+        return ""
+
+
+def _line(templates: dict, key: str, ctx: dict, default: str) -> str:
+    """Use the admin's override for ``key`` if set (and it renders non-empty), else the default."""
+    override = (templates.get(key) or "").strip()
+    if override:
+        rendered = _render(override, ctx)
+        if rendered:
+            return rendered
+    return default
+
+
+def _build_summary(
+    instance_name: str, gallery_name: str, rows: list, templates: dict | None = None
+) -> tuple[str, str]:
+    tmpl = templates or {}
+    base = {"instance": instance_name, "gallery": gallery_name}
     by_type: dict[str, list] = defaultdict(list)
     for r in rows:
         by_type[r.event_type].append(r)
@@ -81,38 +111,46 @@ def _build_summary(instance_name: str, gallery_name: str, rows: list) -> tuple[s
     for r in by_type.get("comment", []):
         author = r.author or "Someone"
         preview = _meta(r).get("preview", "")
-        lines.append(f"💬 New comment from {author}" + (f": “{preview}”" if preview else ""))
+        default = f"💬 New comment from {author}" + (f": “{preview}”" if preview else "")
+        lines.append(_line(tmpl, "comment", {**base, "author": author, "preview": preview}, default))
 
     for r in by_type.get("annotation", []):
         author = r.author or "Someone"
         preview = _meta(r).get("preview", "")
-        lines.append(f"✏️ New annotation from {author}" + (f": “{preview}”" if preview else ""))
+        default = f"✏️ New annotation from {author}" + (f": “{preview}”" if preview else "")
+        lines.append(_line(tmpl, "annotation", {**base, "author": author, "preview": preview}, default))
 
     for r in by_type.get("collection", []):
         author = r.author or "Someone"
         name = _meta(r).get("name", "")
-        lines.append(f"🗂 {author} saved a selection" + (f" “{name}”" if name else ""))
+        default = f"🗂 {author} saved a selection" + (f" “{name}”" if name else "")
+        lines.append(_line(tmpl, "collection", {**base, "author": author, "name": name}, default))
 
     uploads = by_type.get("upload", [])
     if uploads:
         n = sum(_meta(r).get("count", 1) for r in uploads)
-        lines.append(f"📤 {n} photo{'s' if n != 1 else ''} awaiting review")
+        default = f"📤 {n} photo{'s' if n != 1 else ''} awaiting review"
+        lines.append(_line(tmpl, "upload", {**base, "count": n}, default))
 
     downloads = by_type.get("download", [])
     if downloads:
         n = sum(_meta(r).get("count", 0) for r in downloads)
         photos = f" ({n} photo{'s' if n != 1 else ''})" if n else ""
-        lines.append(f"⬇️ {len(downloads)} download{'s' if len(downloads) != 1 else ''}{photos}")
+        default = f"⬇️ {len(downloads)} download{'s' if len(downloads) != 1 else ''}{photos}"
+        lines.append(_line(tmpl, "download", {**base, "count": len(downloads), "photos": n}, default))
 
     flags = by_type.get("flag", [])
     if flags:
-        lines.append(f"🚩 {len(flags)} photo{'s' if len(flags) != 1 else ''} flagged / liked / voted")
+        default = f"🚩 {len(flags)} photo{'s' if len(flags) != 1 else ''} flagged / liked / voted"
+        lines.append(_line(tmpl, "flag", {**base, "count": len(flags)}, default))
 
     views = by_type.get("view", [])
     if views:
-        lines.append(f"👁 Gallery opened {len(views)}×")
+        default = f"👁 Gallery opened {len(views)}×"
+        lines.append(_line(tmpl, "view", {**base, "count": len(views)}, default))
 
-    title = f"{instance_name} — {gallery_name}"
+    lines = [ln for ln in lines if ln]
+    title = _line(tmpl, "title", base, f"{instance_name} — {gallery_name}")
     return title, "\n".join(lines)
 
 
@@ -153,10 +191,18 @@ def _flush_once() -> int:
         give_up_after = timedelta(seconds=max(600, interval * 10))
         sent_ids: list[str] = []
 
+        templates = cfg.get("templates") or {}
+        # Append the public gallery link only when there's an absolute base to resolve it against —
+        # a relative /g/… link is unclickable in mail/push clients.
+        link_base = (app.public_base_url or "").rstrip("/") if cfg.get("include_link", True) else ""
+
         for gallery_id, grows in by_gallery.items():
             gallery = gallery_repo.get_by_id(db, gallery_id)
             gname = gallery.name if gallery else "a gallery"
-            title, body = _build_summary(app.instance_name, gname, grows)
+            title, body = _build_summary(app.instance_name, gname, grows, templates)
+            if link_base and gallery:
+                link = f"{link_base}/g/{gallery.share_token}"
+                body = f"{body}\n\n🔗 {link}".lstrip("\n")
 
             any_ok = False
             for built in channels:

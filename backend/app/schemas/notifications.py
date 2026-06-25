@@ -74,6 +74,26 @@ class NotificationChannel(BaseModel):
         return self
 
 
+class NotificationTemplates(BaseModel):
+    """Optional per-event line templates + a title template. A blank field falls back to the
+    built-in default, so an empty/absent block renders byte-identical to the stock summary.
+
+    Custom templates are substituted with ``str.format_map`` against the event's placeholders
+    (see ``notification_service._build_summary``); unknown placeholders resolve to empty.
+    """
+
+    model_config = {"extra": "ignore"}
+
+    title: str = Field(default="", max_length=300)
+    comment: str = Field(default="", max_length=300)
+    annotation: str = Field(default="", max_length=300)
+    collection: str = Field(default="", max_length=300)
+    upload: str = Field(default="", max_length=300)
+    download: str = Field(default="", max_length=300)
+    flag: str = Field(default="", max_length=300)
+    view: str = Field(default="", max_length=300)
+
+
 class NotificationSettings(BaseModel):
     """Global notifications config (app_settings.notifications)."""
 
@@ -84,6 +104,11 @@ class NotificationSettings(BaseModel):
     # How often the flusher drains the outbox (seconds). Clamped to a sane range.
     flush_seconds: int = Field(default=60, ge=15, le=3600)
     channels: list[NotificationChannel] = Field(default_factory=list)
+    # Append the public gallery link (/g/{share_token}) to each message. Only emitted when
+    # public_base_url is set (else the link would be relative/unclickable). Default on.
+    include_link: bool = True
+    # Per-event message text overrides; blank fields use the built-in defaults.
+    templates: NotificationTemplates = Field(default_factory=NotificationTemplates)
 
 
 # ---- Masking ---------------------------------------------------------------

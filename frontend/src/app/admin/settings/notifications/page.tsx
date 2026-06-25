@@ -13,6 +13,8 @@ import type {
   NotificationEventKey,
   NotificationChannel,
   NotificationChannelType,
+  NotificationTemplateKey,
+  NotificationTemplates,
 } from "@/lib/types";
 import { CHANNEL_TYPES, presetFields, secretKeys } from "@/lib/notification-presets";
 import { Toggle } from "@/components/admin/gallery-settings-fields";
@@ -26,12 +28,31 @@ import { toast } from "sonner";
 import { uid } from "@/lib/utils";
 
 const EVENT_KEYS: NotificationEventKey[] = ["comment", "annotation", "collection", "flag", "upload", "download", "view"];
+const TEMPLATE_KEYS: NotificationTemplateKey[] = ["title", "comment", "annotation", "collection", "upload", "download", "flag", "view"];
+
+const BLANK_TEMPLATES: NotificationTemplates = {
+  title: "", comment: "", annotation: "", collection: "", upload: "", download: "", flag: "", view: "",
+};
+
+// Placeholders offered per template field — shown as a hint so admins know what they can interpolate.
+const TEMPLATE_PLACEHOLDERS: Record<NotificationTemplateKey, string[]> = {
+  title: ["{instance}", "{gallery}"],
+  comment: ["{author}", "{preview}", "{gallery}", "{instance}"],
+  annotation: ["{author}", "{preview}", "{gallery}", "{instance}"],
+  collection: ["{author}", "{name}", "{gallery}", "{instance}"],
+  upload: ["{count}", "{gallery}", "{instance}"],
+  download: ["{count}", "{photos}", "{gallery}", "{instance}"],
+  flag: ["{count}", "{gallery}", "{instance}"],
+  view: ["{count}", "{gallery}", "{instance}"],
+};
 
 const DEFAULTS: NotificationSettings = {
   enabled: false,
   events: { comment: true, annotation: true, collection: true, flag: true, upload: true, download: true, view: false },
   flush_seconds: 60,
   channels: [],
+  include_link: true,
+  templates: BLANK_TEMPLATES,
 };
 
 function newChannel(type: NotificationChannelType): NotificationChannel {
@@ -65,6 +86,8 @@ export default function NotificationsSettingsPage() {
     ...raw,
     events: { ...DEFAULTS.events, ...raw.events },
     channels: normalize(raw.channels),
+    include_link: raw.include_link ?? DEFAULTS.include_link,
+    templates: { ...BLANK_TEMPLATES, ...raw.templates },
   };
 
   // Local edit (no save) — for text fields, committed on blur.
@@ -81,6 +104,8 @@ export default function NotificationsSettingsPage() {
 
   const setEvent = (key: NotificationEventKey, on: boolean) =>
     apply({ events: { ...value.events, [key]: on } });
+  const setTemplate = (key: NotificationTemplateKey, v: string) =>
+    set({ templates: { ...value.templates, [key]: v } });
   const setChannel = (id: string, patch: Partial<NotificationChannel>) =>
     set({ channels: value.channels.map((c) => (c.id === id ? { ...c, ...patch } : c)) });
   const setParam = (id: string, key: string, v: string) =>
@@ -152,6 +177,38 @@ export default function NotificationsSettingsPage() {
               checked={value.events[key]}
               onChange={(on) => setEvent(key, on)}
             />
+          ))}
+        </div>
+      </section>
+
+      <section className="rounded-lg border border-border bg-card/50 p-5 space-y-4">
+        <div>
+          <h2 className="text-sm font-medium text-foreground">{t("messageTitle")}</h2>
+          <p className="text-xs text-muted-foreground mt-1">{t("messageHint")}</p>
+        </div>
+        <Toggle
+          label={t("includeLink")}
+          hint={t("includeLinkHint")}
+          checked={value.include_link}
+          onChange={(on) => apply({ include_link: on })}
+        />
+        <div className="space-y-3 border-t border-border pt-4">
+          <p className="text-xs text-muted-foreground">{t("templatesHint")}</p>
+          {TEMPLATE_KEYS.map((key) => (
+            <div key={key} className="space-y-1">
+              <Label className="text-xs text-muted-foreground">{t(`tmpl_${key}`)}</Label>
+              <Input
+                value={value.templates[key]}
+                onChange={(e) => setTemplate(key, e.target.value)}
+                onBlur={commit}
+                placeholder={String(t.raw(`tmpl_${key}_default`))}
+                className="text-sm"
+                spellCheck={false}
+              />
+              <p className="text-[11px] text-muted-foreground/80 font-mono">
+                {TEMPLATE_PLACEHOLDERS[key].join("  ")}
+              </p>
+            </div>
           ))}
         </div>
       </section>
