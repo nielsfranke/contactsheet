@@ -687,7 +687,8 @@
       "search": "Content Search",
       "account": "Account",
       "general": "General",
-      "notifications": "Notifications"
+      "notifications": "Notifications",
+      "systemGroup": "System"
     },
     "search": {
       "title": "Content Search",
@@ -878,7 +879,7 @@
     },
     "footer": {
       "title": "Footer",
-      "subtitle": "A branding footer shown at the bottom of every public gallery. Only filled-in fields appear. Icons use your <b>accent color</b> (set under Appearance).",
+      "subtitle": "A branding footer shown at the bottom of every public gallery. Only filled-in fields appear. Icons use your <b>accent color</b> (set under Branding).",
       "showFooter": "Show footer on galleries",
       "showFooterHint": "Turn the branding footer on for all public galleries.",
       "businessName": "Business name",

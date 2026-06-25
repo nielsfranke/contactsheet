@@ -687,7 +687,8 @@
       "search": "Inhaltssuche",
       "account": "Konto",
       "general": "Allgemein",
-      "notifications": "Benachrichtigungen"
+      "notifications": "Benachrichtigungen",
+      "systemGroup": "System"
     },
     "search": {
       "title": "Inhaltssuche",
@@ -878,7 +879,7 @@
     },
     "footer": {
       "title": "Fußzeile",
-      "subtitle": "Eine Branding-Fußzeile am unteren Rand jeder öffentlichen Galerie. Nur ausgefüllte Felder werden angezeigt. Symbole verwenden Ihre <b>Akzentfarbe</b> (unter Darstellung festgelegt).",
+      "subtitle": "Eine Branding-Fußzeile am unteren Rand jeder öffentlichen Galerie. Nur ausgefüllte Felder werden angezeigt. Symbole verwenden Ihre <b>Akzentfarbe</b> (unter Branding festgelegt).",
       "showFooter": "Fußzeile in Galerien anzeigen",
       "showFooterHint": "Aktiviert die Branding-Fußzeile für alle öffentlichen Galerien.",
       "businessName": "Firmenname",
