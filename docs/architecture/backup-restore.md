@@ -191,23 +191,43 @@ fragile. Offer both:
      restore during the setup window with a one-time guard.
   2. Open + validate `manifest.json`: `format_version` known, `db_sha256`
      matches, `alembic_revision` not newer than head (else refuse).
-  3. **Maintenance lock** — pause the notification flusher / new writes for the
-     swap (single-process app, so an in-process flag + brief WAL checkpoint).
-  4. Swap atomically where possible: extract DB snapshot to a temp path, then
-     replace `contactsheet.db` (and delete stale `-wal`/`-shm`); restore each
-     in-scope media dir by extracting into a temp sibling and renaming over the
-     old (keeps static mounts pointing at a valid dir; the mount is on the dir
-     **root**, which is preserved — same constraint factory-reset respects).
-  5. Run `alembic upgrade head` against the restored DB.
-  6. Reload `runtime_config` from the restored `app_settings` (new secret key +
-     token_version) → all old sessions invalid.
-  7. Return `{ok, restored_counts}`. Client clears the auth flag and
+  3. `engine.dispose()` so no pooled connection holds the old DB file across the
+     swap. (The restore route deliberately takes no DB session — `get_current_admin`
+     is DB-free — so nothing is checked out during the swap.)
+  4. **Two-phase swap** (`_swap_in`):
+     - **Phase 1 — DB (reversible).** Copy the live DB to `contactsheet.db.bak`,
+       replace `contactsheet.db` with the snapshot (delete stale `-wal`/`-shm`),
+       `alembic upgrade head`, then reload `runtime_config` (new secret key +
+       token_version → all old sessions invalid). If anything here fails, roll the
+       DB back from `.bak` and **leave media untouched** → the instance is exactly
+       as before.
+     - **Phase 2 — media (point of no return).** Only after the DB is committed,
+       replace each in-scope media dir's **contents** in place (clear + move;
+       keeps the static-mount root inode valid, same constraint factory-reset
+       respects). Media can't be rolled back transactionally, so it runs *last*:
+       a mid-media failure leaves the restored DB beside partially-swapped media,
+       which a re-run (CLI) completes — strictly better than a half-migrated DB.
+  5. Return `{ok, restored_counts}`. Client clears the auth flag and
      hard-redirects to `/login` (or `/setup` if the restored DB itself predates
      setup, though a real backup never will).
 
-Failure during the swap must not leave a half-restored instance: extract-then-
-rename per store, and keep the pre-restore DB as `contactsheet.db.bak` until the
-new one opens + migrates cleanly, so a botched restore can roll back.
+> The original design floated a maintenance lock + atomic per-store rename; the
+> shipped version is simpler (DB-phase rollback + media-last) and leans on the
+> "restore onto a fresh/quiet instance" guidance below rather than a hard lock.
+
+## Deploy / upgrade impact
+
+Two things that an image pull alone does **not** deliver — call them out in release notes:
+
+- **`nginx.conf` is host-mounted.** The bundled `nginx.conf` gains a
+  `location ~ ^/api/admin/settings/(backup|restore)` block raising
+  `client_max_body_size` to `2g` + 30-min timeouts (the restore upload carries a
+  whole archive; the download streams one back). Without it both routes fall
+  through to `location /api/` and inherit the 1 MB cap + 120s timeout, 413-ing or
+  truncating any real backup. Operators must update their host-mounted nginx.conf
+  (or, for a custom/edge proxy, raise the equivalent limit themselves).
+- **Migration `0040`** (`backup_jobs`) must be applied on upgrade
+  (`alembic upgrade head`), like any schema change.
 
 ### Frontend
 

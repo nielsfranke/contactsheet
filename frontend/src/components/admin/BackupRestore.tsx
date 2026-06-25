@@ -37,13 +37,14 @@ function formatBytes(n: number): string {
   return `${v.toFixed(1)} ${units[i]}`;
 }
 
-/** Poll a backup job until it leaves the pending/running state. */
+/** Poll a backup job until it leaves the pending/running state (bounded, ~10 min). */
 async function pollBackup(id: string): Promise<BackupJob> {
-  for (;;) {
+  for (let attempt = 0; attempt < 400; attempt++) {
     const job = await api.adminSettings.backupGet(id);
     if (job.status === "ready" || job.status === "error") return job;
     await new Promise((r) => setTimeout(r, 1500));
   }
+  throw new Error("Backup timed out");
 }
 
 export function BackupRestore() {

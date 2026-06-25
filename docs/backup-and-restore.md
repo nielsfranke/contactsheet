@@ -75,8 +75,11 @@ you out. Two ways:
 4. Click **Restore**. When it completes you're redirected to the login page —
    sign in again (see the note on credentials below).
 
-Large archives upload through the web server, so very large Full backups can hit
-the upload size limit — use the CLI path for those.
+Large archives upload through the web server. The bundled nginx allows backup
+uploads/downloads up to **2 GB**; beyond that (or if you run a custom/edge proxy
+with a smaller limit), use the CLI path. If you upgraded an existing instance,
+make sure your **host-mounted `nginx.conf`** includes the backup/restore
+`location` block — an image pull alone won't add it.
 
 ### B) From the command line (large instances / fresh hosts)
 

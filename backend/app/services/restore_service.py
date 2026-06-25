@@ -111,9 +111,37 @@ def _validate(manifest: dict, extract_dir: str) -> None:
         )
 
 
+def _remove_wal_sidecars(live_db: str) -> None:
+    for sidecar in (live_db + "-wal", live_db + "-shm"):
+        if os.path.exists(sidecar):
+            os.remove(sidecar)
+
+
+def _reload_runtime() -> None:
+    """Reload the runtime secret key + token generation from the (restored) settings;
+    this invalidates the caller's session, forcing a fresh login."""
+    from app.database import SessionLocal
+    from app.repositories import settings_repo
+
+    db = SessionLocal()
+    try:
+        s = settings_repo.get(db)
+        if s.secret_key:
+            set_secret_key(s.secret_key)
+        set_token_version(s.token_version)
+    finally:
+        db.close()
+
+
 def _swap_in(extract_dir: str, manifest: dict) -> None:
-    """Replace the live DB + media dirs with the archive's. Keeps a ``.bak`` of the live
-    DB and rolls it back if the swap or forward-migration fails."""
+    """Replace the live DB + media dirs with the archive's, in two phases.
+
+    Phase 1 (DB) is **reversible**: it keeps a ``.bak`` of the live DB and, if the swap or
+    forward-migration fails, rolls the DB back and leaves media untouched — so the instance
+    is exactly as before. Phase 2 (media) is the **point of no return**: it runs only after
+    the DB is committed, because media can't be rolled back transactionally. A failure mid-
+    media leaves the restored DB with partially-swapped media, which a re-run (CLI) finishes
+    — strictly better than a half-migrated DB stranded next to swapped media."""
     from app.database import engine
 
     live_db = migrations.sqlite_path()
@@ -125,42 +153,21 @@ def _swap_in(extract_dir: str, manifest: dict) -> None:
 
     if os.path.exists(live_db):
         shutil.copy2(live_db, backup_db)
+
+    # --- Phase 1: database (reversible) ---
     try:
-        # DB: replace the main file and discard stale WAL sidecars.
         os.makedirs(os.path.dirname(live_db), exist_ok=True)
         shutil.copy2(db_src, live_db)
-        for sidecar in (live_db + "-wal", live_db + "-shm"):
-            if os.path.exists(sidecar):
-                os.remove(sidecar)
-
-        # Media: only dirs actually present in the archive (metadata-only backups omit
-        # uploads, so a metadata restore leaves existing originals untouched).
-        for attr, arcname in MEDIA_DIRS.items():
-            src = os.path.join(extract_dir, arcname)
-            if os.path.isdir(src):
-                _replace_dir_contents(getattr(settings, attr), src)
-
-        # Migrate the restored snapshot forward to this binary's schema.
-        migrations.upgrade_to_head()
-
-        # Reload the runtime secret key + token generation from the restored settings;
-        # this invalidates the caller's session, forcing a fresh login.
-        from app.database import SessionLocal
-        from app.repositories import settings_repo
-
-        db = SessionLocal()
-        try:
-            s = settings_repo.get(db)
-            if s.secret_key:
-                set_secret_key(s.secret_key)
-            set_token_version(s.token_version)
-        finally:
-            db.close()
+        _remove_wal_sidecars(live_db)
+        migrations.upgrade_to_head()  # migrate the restored snapshot forward
+        _reload_runtime()
     except Exception:
-        # Roll back to the pre-restore DB so a failed restore doesn't brick the instance.
+        # Roll the DB back so a failed restore doesn't brick the instance. No media has
+        # been touched yet, so this returns the instance to its pre-restore state.
         if os.path.exists(backup_db):
             engine.dispose()
             shutil.copy2(backup_db, live_db)
+            _remove_wal_sidecars(live_db)
         raise
     finally:
         if os.path.exists(backup_db):
@@ -168,6 +175,14 @@ def _swap_in(extract_dir: str, manifest: dict) -> None:
                 os.remove(backup_db)
             except OSError:
                 pass
+
+    # --- Phase 2: media (point of no return; DB already committed) ---
+    # Only dirs actually present in the archive (metadata-only backups omit uploads, so a
+    # metadata restore leaves existing originals untouched).
+    for attr, arcname in MEDIA_DIRS.items():
+        src = os.path.join(extract_dir, arcname)
+        if os.path.isdir(src):
+            _replace_dir_contents(getattr(settings, attr), src)
 
 
 def restore(archive_path: str, *, password: str | None, verify_admin: bool) -> dict:
