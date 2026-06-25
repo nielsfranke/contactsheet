@@ -4,10 +4,10 @@
 import uuid
 from datetime import datetime, timezone
 
-from sqlalchemy import JSON, DateTime, ForeignKey, String, Text
+from sqlalchemy import JSON, ForeignKey, String, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from app.database import Base
+from app.database import Base, UTCDateTime
 
 
 def _now() -> datetime:
@@ -31,6 +31,6 @@ class Comment(Base):
     # NULL = an ordinary unanchored comment. Shape validated by schemas.comment.Anchor.
     # none_as_null so a plain comment stores SQL NULL (not JSON 'null'), keeping anchored counts clean.
     anchor: Mapped[dict | None] = mapped_column(JSON(none_as_null=True), nullable=True)
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=_now)
+    created_at: Mapped[datetime] = mapped_column(UTCDateTime, nullable=False, default=_now)
 
     image: Mapped["Image"] = relationship("Image", back_populates="comments")  # noqa: F821

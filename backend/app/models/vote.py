@@ -4,10 +4,10 @@
 import uuid
 from datetime import datetime, timezone
 
-from sqlalchemy import DateTime, ForeignKey, Integer, String, UniqueConstraint
+from sqlalchemy import ForeignKey, Integer, String, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from app.database import Base
+from app.database import Base, UTCDateTime
 
 
 def _now() -> datetime:
@@ -33,7 +33,7 @@ class ImageVote(Base):
     color_flag: Mapped[str] = mapped_column(String(10), nullable=False, default="none")
     # Per-reviewer 1–5 star rating (0 = cleared); the stars-mode parallel to color_flag.
     rating: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=_now)
-    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=_now, onupdate=_now)
+    created_at: Mapped[datetime] = mapped_column(UTCDateTime, nullable=False, default=_now)
+    updated_at: Mapped[datetime] = mapped_column(UTCDateTime, nullable=False, default=_now, onupdate=_now)
 
     image: Mapped["Image"] = relationship("Image", back_populates="votes")  # noqa: F821

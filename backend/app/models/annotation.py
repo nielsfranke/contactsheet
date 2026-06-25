@@ -4,10 +4,10 @@
 import uuid
 from datetime import datetime, timezone
 
-from sqlalchemy import DateTime, ForeignKey, String, Text
+from sqlalchemy import ForeignKey, String, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from app.database import Base
+from app.database import Base, UTCDateTime
 
 
 def _now() -> datetime:
@@ -27,6 +27,6 @@ class Annotation(Base):
     )
     reviewer_name: Mapped[str | None] = mapped_column(String(255), nullable=True)
     annotation_data: Mapped[str] = mapped_column(Text, nullable=False, default="[]")
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=_now)
+    created_at: Mapped[datetime] = mapped_column(UTCDateTime, nullable=False, default=_now)
 
     image: Mapped["Image"] = relationship("Image", back_populates="annotations")  # noqa: F821

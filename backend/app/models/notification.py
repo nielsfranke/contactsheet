@@ -4,10 +4,10 @@
 import uuid
 from datetime import datetime, timezone
 
-from sqlalchemy import DateTime, ForeignKey, Index, String, Text
+from sqlalchemy import ForeignKey, Index, String, Text
 from sqlalchemy.orm import Mapped, mapped_column
 
-from app.database import Base
+from app.database import Base, UTCDateTime
 
 
 def _now() -> datetime:
@@ -38,5 +38,5 @@ class NotificationOutbox(Base):
     event_type: Mapped[str] = mapped_column(String(20), nullable=False)
     author: Mapped[str | None] = mapped_column(String(255), nullable=True)
     meta: Mapped[str | None] = mapped_column(Text, nullable=True)  # JSON
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=_now)
-    sent_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(UTCDateTime, nullable=False, default=_now)
+    sent_at: Mapped[datetime | None] = mapped_column(UTCDateTime, nullable=True)

@@ -4,10 +4,10 @@
 import uuid
 from datetime import datetime, timezone
 
-from sqlalchemy import DateTime, ForeignKey, Index, String, Text
+from sqlalchemy import ForeignKey, Index, String, Text
 from sqlalchemy.orm import Mapped, mapped_column
 
-from app.database import Base
+from app.database import Base, UTCDateTime
 
 
 def _now() -> datetime:
@@ -35,4 +35,4 @@ class Activity(Base):
     # Client IP for public events (view/download/upload), captured only while IP logging is on;
     # scrubbed to NULL after the configured retention. Always NULL for admin-side actions.
     ip: Mapped[str | None] = mapped_column(String(64), nullable=True)
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=_now)
+    created_at: Mapped[datetime] = mapped_column(UTCDateTime, nullable=False, default=_now)

@@ -4,10 +4,10 @@
 import uuid
 from datetime import datetime, timezone
 
-from sqlalchemy import Boolean, DateTime, Float, ForeignKey, Integer, String, Text
+from sqlalchemy import Boolean, Float, ForeignKey, Integer, String, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from app.database import Base
+from app.database import Base, UTCDateTime
 
 
 def _now() -> datetime:
@@ -42,7 +42,7 @@ class Gallery(Base):
 
     tags: Mapped[str] = mapped_column(Text, nullable=False, default="[]")               # JSON array
     watermark_settings: Mapped[str | None] = mapped_column(Text, nullable=True)         # JSON object
-    expires_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    expires_at: Mapped[datetime | None] = mapped_column(UTCDateTime, nullable=True)
     downloads_enabled: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
 
     enable_team_voting: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
@@ -82,9 +82,9 @@ class Gallery(Base):
     # Per-gallery notifications master switch (operational, never cascades, never public).
     notifications_enabled: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
 
-    deleted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True, index=True)
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=_now)
-    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=_now, onupdate=_now)
+    deleted_at: Mapped[datetime | None] = mapped_column(UTCDateTime, nullable=True, index=True)
+    created_at: Mapped[datetime] = mapped_column(UTCDateTime, nullable=False, default=_now)
+    updated_at: Mapped[datetime] = mapped_column(UTCDateTime, nullable=False, default=_now, onupdate=_now)
 
     # Relationships
     children: Mapped[list["Gallery"]] = relationship(

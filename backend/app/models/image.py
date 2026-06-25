@@ -4,10 +4,10 @@
 import uuid
 from datetime import datetime, timezone
 
-from sqlalchemy import Boolean, DateTime, ForeignKey, Integer, String, Text
+from sqlalchemy import Boolean, ForeignKey, Integer, String, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from app.database import Base
+from app.database import Base, UTCDateTime
 
 
 def _now() -> datetime:
@@ -61,8 +61,8 @@ class Image(Base):
     # "pending" | "indexed" | "skipped" (video / unencodable) | "error".
     embedding_status: Mapped[str] = mapped_column(String(10), nullable=False, default="pending")
 
-    deleted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True, index=True)
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=_now)
+    deleted_at: Mapped[datetime | None] = mapped_column(UTCDateTime, nullable=True, index=True)
+    created_at: Mapped[datetime] = mapped_column(UTCDateTime, nullable=False, default=_now)
 
     gallery: Mapped["Gallery"] = relationship("Gallery", back_populates="images")  # noqa: F821
     comments: Mapped[list["Comment"]] = relationship(  # noqa: F821

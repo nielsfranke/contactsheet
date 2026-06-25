@@ -83,7 +83,7 @@ Without it the backend crashes on startup (`OSError: Read-only file system: '/da
 | `app/main.py` | FastAPI app, lifespan startup (secret key, auto-setup, DB cleanup) |
 | `app/config.py` | Pydantic settings from env / `.env` |
 | `app/runtime_config.py` | Runtime secret key (set during startup, used by JWT) |
-| `app/database.py` | SQLAlchemy engine (SQLite WAL + foreign keys) |
+| `app/database.py` | SQLAlchemy engine (SQLite WAL + foreign keys); `UTCDateTime` type decorator — all model datetimes round-trip tz-aware UTC so the API serializes a `Z`/offset (SQLite reads `DateTime` back naive otherwise → clients misparse as local time) |
 | `app/auth/jwt.py` | Create/decode admin + gallery JWTs |
 | `app/auth/dependencies.py` | FastAPI deps: `get_current_admin`, `require_gallery_token` |
 | `app/routers/setup.py` | Setup wizard endpoints |

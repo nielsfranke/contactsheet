@@ -1,10 +1,44 @@
 # SPDX-FileCopyrightText: 2026 Niels Franke
 # SPDX-License-Identifier: AGPL-3.0-or-later
 
-from sqlalchemy import create_engine, event
+import datetime as _dt
+
+from sqlalchemy import DateTime, TypeDecorator, create_engine, event
 from sqlalchemy.orm import DeclarativeBase, sessionmaker
 
 from app.config import settings
+
+
+class UTCDateTime(TypeDecorator):
+    """A timezone-aware DateTime that round-trips as UTC.
+
+    SQLite has no native datetime type — SQLAlchemy stores datetimes as naive ISO strings and reads
+    them back with ``tzinfo=None`` even for ``DateTime(timezone=True)``. That meant API responses
+    serialized timestamps *without* a ``Z``/offset, so browsers parsed them as **local** time (off by
+    the viewer's UTC offset — e.g. "2h ago" for something that just happened in CEST). This decorator
+    normalizes every value to UTC on the way in (storing naive-UTC, as SQLite does) and re-attaches
+    UTC on the way out, so Pydantic always emits an explicit offset and clients parse it correctly.
+
+    Storage format is unchanged (naive-UTC ISO string) → no migration; existing rows read back
+    correctly since they were already written as UTC.
+    """
+
+    impl = DateTime
+    cache_ok = True
+
+    def process_bind_param(self, value: _dt.datetime | None, dialect):
+        if value is None:
+            return None
+        if value.tzinfo is not None:
+            value = value.astimezone(_dt.timezone.utc)
+        return value.replace(tzinfo=None)
+
+    def process_result_value(self, value: _dt.datetime | None, dialect):
+        if value is None:
+            return None
+        if value.tzinfo is None:
+            return value.replace(tzinfo=_dt.timezone.utc)
+        return value.astimezone(_dt.timezone.utc)
 
 engine = create_engine(
     settings.db_url,
