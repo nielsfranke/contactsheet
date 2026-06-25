@@ -211,6 +211,15 @@ fragile. Offer both:
      (`preview_upgrade`) — so a `include_renditions=false` backup restores to a
      working library, not broken thumbnails. Blocking on the CLI path (a daemon
      thread wouldn't survive the process exiting); background on the web path.
+     **Known limitation — RAW with renditions excluded.** `preview_upgrade`
+     rebuilds renditions with plain Pillow, which can't decode camera RAW (the
+     upload path instead derives RAW previews from the file's *embedded* JPEG, a
+     step the regenerator doesn't replicate). So a backup taken with
+     `include_renditions=false` that contains RAW originals restores those RAW
+     images with missing `thumb`/`medium`. Mitigation: keep the default
+     (`include_renditions=true`) for any library with RAW, or re-trigger
+     extraction after restore. Niche (RAW **and** renditions-excluded **and**
+     originals present), so it's documented rather than worked around.
   6. Return `{ok, restored_counts}`. Client clears the auth flag and
      hard-redirects to `/login` (or `/setup` if the restored DB itself predates
      setup, though a real backup never will).
