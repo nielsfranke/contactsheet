@@ -7,7 +7,9 @@ from .conftest import ADMIN_PASSWORD, ADMIN_USERNAME
 
 
 def test_health(client):
-    assert client.get("/api/health").json() == {"status": "ok"}
+    body = client.get("/api/health").json()
+    assert body["status"] == "ok"
+    assert "version" in body
 
 
 def test_setup_status_starts_incomplete(client):

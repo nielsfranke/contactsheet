@@ -18,9 +18,14 @@ from slowapi.errors import RateLimitExceeded
 from app.config import settings
 from app.version import __version__
 from app.errors import CodedHTTPException
+from app.observability import RequestContextMiddleware, configure_logging, init_sentry
 from app.rate_limit import limiter
 from app.routers import auth, galleries, images, public
 from app.routers import admin_settings, branding_icon, collections, realtime, search, setup, zip_export
+
+# Configure structured logging + (optional) error tracking before anything else logs or raises.
+configure_logging()
+init_sentry()
 
 _log = logging.getLogger(__name__)
 
@@ -194,6 +199,9 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Added last → outermost: a request id is bound (and the access line logged) around everything else.
+app.add_middleware(RequestContextMiddleware)
+
 app.include_router(setup.router)
 app.include_router(auth.router)
 app.include_router(galleries.router)
@@ -209,4 +217,52 @@ app.include_router(search.router)
 
 @app.get("/api/health")
 def health():
-    return {"status": "ok"}
+    """Liveness: cheap, always 200 if the process is up."""
+    return {"status": "ok", "version": __version__}
+
+
+@app.get("/api/health/ready")
+def health_ready():
+    """Readiness: report each dependency a deploy relies on. 503 only if the DB (the one hard
+    dependency) is down; `migrations: behind` flags an image pulled without `alembic upgrade head`.
+    No secrets/paths in the payload, so it's safe to leave unauthenticated for probes."""
+    from sqlalchemy import text
+
+    from app import migrations
+    from app.database import engine
+    from app.ml import embedder
+
+    checks: dict[str, str] = {}
+
+    try:
+        with engine.connect() as conn:
+            conn.execute(text("SELECT 1"))
+        checks["database"] = "ok"
+    except Exception:
+        checks["database"] = "error"
+
+    try:
+        db_rev = migrations.revision_of_db(migrations.sqlite_path())
+        checks["migrations"] = "ok" if db_rev == migrations.current_head() else "behind"
+    except Exception:
+        checks["migrations"] = "unknown"
+
+    if not embedder.is_configured():
+        checks["ml_sidecar"] = "unconfigured"
+    else:
+        checks["ml_sidecar"] = "ok" if embedder.health() else "unreachable"
+
+    writable = all(
+        os.access(d, os.W_OK)
+        for d in (settings.upload_dir, settings.exports_dir, settings.branding_dir, settings.watermarks_dir)
+    )
+    checks["storage"] = "ok" if writable else "error"
+
+    if checks["database"] != "ok":
+        overall, code = "error", 503
+    elif checks["migrations"] in ("behind", "unknown") or checks["ml_sidecar"] == "unreachable" or checks["storage"] != "ok":
+        overall, code = "degraded", 200
+    else:
+        overall, code = "ok", 200
+
+    return JSONResponse(status_code=code, content={"status": overall, "version": __version__, "checks": checks})

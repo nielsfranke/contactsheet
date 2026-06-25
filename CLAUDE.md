@@ -269,3 +269,9 @@ Key non-obvious constraints — full details in `docs/architecture/`.
 - A pasted share link unfurls with the gallery's **name + cover** via a server `app/g/[share_token]/layout.tsx` (`generateMetadata`) — the gallery `page.tsx` itself stays `"use client"`.
 - Metadata comes from a **dedicated, side-effect-free** `GET /api/public/g/{share_token}/meta` — **never** reuse the full `GET /g/{share_token}`, which enqueues a `view` notification + logs activity (a scraper unfurl must not look like a client open). Password-protected galleries expose the name but **not** the cover image.
 - The Next *server* calls the backend directly (container-to-container) via `BACKEND_INTERNAL_URL`, not through nginx. `og:image` is absolutized from `app_settings.public_base_url`, falling back to the request host via Next `metadataBase`. See `docs/architecture/gallery-link-previews-open-graph.md`.
+
+### Observability
+- `app/observability.py` is wired at the **top of `app/main.py`** (`configure_logging()` + `init_sentry()` run before the app is built). Logging is a `dictConfig`: `LOG_FORMAT=text|json`, `LOG_LEVEL`; uvicorn's access log is silenced in favour of the structured access line from `RequestContextMiddleware` (added **last** → outermost).
+- Every request carries a `request_id` (inbound `X-Request-ID` or fresh), bound via a `contextvar` + log filter and echoed back as a header — the correlation key across log lines.
+- **Sentry is a no-op unless `SENTRY_DSN` is set.** `send_default_pii=False` + a `before_send` scrubber drop request bodies (photos/passwords) and redact auth headers/cookies. Only unhandled/5xx escalate — `CodedHTTPException`/4xx don't.
+- Health is split: `GET /api/health` (liveness + version) and `GET /api/health/ready` (per-component `database`/`migrations`/`ml_sidecar`/`storage`; **503 only if the DB is down**, `migrations: behind` flags an un-migrated image). See `docs/architecture/observability.md`.

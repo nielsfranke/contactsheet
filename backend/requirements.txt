@@ -24,3 +24,6 @@ zipstream-ng==1.9.2
 # here — the backend stays free of any ML runtime.
 numpy==2.2.1
 httpx==0.28.1
+# Optional error tracking: dormant unless SENTRY_DSN is set (see app/observability.py). Pure-Python,
+# its transitive deps (certifi/urllib3) are already present. Works against self-hosted Sentry/GlitchTip.
+sentry-sdk==2.63.0

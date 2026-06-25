@@ -25,6 +25,14 @@ services:
       # Semantic search (optional): URL of the ML sidecar. Empty = feature unavailable. Set to
       # http://ml:8001 and start the stack with `--profile ml` to enable Content Search.
       ML_SERVICE_URL: "${ML_SERVICE_URL:-}"
+      # Observability (all optional — see docs/architecture/observability.md). LOG_FORMAT=json emits
+      # structured one-line-per-record logs for a log shipper; text is the human-readable default.
+      LOG_FORMAT: "${LOG_FORMAT:-text}"
+      LOG_LEVEL: "${LOG_LEVEL:-INFO}"
+      # Error tracking is OFF unless SENTRY_DSN is set (works with self-hosted Sentry/GlitchTip).
+      # No PII; request bodies + auth headers are scrubbed. NOT settable in the web UI.
+      SENTRY_DSN: "${SENTRY_DSN:-}"
+      SENTRY_ENVIRONMENT: "${SENTRY_ENVIRONMENT:-}"
       # Optional — only needed for non-interactive first-run setup; otherwise the
       # browser setup wizard handles these (SECRET_KEY is auto-generated & stored in the DB):
       # SECRET_KEY: "${SECRET_KEY:-}"

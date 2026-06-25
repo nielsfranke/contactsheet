@@ -1,6 +1,8 @@
 # SPDX-FileCopyrightText: 2026 Niels Franke
 # SPDX-License-Identifier: AGPL-3.0-or-later
 
+from typing import Literal
+
 from pydantic import field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -12,7 +14,7 @@ class Settings(BaseSettings):
     admin_username: str = "admin"
     admin_password: str | None = None
 
-    @field_validator("secret_key", "admin_password", mode="before")
+    @field_validator("secret_key", "admin_password", "sentry_dsn", "sentry_environment", mode="before")
     @classmethod
     def _empty_str_to_none(cls, v: object) -> object:
         if isinstance(v, str) and v == "":
@@ -94,6 +96,18 @@ class Settings(BaseSettings):
     # Worker threads that push images to the sidecar for indexing. Kept low so backfill/indexing
     # never starves HTTP or the image-rendering pool on a modest CPU box.
     embed_workers: int = 2
+
+    # Observability (see docs/architecture/observability.md). All optional, safe-by-default.
+    # log_format=json emits one JSON object per line (request_id + access fields) for log shippers;
+    # text keeps human-readable console output. log_level applies to the app + uvicorn loggers.
+    log_level: str = "INFO"
+    log_format: Literal["text", "json"] = "text"
+    # Error tracking is OFF unless a DSN is set — then sentry-sdk initializes (works against
+    # self-hosted Sentry/GlitchTip too). send_default_pii stays false; bodies/auth headers are
+    # scrubbed. traces_sample_rate default 0.0 = errors only, no per-request tracing overhead.
+    sentry_dsn: str | None = None
+    sentry_environment: str | None = None
+    sentry_traces_sample_rate: float = 0.0
 
 
 settings = Settings()
