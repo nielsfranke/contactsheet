@@ -9,6 +9,7 @@ import { CSS } from "@dnd-kit/utilities";
 import type { ImageResponse, LayoutType } from "@/lib/types";
 import { GAP, GAP_PX, JUSTIFIED_ROW_HEIGHT, gridColumns, gridSizes, imageAspect } from "@/lib/gridLayout";
 import { JustifiedGrid } from "@/components/JustifiedGrid";
+import { WindowedFixedGrid } from "@/components/WindowedFixedGrid";
 import { cn } from "@/lib/utils";
 import { AdminTile } from "./admin-grid-tile";
 import type { CardProps, DragMode, GridPresentation } from "./admin-grid-types";
@@ -37,6 +38,9 @@ export function LayoutGrid({
     return <AdminTile key={img.id} img={img} aspectSquare={aspectSquare} fixedHeight={fixedHeight} sizes={sizes} {...card} />;
   };
 
+  // dnd-kit sortable (reorder) must keep every tile mounted to compute moves, so it never windows.
+  const sortable = dragMode === "sortable";
+
   if (layout === "masonry") {
     return (
       <JustifiedGrid
@@ -46,14 +50,28 @@ export function LayoutGrid({
         targetRowHeight={JUSTIFIED_ROW_HEIGHT[presentation.previewSize]}
         gap={GAP_PX[presentation.previewSpacing]}
         renderItem={(img, _i, height) => renderTile(img, height)}
+        virtualize={!sortable}
       />
     );
   }
-  const colClass = gridColumns(layout, presentation.previewSize);
+
+  if (sortable) {
+    const colClass = gridColumns(layout, presentation.previewSize);
+    return (
+      <div className={`grid ${colClass} ${GAP[presentation.previewSpacing]}`}>
+        {images.map((img) => renderTile(img))}
+      </div>
+    );
+  }
+
   return (
-    <div className={`grid ${colClass} ${GAP[presentation.previewSpacing]}`}>
-      {images.map((img) => renderTile(img))}
-    </div>
+    <WindowedFixedGrid
+      count={images.length}
+      layout={layout}
+      size={presentation.previewSize}
+      spacing={presentation.previewSpacing}
+      renderTile={(i) => renderTile(images[i])}
+    />
   );
 }
 

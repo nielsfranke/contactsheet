@@ -8,8 +8,9 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import type { ColorFlag, CollabFeatures, GridPresentation, ImageResponse, LayoutType } from "@/lib/types";
 import { useLightboxStore, type LightboxIntent } from "@/store/lightbox";
 import { api } from "@/lib/api";
-import { GRID_COLS, GAP, GAP_PX, JUSTIFIED_ROW_HEIGHT, cornerRounding, gridSizes, imageAspect, previewSrcSet } from "@/lib/gridLayout";
+import { GAP_PX, JUSTIFIED_ROW_HEIGHT, cornerRounding, gridSizes, imageAspect, previewSrcSet } from "@/lib/gridLayout";
 import { JustifiedGrid } from "@/components/JustifiedGrid";
+import { WindowedFixedGrid } from "@/components/WindowedFixedGrid";
 import { Loader2, AlertCircle, Check } from "lucide-react";
 import { Icons } from "@/lib/ui-icons";
 import { OverlayPill } from "@/components/chrome/OverlayPill";
@@ -148,13 +149,15 @@ export function PhotoGrid({
     );
   }
 
-  const colClass = layout === "list" ? "grid-cols-1 sm:grid-cols-2" : GRID_COLS[presentation.previewSize];
-
   return (
     <div>
-      <div className={`grid ${colClass} ${GAP[presentation.previewSpacing]}`}>
-        {ready.map((img, i) => tile(img, i, layout !== "list"))}
-      </div>
+      <WindowedFixedGrid
+        count={ready.length}
+        layout={layout}
+        size={presentation.previewSize}
+        spacing={presentation.previewSpacing}
+        renderTile={(i, square) => tile(ready[i], i, square)}
+      />
       <PendingStrip pending={pending} failed={failed} />
     </div>
   );

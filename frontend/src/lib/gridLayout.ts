@@ -20,6 +20,28 @@ export const JUSTIFIED_ROW_HEIGHT: Record<SizeType, number> = { small: 120, medi
 
 export const GAP_PX: Record<SizeType, number> = { small: 4, medium: 8, large: 16 };
 
+// Above this many tiles, the grids window their rows (only on-screen rows mount). Below it the
+// markup is unchanged — small galleries (the common case) pay nothing and behave exactly as before.
+export const VIRTUALIZE_THRESHOLD = 150;
+
+// Explicit column counts behind the responsive GRID_COLS classes, by Tailwind breakpoint
+// [base, sm≥640, lg≥1024, xl≥1280] — used by the windowed grid, which can't lean on CSS classes.
+const GRID_COL_COUNTS: Record<SizeType, [number, number, number, number]> = {
+  small: [3, 5, 8, 10],
+  medium: [2, 3, 4, 5],
+  large: [1, 2, 2, 3],
+};
+
+/** Column count for the grid/list layouts at a given container width — mirrors GRID_COLS. */
+export function gridColumnCount(layout: LayoutType, size: SizeType, width: number): number {
+  if (layout === "list") return width >= 640 ? 2 : 1;
+  const [base, sm, lg, xl] = GRID_COL_COUNTS[size];
+  if (width >= 1280) return xl;
+  if (width >= 1024) return lg;
+  if (width >= 640) return sm;
+  return base;
+}
+
 /** Aspect ratio for layout, with a landscape fallback for images without stored dimensions. */
 export function imageAspect(img: { width: number | null; height: number | null }): number {
   return img.width && img.height ? img.width / img.height : 3 / 2;
