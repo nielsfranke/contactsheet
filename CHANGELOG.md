@@ -12,6 +12,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.2.3] - 2026-06-25
+
+### Added
+
+- **Batch rename selected photos.** Select multiple photos, then "Rename selected…" opens a dialog
+  with three modes — sequential numbering, find & replace, and prefix/suffix — with a live
+  before → after preview. File extensions are always preserved, so downloads stay valid.
+- **Customisable notification text.** Notification settings gain editable per-event message
+  templates plus a title template (placeholders like `{author}`, `{count}`, `{gallery}`); leaving a
+  field blank keeps the built-in default, so existing setups are unchanged.
+- **Gallery link in notifications.** A new "Include gallery link" toggle (on by default) appends the
+  public gallery URL to each notification — emitted only when a Public Base URL is configured.
+
+### Changed
+
+- **Clearer upload wording.** The sidebar "Upload New Files" / cover "Upload New Image" buttons and
+  the drag-and-drop zone copy were reworded ("Add Files", "Add Image", "Add photos & videos").
+
+### Fixed
+
+- **Mobile gallery header.** The download button now stacks below the gallery title on narrow
+  screens instead of crowding it.
+
 ## [1.2.2] - 2026-06-24
 
 ### Added
