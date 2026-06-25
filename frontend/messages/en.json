@@ -369,7 +369,8 @@
       "moveToGallery": "Move to gallery…",
       "renameSelection": "Rename selected…",
       "deleteSelection": "Delete selected",
-      "preview": "Preview"
+      "preview": "Preview",
+      "insights": "Insights"
     },
     "detail": {
       "loading": "Loading…",

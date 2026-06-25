@@ -131,7 +131,7 @@ export function GalleryAdminSidebar({
               <button className={iconBtn} onClick={onShare} title={t("share")} aria-label={t("share")}>
                 <Send size={16} />
               </button>
-              <button className={iconBtn} onClick={onActivity} title={t("activityLog")} aria-label={t("activityLog")}>
+              <button className={iconBtn} onClick={onActivity} title={t("insights")} aria-label={t("insights")}>
                 <Activity size={16} />
               </button>
               <DropdownMenu>

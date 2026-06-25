@@ -369,7 +369,8 @@
       "moveToGallery": "In Galerie verschieben…",
       "renameSelection": "Auswahl umbenennen…",
       "deleteSelection": "Auswahl löschen",
-      "preview": "Vorschau"
+      "preview": "Vorschau",
+      "insights": "Einblicke"
     },
     "detail": {
       "loading": "Wird geladen…",
