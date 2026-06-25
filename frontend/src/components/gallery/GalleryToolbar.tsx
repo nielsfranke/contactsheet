@@ -226,9 +226,11 @@ export function GalleryToolbar({
     <>
     <ToolbarBand className={className}>
       {searchMode ? (
-        /* Content search is the primary field. It owns the row; the filename filter moves into the
-           Filter sheet so the two distinct jobs never share one ambiguous box. */
-        <div className="relative flex-1 min-w-0">
+        /* Content search is the primary field; the filename filter moves into the Filter sheet so the
+           two distinct jobs never share one ambiguous box. Bounded width at sm+ (not flex-1) so the
+           row keeps the same fixed-field + flexible-gap shape as the client toolbar — controls don't
+           reflow when the result count appears. Full width only on a phone. */
+        <div className="relative flex-1 min-w-0 sm:flex-none sm:w-72">
           <ScanSearch size={15} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
           <Input
             value={search!.query}
@@ -271,7 +273,7 @@ export function GalleryToolbar({
           onClick={() => setSheetOpen(true)}
           aria-haspopup="dialog"
           aria-expanded={sheetOpen}
-          className={`${searchMode ? "" : "sm:hidden "}inline-flex items-center gap-1.5 h-8 shrink-0 rounded-lg border border-input bg-background px-2.5 text-sm text-foreground transition-colors hover:bg-accent outline-none focus-visible:ring-2 focus-visible:ring-ring ${searchMode ? "ml-auto" : ""}`}
+          className={`${searchMode ? "" : "sm:hidden "}inline-flex items-center gap-1.5 h-8 shrink-0 rounded-lg border border-input bg-background px-2.5 text-sm text-foreground transition-colors hover:bg-accent outline-none focus-visible:ring-2 focus-visible:ring-ring`}
         >
           <SlidersHorizontal size={14} />
           {t("filterSort")}
@@ -298,10 +300,10 @@ export function GalleryToolbar({
               title={t("hasComments")}
               aria-label={t("hasComments")}
               aria-pressed={arrange.commentsOnly}
-              className={`ml-1 inline-flex h-6 w-6 items-center justify-center rounded-md border transition-colors outline-none focus-visible:ring-2 focus-visible:ring-ring ${
+              className={`ml-1 inline-flex h-6 w-6 items-center justify-center rounded-full transition-all outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 focus-visible:ring-offset-background ${
                 arrange.commentsOnly
-                  ? "border-primary bg-primary text-primary-foreground"
-                  : "border-transparent text-muted-foreground hover:text-foreground hover:bg-accent"
+                  ? "bg-primary/10 text-foreground ring-2 ring-primary scale-105"
+                  : "text-muted-foreground hover:text-foreground hover:bg-accent"
               }`}
             >
               <MessageCircle size={14} />
@@ -329,7 +331,7 @@ export function GalleryToolbar({
       {/* Sort + group — pushed right on wide screens. Hidden while actively searching. In content-
           search mode group moves to the sheet, keeping only Sort inline. */}
       {!searching && (
-        <div className={`hidden sm:flex flex-wrap items-center gap-2 ${searchMode ? "" : "sm:ml-auto"}`}>
+        <div className="hidden sm:flex flex-wrap items-center gap-2 sm:ml-auto">
           {sortSelect(selectCls)}
           {sortDirButton("h-8 w-8")}
           {!searchMode && features.colorFlags && groupSelect(selectCls)}
