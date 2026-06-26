@@ -12,6 +12,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.3.3] - 2026-06-26
+
+### Fixed
+
+- **Admins now stay signed in on Safari (iPad & Mac).** Without "Remember me" the admin
+  session cookie was a bare session cookie (no expiry). WebKit drops session cookies
+  unreliably — between tabs, on backgrounding, under ITP — so admins were logged out on
+  almost every visit and a fresh tab never carried the session. The cookie now always sets an
+  explicit lifetime matching its token (30 days with "Remember me", 24 hours otherwise), so it
+  survives tab switches and app restarts. Verified end-to-end against the real WebKit engine.
+- **Overlapping toolbar on iPad portrait.** In Split View the admin galleries toolbar pinned a
+  fixed height while its controls wrapped onto extra rows, so the sort buttons overlapped the
+  "move to top level" drop zone below. The shelf now keeps its anchor height on one row but
+  grows when the controls wrap.
+
 ## [1.3.2] - 2026-06-26
 
 ### Fixed
