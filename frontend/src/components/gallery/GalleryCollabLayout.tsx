@@ -18,12 +18,14 @@ import type { GalleryViewModel } from "./useGalleryView";
 export function GalleryCollabLayout({
   vm,
   upNav,
+  breadcrumb,
   subGalleryCards,
   photoGrid,
   galleryFooter,
 }: {
   vm: GalleryViewModel;
   upNav: ReactNode;
+  breadcrumb: ReactNode;
   subGalleryCards: ReactNode;
   photoGrid: ReactNode;
   galleryFooter: ReactNode;
@@ -141,6 +143,7 @@ export function GalleryCollabLayout({
           />
         </div>
         <main ref={photosRef} className="p-4 space-y-5">
+          {breadcrumb}
           {subGalleryCards}
           {photoGrid}
           {galleryFooter}

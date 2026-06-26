@@ -167,10 +167,10 @@ export function GalleryView({ gallery, shareToken, galleryToken }: Props) {
     />
   );
 
-  // Breadcrumb nav (presentation mode): ancestor chain → current → child links. On mobile it's
-  // hidden when it has no child links (pure ancestors → current), since the sticky up-nav + the
-  // heading already cover that; it stays on mobile when it carries sub-gallery links the up-nav
-  // can't. Desktop always shows it.
+  // Breadcrumb nav (both layouts): ancestor chain → current → child links, rendered above the grid.
+  // On mobile it's hidden when it has no child links (pure ancestors → current), since the sticky
+  // up-nav + the heading already cover that; it stays on mobile when it carries sub-gallery links
+  // the up-nav can't. Desktop always shows it.
   const breadcrumb = hasNav ? (
     <div className={gallery.subgalleries.length === 0 ? "max-md:hidden" : undefined}>
       <GalleryBreadcrumb
@@ -213,6 +213,7 @@ export function GalleryView({ gallery, shareToken, galleryToken }: Props) {
         <GalleryCollabLayout
           vm={vm}
           upNav={upNav}
+          breadcrumb={breadcrumb}
           subGalleryCards={subGalleryCards}
           photoGrid={photoGrid}
           galleryFooter={galleryFooter}
