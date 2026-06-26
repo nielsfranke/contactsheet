@@ -8,7 +8,7 @@ import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api";
-import { isAuthenticated, clearAuthenticated } from "@/lib/auth";
+import { markAuthenticated, clearAuthenticated } from "@/lib/auth";
 import { GalleryTree } from "@/components/admin/GalleryTree";
 import { AdminThemeProvider } from "@/components/admin/AdminThemeProvider";
 import { AdminDndProvider } from "@/components/admin/AdminDnd";
@@ -54,16 +54,22 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   // so the bar shows that instead of a second stacked up-nav row (see useAdminMobileHeader).
   const mobileHeaderNav = useAdminMobileHeader((s) => s.nav);
 
-  // Verify session is still valid against the server
+  // The httponly cookie is the only source of truth — always validate against the server, never gate
+  // on the localStorage flag. WebKit's ITP evicts script-writable storage (localStorage) after 7 days
+  // while leaving our server-set httponly cookie intact for its full 30-day life. Gating on the flag
+  // therefore bounced Safari admins to /login despite a still-valid session (cookie never asked). We
+  // re-arm the flag on success so it keeps doing its job (skipping the /login flash) until ITP wipes
+  // it again.
   useEffect(() => {
-    if (!isAuthenticated()) {
-      router.replace("/login");
-      return;
-    }
-    api.auth.me().then(() => setChecked(true)).catch(() => {
-      clearAuthenticated();
-      router.replace("/login");
-    });
+    api.auth.me()
+      .then(() => {
+        markAuthenticated();
+        setChecked(true);
+      })
+      .catch(() => {
+        clearAuthenticated();
+        router.replace("/login");
+      });
   }, [router]);
 
   // Esc closes the mobile drawer.

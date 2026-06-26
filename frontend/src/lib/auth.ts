@@ -5,11 +5,11 @@
 
 const TOKEN_KEY = "cs_admin_authenticated";
 
-// Admin flag lives in localStorage so it survives a browser/app restart — otherwise "Remember me"
-// is defeated: the 30-day cookie stays valid, but a sessionStorage flag clears on app close and the
-// admin layout would redirect to /login before ever asking the server (see admin/layout.tsx). The
-// flag is only a hint; api.auth.me() validates against the cookie, so a stale flag (e.g. a session-
-// only cookie that expired on app close) is caught there and cleared.
+// Admin flag lives in localStorage so it survives a browser/app restart and lets the login page
+// redirect an already-authenticated visitor straight to /admin. It is *only* a hint and never a gate:
+// the admin layout always validates the httponly cookie via api.auth.me() regardless of this flag
+// (see admin/layout.tsx), because WebKit's ITP evicts localStorage after ~7 days while the server
+// cookie lives its full 30 days — gating on the flag would log Safari admins out mid-session.
 export function markAuthenticated() {
   if (typeof window !== "undefined") localStorage.setItem(TOKEN_KEY, "1");
 }
