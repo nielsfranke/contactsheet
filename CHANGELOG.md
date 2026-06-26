@@ -12,6 +12,82 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.3.0] - 2026-06-26
+
+### Added
+
+- **Full-instance backup & restore.** A new **Settings → Workspace** section builds a complete
+  backup — the database plus uploads, branding, and watermarks — as a single archive you can
+  download, and restores one back in place. Backups run as an async job (like ZIP export); restore
+  is available both in the browser and via a CLI (`python -m app.restore <archive>`) for large
+  instances. The database is captured with `VACUUM INTO` (never the live WAL), media is copied
+  before the snapshot, a manifest records integrity and the schema revision, and restore refuses an
+  archive from a *newer* build and keeps a rollback copy. Archives are plaintext — the UI warns, as
+  they contain the password hash and secret key. See `docs/backup-and-restore.md`.
+- **Photographer analytics.** A new **Analytics** dashboard (per-gallery in the Insights dialog and
+  an instance-wide rollup at `/admin/analytics`) charts views, downloads, and engagement
+  (flags, likes, ratings, votes, comments, annotations) over 7/30/90 days, with a "busiest
+  galleries" / "top photos" breakdown. It's a pure read-model over existing activity — no new
+  tracking. View counts appear only when activity IP logging is enabled; otherwise the dashboard
+  says so rather than showing a fake zero. Timeseries bars use the instance accent colour.
+- **Structured logging, request IDs & deep health checks.** Opt-in JSON logging (`LOG_FORMAT=json`),
+  a per-request `X-Request-ID` correlation header, and an optional Sentry integration
+  (`SENTRY_DSN`, PII-scrubbed, off unless set). Health is split into `GET /api/health` (liveness +
+  version) and `GET /api/health/ready` (per-component database / migrations / storage / ML sidecar).
+- **"Rebuild previews" maintenance action.** A button under Workspace regenerates all thumbnail and
+  medium renditions from the originals — handy after a restore or a format-support change.
+- **Optional `sqlite-vec` search backend.** For very large libraries (100k+ photos), an opt-in
+  (`SEMANTIC_SEARCH_VEC`) C-accelerated vector index serves instance-wide semantic search; the
+  default NumPy path and the SQLite source-of-truth table are unchanged. Off by default.
+
+### Changed
+
+- **Settings reorganized.** The settings navigation is regrouped into four coherent sections —
+  Branding, Client Galleries, Workspace, and System — instead of one long list.
+- **Smoother large galleries.** The admin and client photo grids are now window-virtualized, so
+  galleries with thousands of photos scroll without the browser straining to render every tile.
+- **Star-rating filter chips** were restyled to match the colour-flag chips — a gold star on a
+  neutral chip rather than an amber fill.
+
+### Fixed
+
+- **UTC-aware API timestamps.** All model datetimes now round-trip as timezone-aware UTC, so the API
+  serializes an explicit offset (`Z`). SQLite previously read them back naive, which some clients
+  misparsed as local time.
+- **Steadier toolbar.** The filter/sort/group bar no longer shifts when a filter becomes active, the
+  admin search-mode layout is stable, and the "Filter & sort" count is floated so it can't shove the
+  filter chips. The comment-filter active state is clearer, and flag/star chips are shown inline in
+  the admin toolbar.
+- **Insights label.** The per-gallery toolbar trigger now reads "Insights" instead of the misleading
+  "Activity log" (the dialog holds both Analytics and Activity tabs).
+
+### Upgrade notes
+
+- **Host-mounted `nginx.conf` — manual step for backup/restore.** Backup/restore moves
+  multi-gigabyte archives, which would otherwise hit nginx's 1 MB body cap and 413/truncate. The
+  bundled `nginx.conf` now includes the block below; if you run a **custom or host-mounted** nginx
+  config, add it yourself (above the general `location /api/`) — pulling the new images alone won't
+  update a host-mounted file. Without it, backup download and restore upload will fail.
+
+  ```nginx
+  location ~ ^/api/admin/settings/(backup|restore) {
+      client_max_body_size 2g;
+      proxy_request_buffering off;
+      proxy_pass http://backend:8000;
+      proxy_set_header Host $host;
+      proxy_set_header X-Real-IP $remote_addr;
+      proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+      proxy_set_header X-Forwarded-Proto $scheme;
+      proxy_read_timeout 1800s;
+      proxy_send_timeout 1800s;
+  }
+  ```
+
+- **Database migration 0040** (`backup_jobs`) applies automatically on container start
+  (`alembic upgrade head` runs in the entrypoint). No manual action needed.
+- New optional env vars — `LOG_FORMAT`/`LOG_LEVEL`, `SENTRY_DSN`, `SEMANTIC_SEARCH_VEC` — are all
+  off/default unless set; existing deployments are unchanged.
+
 ## [1.2.3] - 2026-06-25
 
 ### Added
@@ -445,7 +521,17 @@ contract are considered stable as of this release.
   caps (stricter for public uploads).
 - Docker Compose deployment (backend + frontend + nginx); SQLite + local filesystem.
 
-[Unreleased]: https://github.com/nielsfranke/contactsheet/compare/v1.0.6...HEAD
+[Unreleased]: https://github.com/nielsfranke/contactsheet/compare/v1.3.0...HEAD
+[1.3.0]: https://github.com/nielsfranke/contactsheet/compare/v1.2.3...v1.3.0
+[1.2.3]: https://github.com/nielsfranke/contactsheet/compare/v1.2.2...v1.2.3
+[1.2.2]: https://github.com/nielsfranke/contactsheet/compare/v1.2.1...v1.2.2
+[1.2.1]: https://github.com/nielsfranke/contactsheet/compare/v1.2.0...v1.2.1
+[1.2.0]: https://github.com/nielsfranke/contactsheet/compare/v1.1.4...v1.2.0
+[1.1.4]: https://github.com/nielsfranke/contactsheet/compare/v1.1.3...v1.1.4
+[1.1.3]: https://github.com/nielsfranke/contactsheet/compare/v1.1.2...v1.1.3
+[1.1.2]: https://github.com/nielsfranke/contactsheet/compare/v1.1.1...v1.1.2
+[1.1.1]: https://github.com/nielsfranke/contactsheet/compare/v1.1.0...v1.1.1
+[1.1.0]: https://github.com/nielsfranke/contactsheet/compare/v1.0.6...v1.1.0
 [1.0.6]: https://github.com/nielsfranke/contactsheet/compare/v1.0.5...v1.0.6
 [1.0.5]: https://github.com/nielsfranke/contactsheet/compare/v1.0.4...v1.0.5
 [1.0.4]: https://github.com/nielsfranke/contactsheet/compare/v1.0.3...v1.0.4

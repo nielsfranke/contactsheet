@@ -58,9 +58,11 @@ are very welcome.
 - **Downloads** — original-file download and gallery **ZIP** export (with a sub-gallery picker).
 - **Watermarks** — image or text overlays composited onto delivered photos.
 - **Live updates** — comments, flags, likes, and new uploads appear in every open viewer in real time.
+- **Analytics** — a per-gallery and instance-wide dashboard for views, downloads, and client engagement over time.
 - **Notifications** — email, Pushover, ntfy, Discord, Telegram, Slack, or any [Apprise](https://github.com/caronc/apprise) URL.
 - **Video** — browser-playable MP4/MOV/WebM, streamed with seek support (no transcoding).
 - **Branding & PWA** — your logo, accent color, and a public footer; installable with a branding-aware app icon.
+- **Backup & restore** — one-click full-instance backup (database + all media) you can download, and restore in place — in the browser or via CLI.
 - **Multilingual** — English & German out of the box, community-translatable via [Weblate](https://translate.nielsbox.cc).
 - **Mobile-first** — galleries and the admin dashboard reflow to a single column with a native swipe lightbox.
 
