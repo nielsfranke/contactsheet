@@ -12,6 +12,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.3.2] - 2026-06-26
+
+### Fixed
+
+- **"Remember me" now actually keeps you signed in.** The admin login flag was stored in
+  `sessionStorage`, which the browser clears when the app or tab is closed — so on the next
+  launch the admin area redirected to the login page *before* checking the still-valid 30-day
+  session cookie. The flag now lives in `localStorage`, so a ticked "Remember me" survives an
+  app restart (notably on iOS/iPadOS/macOS Safari, which fully close apps often). The server
+  cookie remains the source of truth, so sign-out and session expiry are unaffected.
+
 ## [1.3.1] - 2026-06-26
 
 ### Fixed
