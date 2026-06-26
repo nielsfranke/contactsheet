@@ -3,6 +3,8 @@
 
 """Setup wizard + admin authentication / session revocation."""
 
+from app.config import settings
+
 from .conftest import ADMIN_PASSWORD, ADMIN_USERNAME
 
 
@@ -52,20 +54,23 @@ def test_protected_route_requires_auth(client):
     assert client.get("/api/galleries").status_code == 401
 
 
-def test_remember_me_sets_persistent_cookie(setup_done):
+def test_remember_me_sets_long_lived_cookie(setup_done):
     r = setup_done.post(
         "/api/auth/login", json={"username": ADMIN_USERNAME, "password": ADMIN_PASSWORD, "remember": True}
     )
     assert r.status_code == 200
     set_cookie = r.headers.get("set-cookie", "")
-    assert "Max-Age" in set_cookie  # persistent cookie when remember=True
+    assert f"Max-Age={settings.remember_token_ttl}" in set_cookie  # 30-day persistent cookie
 
 
-def test_no_remember_is_session_cookie(setup_done):
+def test_no_remember_still_persistent_matching_token(setup_done):
+    # Always a persistent cookie (never a bare session cookie) — WebKit drops session cookies
+    # unreliably, logging admins out on every visit. Without "remember" the lifetime matches the
+    # token's own 24h expiry.
     r = setup_done.post(
         "/api/auth/login", json={"username": ADMIN_USERNAME, "password": ADMIN_PASSWORD, "remember": False}
     )
-    assert "Max-Age" not in r.headers.get("set-cookie", "")
+    assert f"Max-Age={settings.access_token_ttl}" in r.headers.get("set-cookie", "")
 
 
 def test_change_password_flow(admin_client):

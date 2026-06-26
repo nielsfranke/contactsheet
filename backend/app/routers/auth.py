@@ -37,9 +37,12 @@ def login(request: Request, body: LoginRequest, response: Response, db: Session 
         httponly=True,
         samesite="strict",
         secure=_cookie_secure(request),
-        # Remember me → persistent 30-day cookie. Otherwise omit max_age for a session cookie that
-        # clears when the browser closes (the JWT still carries its own 24h expiry).
-        max_age=settings.remember_token_ttl if body.remember else None,
+        # Always a *persistent* cookie whose lifetime matches the token's own expiry — 30 days with
+        # "Remember me", 24h otherwise. We deliberately avoid a bare session cookie (max_age=None):
+        # WebKit (iOS + macOS Safari) drops session cookies unreliably (between tabs, on
+        # backgrounding, under ITP), which logged admins out on every visit. The JWT's `exp` still
+        # bounds the real session — the cookie just survives long enough to present it.
+        max_age=settings.remember_token_ttl if body.remember else settings.access_token_ttl,
     )
     return LoginResponse(access_token=token)
 
@@ -62,8 +65,9 @@ def change_password(
         httponly=True,
         samesite="strict",
         secure=_cookie_secure(request),
-        # Session cookie (no max_age): clears on browser close. The admin can re-tick
-        # "Remember me" at next login if they want a persistent session again.
+        # Persistent cookie matching the reissued 24h token (change_password drops "remember").
+        # Not a bare session cookie — see the login handler for why WebKit makes those unreliable.
+        max_age=settings.access_token_ttl,
     )
     return {"ok": True}
 
