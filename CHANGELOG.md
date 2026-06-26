@@ -12,6 +12,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.3.1] - 2026-06-26
+
+### Fixed
+
+- **Folder breadcrumb in collaboration galleries.** Nested sub-galleries in collaboration
+  (voting) mode now show the full ancestor breadcrumb above the photo grid — the same
+  `Parent › … › Current › child` trail presentation galleries already had. Previously the
+  collaboration view only offered a one-level "up to parent" link, leaving clients in deeply
+  nested galleries without orientation.
+- **Notifications settings page no longer drifts sideways on mobile.**
+
 ## [1.3.0] - 2026-06-26
 
 ### Added
