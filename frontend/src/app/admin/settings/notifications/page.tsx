@@ -64,8 +64,11 @@ function normalize(channels: NotificationChannel[] | undefined): NotificationCha
   return (channels ?? []).map((c) => ({ ...c, type: c.type ?? "custom", params: c.params ?? {} }));
 }
 
+// `min-w-0` lets the native select shrink in its flex row — without it the control is sized to its
+// widest option (e.g. the long "Benutzerdefiniert (Apprise-URL)" label), pushing the channel rows
+// past narrow mobile viewports and letting the whole settings page slide sideways.
 const SELECT_CLASS =
-  "h-9 rounded-md border border-input bg-background px-3 text-sm text-foreground";
+  "h-9 min-w-0 rounded-md border border-input bg-background px-3 text-sm text-foreground";
 
 export default function NotificationsSettingsPage() {
   const t = useTranslations("settings.notifications");
