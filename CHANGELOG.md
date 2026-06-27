@@ -12,6 +12,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.3.5] - 2026-06-27
+
+### Fixed
+
+- **Large galleries now load every photo on mobile.** In the admin gallery view, galleries with
+  more than ~150 photos only rendered the first screenful — scrolling down revealed blank space
+  where the rest of the grid should be, most noticeably on phones. The photo grid only keeps the
+  on-screen rows mounted (for speed) and tracks the scroll position to know which rows those are;
+  it was watching the browser window's scroll, but the admin screen scrolls an inner panel, so it
+  never noticed you scrolling and never loaded the rows below the fold. It now follows whichever
+  element actually scrolls. The public gallery, which scrolls the window, was unaffected. Verified
+  end-to-end against a real mobile browser.
+
 ## [1.3.4] - 2026-06-27
 
 ### Fixed
@@ -571,7 +584,12 @@ contract are considered stable as of this release.
   caps (stricter for public uploads).
 - Docker Compose deployment (backend + frontend + nginx); SQLite + local filesystem.
 
-[Unreleased]: https://github.com/nielsfranke/contactsheet/compare/v1.3.0...HEAD
+[Unreleased]: https://github.com/nielsfranke/contactsheet/compare/v1.3.5...HEAD
+[1.3.5]: https://github.com/nielsfranke/contactsheet/compare/v1.3.4...v1.3.5
+[1.3.4]: https://github.com/nielsfranke/contactsheet/compare/v1.3.3...v1.3.4
+[1.3.3]: https://github.com/nielsfranke/contactsheet/compare/v1.3.2...v1.3.3
+[1.3.2]: https://github.com/nielsfranke/contactsheet/compare/v1.3.1...v1.3.2
+[1.3.1]: https://github.com/nielsfranke/contactsheet/compare/v1.3.0...v1.3.1
 [1.3.0]: https://github.com/nielsfranke/contactsheet/compare/v1.2.3...v1.3.0
 [1.2.3]: https://github.com/nielsfranke/contactsheet/compare/v1.2.2...v1.2.3
 [1.2.2]: https://github.com/nielsfranke/contactsheet/compare/v1.2.1...v1.2.2
