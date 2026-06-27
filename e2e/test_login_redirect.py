@@ -16,13 +16,18 @@ FLAG_KEY = "cs_admin_authenticated"
 
 
 def test_login_redirects_when_already_authenticated(page, frontend_url, context):
-    # Setup wizard → create the admin account (real browser form).
-    page.goto(f"{frontend_url}/setup")
-    page.fill("#username", ADMIN_USER)
-    page.fill("#password", ADMIN_PASS)
-    page.fill("#confirm", ADMIN_PASS)
-    page.click("button[type=submit]")
-    page.wait_for_url("**/login", timeout=30_000)
+    # Setup wizard → create the admin account (real browser form). The e2e backend is shared across
+    # the session, so another test (test_core_loop) may already have completed setup with the same
+    # credentials — only run the wizard on a genuinely fresh instance, otherwise go straight to login.
+    if not page.request.get(f"{frontend_url}/api/setup/status").json()["setup_complete"]:
+        page.goto(f"{frontend_url}/setup")
+        page.fill("#username", ADMIN_USER)
+        page.fill("#password", ADMIN_PASS)
+        page.fill("#confirm", ADMIN_PASS)
+        page.click("button[type=submit]")
+        page.wait_for_url("**/login", timeout=30_000)
+    else:
+        page.goto(f"{frontend_url}/login")
 
     # Logged-out admin actually sees the form (the checking gate resolves to "show form").
     page.locator("#username").wait_for(state="visible", timeout=30_000)
