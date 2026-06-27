@@ -12,6 +12,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.4.0] - 2026-06-28
+
+### Added
+
+- **API tokens for third-party tools.** A new **Settings → API tokens** page lets you create scoped,
+  revocable personal access tokens (`cs_pat_…`) so external tools can upload to your galleries
+  without sharing your admin password. Each token is limited to gallery and image-upload
+  permissions — never settings, reset, or account access — and shows up in the Publish flow of the
+  new plugin below.
+- **Capture One export plugin** *(macOS)*. Publish selected variants straight from Capture One into
+  a gallery — pick or create a gallery (Showcase/Review), with editable export recipes — powered by
+  the new API tokens. It's a separate, MIT-licensed add-on:
+  [contactsheet-captureone](https://github.com/nielsfranke/contactsheet-captureone).
+
+### Changed
+
+- Dependency refresh (FastAPI, SQLAlchemy, Pydantic, React, and others) and a small internal
+  cleanup — no behaviour change.
+
 ## [1.3.5] - 2026-06-27
 
 ### Fixed
@@ -584,7 +603,8 @@ contract are considered stable as of this release.
   caps (stricter for public uploads).
 - Docker Compose deployment (backend + frontend + nginx); SQLite + local filesystem.
 
-[Unreleased]: https://github.com/nielsfranke/contactsheet/compare/v1.3.5...HEAD
+[Unreleased]: https://github.com/nielsfranke/contactsheet/compare/v1.4.0...HEAD
+[1.4.0]: https://github.com/nielsfranke/contactsheet/compare/v1.3.5...v1.4.0
 [1.3.5]: https://github.com/nielsfranke/contactsheet/compare/v1.3.4...v1.3.5
 [1.3.4]: https://github.com/nielsfranke/contactsheet/compare/v1.3.3...v1.3.4
 [1.3.3]: https://github.com/nielsfranke/contactsheet/compare/v1.3.2...v1.3.3
