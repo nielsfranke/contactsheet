@@ -14,5 +14,6 @@ from app.models.zip_job import ZipJob
 from app.models.backup_job import BackupJob
 from app.models.collection import Collection, CollectionImage
 from app.models.notification import NotificationOutbox
+from app.models.api_token import ApiToken
 
-__all__ = ["Gallery", "Image", "ImageEmbedding", "Comment", "Annotation", "ImageVote", "ImageLike", "Activity", "AppSettings", "ZipJob", "BackupJob", "Collection", "CollectionImage", "NotificationOutbox"]
+__all__ = ["Gallery", "Image", "ImageEmbedding", "Comment", "Annotation", "ImageVote", "ImageLike", "Activity", "AppSettings", "ZipJob", "BackupJob", "Collection", "CollectionImage", "NotificationOutbox", "ApiToken"]

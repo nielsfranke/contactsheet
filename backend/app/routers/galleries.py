@@ -8,7 +8,7 @@ from fastapi import APIRouter, Depends, File, HTTPException, Query, Response, Up
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
-from app.auth.dependencies import get_current_admin
+from app.auth.dependencies import get_current_admin, require_scope
 from app.config import settings as app_settings
 from app.utils import assert_image_magic, read_limited
 from app.database import get_db
@@ -37,7 +37,7 @@ router = APIRouter(prefix="/api/galleries", tags=["galleries"])
 def list_galleries(
     db: Session = Depends(get_db),
     storage: StorageProvider = Depends(get_storage),
-    _admin: str = Depends(get_current_admin),
+    _auth: str = Depends(require_scope("galleries:read")),
 ):
     return gallery_service.list_gallery_tree(db, storage)
 
@@ -47,7 +47,7 @@ def create_gallery(
     body: GalleryCreate,
     db: Session = Depends(get_db),
     storage: StorageProvider = Depends(get_storage),
-    _admin: str = Depends(get_current_admin),
+    _auth: str = Depends(require_scope("galleries:write")),
 ):
     return gallery_service.create_gallery(db, body, storage)
 
@@ -57,7 +57,7 @@ def get_gallery(
     gallery_id: str,
     db: Session = Depends(get_db),
     storage: StorageProvider = Depends(get_storage),
-    _admin: str = Depends(get_current_admin),
+    _auth: str = Depends(require_scope("galleries:read")),
 ):
     return gallery_service.get_gallery(db, gallery_id, storage)
 

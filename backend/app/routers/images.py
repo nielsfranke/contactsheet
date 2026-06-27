@@ -7,7 +7,7 @@ from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
-from app.auth.dependencies import get_current_admin
+from app.auth.dependencies import get_current_admin, require_scope
 from app.database import get_db
 from app.dependencies import get_storage
 from app.repositories import comment_repo, gallery_repo, image_repo
@@ -26,7 +26,7 @@ def upload_images(
     files: list[UploadFile] = File(...),
     db: Session = Depends(get_db),
     storage: StorageProvider = Depends(get_storage),
-    _admin: str = Depends(get_current_admin),
+    _auth: str = Depends(require_scope("images:write")),
 ):
     return image_service.upload_images(db, gallery_id, files, storage)
 
