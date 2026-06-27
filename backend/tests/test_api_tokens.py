@@ -13,8 +13,9 @@ from datetime import datetime, timedelta, timezone
 from fastapi.testclient import TestClient
 
 from app.main import app
+from app.rate_limit import limiter
 
-from .helpers import png_bytes
+from .helpers import make_gallery, png_bytes
 
 ALL_SCOPES = ["galleries:read", "galleries:write", "images:write"]
 
@@ -84,6 +85,35 @@ def test_token_cannot_reach_admin_only_endpoints(admin_client):
     assert pat.get("/api/auth/me").status_code == 401
     assert pat.get("/api/admin/api-tokens").status_code == 401
     assert pat.post("/api/admin/api-tokens", json={"name": "evil", "scopes": ["images:write"]}).status_code == 401
+
+
+def test_token_cannot_read_gallery_detail(admin_client):
+    # A read token lists galleries (to populate a picker) but cannot pull one gallery's full
+    # contents — GET /api/galleries/{id} is admin-only, so a leaked read token can't enumerate
+    # the whole library.
+    g = make_gallery(admin_client, name="Private")
+    pat = _pat_client(_mint(admin_client, ALL_SCOPES).json()["token"])
+    assert pat.get("/api/galleries").status_code == 200            # list: allowed
+    assert pat.get(f"/api/galleries/{g['id']}").status_code == 401  # detail: admin-only
+
+
+def test_pat_endpoints_are_rate_limited(admin_client):
+    pat = _pat_client(_mint(admin_client, ALL_SCOPES).json()["token"])
+    pat.headers.update({"X-Forwarded-For": "10.0.0.5"})  # stable client key for the limiter
+    try:
+        limiter._storage.reset()
+    except Exception:
+        pass
+    limiter.enabled = True
+    try:
+        codes = [
+            pat.post("/api/galleries", json={"name": f"g{i}", "mode": "presentation"}).status_code
+            for i in range(61)
+        ]
+    finally:
+        limiter.enabled = False
+    assert codes[:60] == [201] * 60  # create is 60/minute → the first 60 succeed
+    assert codes[60] == 429          # the 61st is throttled
 
 
 def test_invalid_token_rejected(admin_client):

@@ -4,7 +4,7 @@
 import os
 import uuid
 
-from fastapi import APIRouter, Depends, File, HTTPException, Query, Response, UploadFile, status
+from fastapi import APIRouter, Depends, File, HTTPException, Query, Request, Response, UploadFile, status
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
@@ -13,6 +13,7 @@ from app.config import settings as app_settings
 from app.utils import assert_image_magic, read_limited
 from app.database import get_db
 from app.dependencies import get_storage
+from app.rate_limit import limiter
 from app.repositories import activity_repo, gallery_repo, image_repo, vote_repo
 from app.schemas.activity import ActivityPage
 from app.schemas.comment import CommentCreate, CommentResponse, CommentUpdate
@@ -34,7 +35,9 @@ router = APIRouter(prefix="/api/galleries", tags=["galleries"])
 
 
 @router.get("", response_model=list[GalleryResponse])
+@limiter.limit("120/minute")
 def list_galleries(
+    request: Request,
     db: Session = Depends(get_db),
     storage: StorageProvider = Depends(get_storage),
     _auth: str = Depends(require_scope("galleries:read")),
@@ -43,7 +46,9 @@ def list_galleries(
 
 
 @router.post("", response_model=GalleryResponse, status_code=201)
+@limiter.limit("60/minute")
 def create_gallery(
+    request: Request,
     body: GalleryCreate,
     db: Session = Depends(get_db),
     storage: StorageProvider = Depends(get_storage),
@@ -52,12 +57,16 @@ def create_gallery(
     return gallery_service.create_gallery(db, body, storage)
 
 
+# Admin-only by design: a `galleries:read` token can list galleries (to populate a plugin's
+# destination picker) but cannot pull a single gallery's full contents (images/comments/votes),
+# so a leaked read token can't enumerate the whole library. Re-gate behind a scope only if a
+# client genuinely needs per-gallery detail.
 @router.get("/{gallery_id}", response_model=GalleryResponse)
 def get_gallery(
     gallery_id: str,
     db: Session = Depends(get_db),
     storage: StorageProvider = Depends(get_storage),
-    _auth: str = Depends(require_scope("galleries:read")),
+    _admin: str = Depends(get_current_admin),
 ):
     return gallery_service.get_gallery(db, gallery_id, storage)
 

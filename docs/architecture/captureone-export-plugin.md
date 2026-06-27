@@ -98,19 +98,25 @@ secret is gone for good).
 - **List / revoke:** `GET` / `DELETE …/api-tokens/{id}` (never returns secrets).
 - **Auth:** a `require_scope(scope)` dependency (in `auth/dependencies.py`) admits
   either the admin (cookie or admin JWT — full access) **or** a `Bearer cs_pat_…`
-  whose `scopes` include `scope`. Applied to exactly four endpoints
-  (`GET`/`POST /api/galleries`, `GET /api/galleries/{id}`,
-  `POST /api/galleries/{id}/images`). Every other admin endpoint keeps
+  whose `scopes` include `scope`. Applied to exactly **three** endpoints —
+  `GET /api/galleries` (list, for the picker), `POST /api/galleries` (create) and
+  `POST /api/galleries/{id}/images` (upload). Every other admin endpoint keeps
   `get_current_admin`, where a PAT fails to decode → 401 — so a token physically
   cannot reach settings, reset, backup, auth or token management. Coexists with the
   cookie path; the JWT `token_version` / "sign out everywhere" mechanism is
   untouched (PATs are deleted to revoke).
+- **Read scope is list-only by design:** `GET /api/galleries/{id}` (a single
+  gallery's full contents) stays **admin-only** — a `galleries:read` token sees the
+  gallery list/structure for the picker but cannot enumerate the whole library.
+- **Rate limited:** the three PAT-facing endpoints carry generous per-IP slowapi
+  limits (`120`/`60`/`120` per minute for list/create/upload) — invisible to a
+  human admin or a batching client, a backstop against automated abuse. (The web UI
+  uploads a whole batch as one request, so the upload limit never bites bulk drops.)
 - **Factory reset** already hard-deletes all tables except `app_settings`, so it
   wipes tokens for free — no special-casing.
 - **UI:** an "API tokens" section under admin settings (create with a copy-once
   secret reveal; list with prefix + last-used; revoke).
-- Subject to the existing slowapi rate limiting; **HTTPS required** (token rides in
-  a header).
+- **HTTPS required** (the token rides in a header).
 
 ### Plugin ↔ server auth flow
 
@@ -151,7 +157,7 @@ coupling point.
 
 1. **Server (this repo, AGPL):** ✅ **done** (branch `feature/api-tokens`) —
    `api_tokens` model + migration `0041` + issue/list/revoke endpoints +
-   `require_scope` Bearer auth dependency + 11 tests. **Still to do:** the admin
+   `require_scope` Bearer auth dependency + per-IP rate limits + 13 tests. **Still to do:** the admin
    **frontend UI** ("API tokens" settings page — create with copy-once reveal,
    list, revoke).
 2. **New plugin repo (MIT/Apache):** macOS Swift publish-plugin MVP — settings
@@ -169,6 +175,10 @@ coupling point.
 - **Token hashing:** SHA-256 (high-entropy tokens; bcrypt rejected).
 - **Generic, not C1-specific:** the token mechanism is a plain PAT any client can
   use (Lightroom, scripts, CI), not branded to Capture One.
+- **Read = list-only:** `galleries:read` grants the gallery *list* (picker), not a
+  single gallery's full contents — shrinks a leaked read token's blast radius.
+- **Rate limited:** generous per-IP limits on the three PAT-facing endpoints as an
+  abuse backstop (token entropy already makes brute-force infeasible).
 
 ## Open questions (still to confirm)
 
