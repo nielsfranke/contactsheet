@@ -65,6 +65,7 @@ are very welcome.
 - **Backup & restore** — one-click full-instance backup (database + all media) you can download, and restore in place — in the browser or via CLI.
 - **Multilingual** — English & German out of the box, community-translatable via [Weblate](https://translate.nielsbox.cc).
 - **Mobile-first** — galleries and the admin dashboard reflow to a single column with a native swipe lightbox.
+- **Capture One plugin** *(macOS)* — publish straight from Capture One into a gallery, with editable export recipes ([separate repo](https://github.com/nielsfranke/contactsheet-captureone)).
 
 See the **[User guide](https://github.com/nielsfranke/contactsheet/wiki)** for the full tour.
 
@@ -119,6 +120,7 @@ Environment variables, the two-volume layout, reverse-proxy/HTTPS, updating, and
 | 📖 **[User guide](https://github.com/nielsfranke/contactsheet/wiki)** | Galleries, sharing, client review, branding, settings |
 | 🚀 **[Self-hosting](https://github.com/nielsfranke/contactsheet/wiki/Self-Hosting-and-Deployment)** | Docker Compose, env vars, reverse proxy, backups |
 | 🛠️ **[Development](https://github.com/nielsfranke/contactsheet/wiki/Development)** | Run the backend & frontend locally |
+| 🎞️ **[Capture One plugin](https://github.com/nielsfranke/contactsheet-captureone)** | Publish from Capture One straight into a gallery (macOS) |
 | 🏗️ **[Architecture](ARCHITECTURE.md)** | Full technical design |
 | 🌍 **[Translating](TRANSLATING.md)** | Help translate the app (no code required) |
 

@@ -5,9 +5,10 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 # Capture One export plugin
 
-**Status:** the **server-side API-token mechanism is implemented** (branch
-`feature/api-tokens`, 2026-06-27, migration `0041`). The **plugin itself**
-(separate repo) is **proposed / not started**.
+**Status:** **shipped.** The server-side API-token mechanism is on `main` (migration `0041`),
+and the **plugin is built, released, and working** in Capture One 16.6 — it lives in its own
+MIT-licensed repo: [contactsheet-captureone](https://github.com/nielsfranke/contactsheet-captureone)
+(v0.7.0 release, macOS only).
 
 **Decisions locked:** macOS-first (Windows later); generic multi-client tokens
 (Capture One now, Lightroom/scripts later, not C1-specific); three coarse scopes
