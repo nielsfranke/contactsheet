@@ -24,13 +24,37 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   // Instance's uploaded branding logo, if any — falls back to the fixed product mark below.
   const [logoUrl, setLogoUrl] = useState<string | null>(null);
+  // Render nothing until we know whether to show the form — avoids flashing the login form to an
+  // admin who already has a valid session and is about to be redirected to /admin.
+  const [checking, setChecking] = useState(true);
 
   useEffect(() => {
-    api.setup.status().then((s) => {
-      if (!s.setup_complete) router.replace("/setup");
+    let cancelled = false;
+    api.setup.status().then(async (s) => {
+      if (cancelled) return;
+      if (!s.setup_complete) {
+        router.replace("/setup");
+        return;
+      }
       applyAdminTheme(s.admin_theme === "dark" ? "dark" : "light", s.accent_color, s.accent_gradient);
       setLogoUrl(s.logo_url);
-    }).catch(() => {});
+      // Already signed in? Safari frequently reopens the bookmarked /login URL directly, which would
+      // otherwise force a returning admin to log in again despite a still-valid cookie. The cookie is
+      // authoritative — if me() succeeds, skip the form and go straight to the dashboard. A 401 here
+      // doesn't trigger api.ts's redirect (that only fires under /admin), so we just show the form.
+      try {
+        await api.auth.me();
+        if (cancelled) return;
+        markAuthenticated();
+        router.replace("/admin/galleries");
+        return;
+      } catch {
+        if (!cancelled) setChecking(false);
+      }
+    }).catch(() => {
+      if (!cancelled) setChecking(false);
+    });
+    return () => { cancelled = true; };
   }, [router]);
 
   async function handleSubmit(e: React.FormEvent) {
@@ -46,6 +70,8 @@ export default function LoginPage() {
       setLoading(false);
     }
   }
+
+  if (checking) return null;
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center gap-4 bg-background">
