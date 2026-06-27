@@ -646,6 +646,23 @@ export interface BackupJob {
   download_url: string | null;
 }
 
+export type ApiTokenScope = "galleries:read" | "galleries:write" | "images:write";
+
+export interface ApiToken {
+  id: string;
+  name: string;
+  prefix: string;
+  scopes: ApiTokenScope[];
+  created_at: string;
+  last_used_at: string | null;
+  expires_at: string | null;
+}
+
+/** Returned only from the create call — carries the plaintext secret, shown once. */
+export interface ApiTokenCreated extends ApiToken {
+  token: string;
+}
+
 export interface LoginRequest {
   username: string;
   password: string;

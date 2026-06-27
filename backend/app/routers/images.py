@@ -3,12 +3,13 @@
 
 import json
 
-from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
+from fastapi import APIRouter, Depends, File, HTTPException, Request, UploadFile, status
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
-from app.auth.dependencies import get_current_admin
+from app.auth.dependencies import get_current_admin, require_scope
 from app.database import get_db
+from app.rate_limit import limiter
 from app.dependencies import get_storage
 from app.repositories import comment_repo, gallery_repo, image_repo
 from app.schemas.gallery import GalleryUpdate
@@ -21,12 +22,14 @@ router = APIRouter(prefix="/api", tags=["images"])
 
 
 @router.post("/galleries/{gallery_id}/images", response_model=list[UploadResponse], status_code=201)
+@limiter.limit("120/minute")
 def upload_images(
+    request: Request,
     gallery_id: str,
     files: list[UploadFile] = File(...),
     db: Session = Depends(get_db),
     storage: StorageProvider = Depends(get_storage),
-    _admin: str = Depends(get_current_admin),
+    _auth: str = Depends(require_scope("images:write")),
 ):
     return image_service.upload_images(db, gallery_id, files, storage)
 

@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: 2026 Niels Franke
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import { SlidersHorizontal, Palette, Images, LayoutGrid, PanelBottom, Bell, KeyRound, ScanSearch } from "lucide-react";
+import { SlidersHorizontal, Palette, Images, LayoutGrid, PanelBottom, Bell, KeyRound, KeySquare, ScanSearch } from "lucide-react";
 
 // Settings nav, grouped by topic so each group is coherent: public identity (Branding), what
 // clients get in a gallery (Client galleries), your own admin experience + login (Workspace), and
@@ -28,6 +28,7 @@ export const SETTINGS_NAV = [
     items: [
       { href: "/admin/settings/workspace", labelKey: "workspace", icon: LayoutGrid },
       { href: "/admin/settings/account", labelKey: "account", icon: KeyRound },
+      { href: "/admin/settings/api-tokens", labelKey: "apiTokens", icon: KeySquare },
     ],
   },
   {

@@ -1,11 +1,14 @@
 # SPDX-FileCopyrightText: 2026 Niels Franke
 # SPDX-License-Identifier: AGPL-3.0-or-later
 
-from fastapi import Cookie, Header, HTTPException, status
+from fastapi import Cookie, Depends, Header, HTTPException, status
 from jwt import InvalidTokenError
+from sqlalchemy.orm import Session
 
 from app.auth.jwt import decode_token
+from app.database import get_db
 from app.runtime_config import get_token_version
+from app.services import api_token_service
 
 
 def _extract_bearer(authorization: str | None) -> str | None:
@@ -83,3 +86,41 @@ def require_gallery_token(
     if not gallery_id:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Gallery access token required")
     return gallery_id
+
+
+def require_scope(scope: str):
+    """Build a dependency that admits either the admin (cookie or admin JWT — full access) **or** a
+    personal access token (`Authorization: Bearer cs_pat_…`) that carries `scope`.
+
+    This is the only door a PAT can open: it gates the handful of endpoints an export plugin needs
+    (gallery read/write, image upload). Every other admin endpoint keeps `get_current_admin`, where a
+    PAT simply fails to decode → 401, so tokens can never reach settings, reset or token management."""
+
+    def dependency(
+        access_token: str | None = Cookie(default=None),
+        authorization: str | None = Header(default=None),
+        db: Session = Depends(get_db),
+    ) -> str:
+        # 1. Admin via cookie or admin JWT bearer → full access (implicitly holds every scope).
+        admin_token = access_token or _extract_bearer(authorization)
+        if admin_token and not admin_token.startswith(api_token_service.TOKEN_PREFIX):
+            try:
+                if _is_valid_admin(decode_token(admin_token)):
+                    return "admin"
+            except InvalidTokenError:
+                pass
+        # 2. Personal access token in the Authorization header — must exist, be valid, and hold the scope.
+        raw = _extract_bearer(authorization)
+        if raw and raw.startswith(api_token_service.TOKEN_PREFIX):
+            tok = api_token_service.authenticate(db, raw)
+            if tok is None:
+                raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid or expired token")
+            if scope not in tok.scopes:
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail=f"Token is missing the required scope: {scope}",
+                )
+            return "token"
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Not authenticated")
+
+    return dependency

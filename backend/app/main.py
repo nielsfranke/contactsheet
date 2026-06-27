@@ -21,7 +21,7 @@ from app.errors import CodedHTTPException
 from app.observability import RequestContextMiddleware, configure_logging, init_sentry
 from app.rate_limit import limiter
 from app.routers import auth, galleries, images, public
-from app.routers import admin_settings, analytics, branding_icon, collections, realtime, search, setup, zip_export
+from app.routers import admin_settings, analytics, api_tokens, branding_icon, collections, realtime, search, setup, zip_export
 
 # Configure structured logging + (optional) error tracking before anything else logs or raises.
 configure_logging()
@@ -210,6 +210,7 @@ app.include_router(images.router)
 app.include_router(public.router)
 app.include_router(zip_export.router)
 app.include_router(admin_settings.router)
+app.include_router(api_tokens.router)
 app.include_router(branding_icon.router)
 app.include_router(realtime.router)
 app.include_router(search.router)
