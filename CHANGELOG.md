@@ -12,6 +12,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.3.4] - 2026-06-27
+
+### Fixed
+
+- **Admins no longer forced to re-login on Safari (iPad & Mac).** Safari autocompletes to the
+  last full URL it saw — typically `…/login` — so a returning admin landed straight on the login
+  form. That page never checked for an existing session, so a still-valid cookie (and "Remember
+  me") was ignored and the admin had to sign in again every visit. The login page now validates
+  the session and redirects an already-signed-in admin to the dashboard. As a companion fix, the
+  admin shell now treats the httponly cookie as the sole source of truth instead of a localStorage
+  hint — WebKit's ITP evicts localStorage after ~7 days while leaving the cookie intact, which had
+  bounced infrequent admins to the login screen. Verified end-to-end against the real browser.
+
 ## [1.3.3] - 2026-06-26
 
 ### Fixed
