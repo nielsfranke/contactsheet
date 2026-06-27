@@ -4,6 +4,9 @@
 import { clearAuthenticated } from "./auth";
 import type {
   ActivityPage,
+  ApiToken,
+  ApiTokenCreated,
+  ApiTokenScope,
   GalleryAnalytics,
   InstanceAnalytics,
   AppSettings,
@@ -412,6 +415,18 @@ export const api = {
         xhr.onerror = () => reject(new Error("Network error"));
         xhr.send(form);
       }),
+  },
+
+  // Personal access tokens for third-party API clients (e.g. the Capture One export plugin).
+  // The plaintext secret is returned only from `create`; the list never includes it.
+  apiTokens: {
+    list: () => request<ApiToken[]>("/api/admin/api-tokens"),
+    create: (name: string, scopes: ApiTokenScope[], expires_at: string | null) =>
+      request<ApiTokenCreated>("/api/admin/api-tokens", {
+        method: "POST",
+        body: JSON.stringify({ name, scopes, expires_at }),
+      }),
+    revoke: (id: string) => request<void>(`/api/admin/api-tokens/${id}`, { method: "DELETE" }),
   },
 
   images: {

@@ -155,11 +155,12 @@ coupling point.
 
 ## Rollout phases
 
-1. **Server (this repo, AGPL):** ✅ **done** (branch `feature/api-tokens`) —
+1. **Server + admin UI (this repo, AGPL):** ✅ **done** (branch `feature/api-tokens`) —
    `api_tokens` model + migration `0041` + issue/list/revoke endpoints +
-   `require_scope` Bearer auth dependency + per-IP rate limits + 13 tests. **Still to do:** the admin
-   **frontend UI** ("API tokens" settings page — create with copy-once reveal,
-   list, revoke).
+   `require_scope` Bearer auth dependency + per-IP rate limits + 13 tests; plus the
+   admin **frontend** "API tokens" settings page (`/admin/settings/api-tokens` —
+   name + scope toggles + expiry, copy-once secret reveal, list with last-used,
+   revoke-with-confirm; en/de localized).
 2. **New plugin repo (MIT/Apache):** macOS Swift publish-plugin MVP — settings
    (URL + keychain token), gallery picker (existing/create), upload with progress
    + error handling (401 / 413 / moderation).
