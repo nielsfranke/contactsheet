@@ -21,8 +21,10 @@ import time
 import httpx
 from PIL import Image
 
-ADMIN_USER = "grid_admin"
-ADMIN_PASS = "grid-supersecret-123"
+# Shared with the other e2e tests: the session backend is set up once by whichever test runs first,
+# so every test must use the same admin and tolerate an already-provisioned instance.
+ADMIN_USER = "e2e_admin"
+ADMIN_PASS = "e2e-supersecret-123"
 N = 170  # > VIRTUALIZE_THRESHOLD (150) so the grid takes the windowed path
 MOBILE = {"width": 390, "height": 844}
 
@@ -34,18 +36,19 @@ def _png(i: int) -> bytes:
 
 
 def _setup_or_login(page, frontend_url: str) -> None:
-    """First test to run creates the admin via the wizard; later tests just log in (fresh context
-    per test → always need the cookie). Order-independent so either test can run first."""
-    page.goto(f"{frontend_url}/setup")
-    page.wait_for_timeout(800)
-    if "/setup" in page.url and page.locator("#confirm").count():
+    """Run the setup wizard only on a genuinely fresh instance; otherwise just log in. The e2e
+    backend is shared across the session (another test may already have completed setup with these
+    same credentials), and every test gets a fresh browser context, so it always needs to log in."""
+    if not page.request.get(f"{frontend_url}/api/setup/status").json()["setup_complete"]:
+        page.goto(f"{frontend_url}/setup")
         page.fill("#username", ADMIN_USER)
         page.fill("#password", ADMIN_PASS)
         page.fill("#confirm", ADMIN_PASS)
         page.click("button[type=submit]")
         page.wait_for_url("**/login", timeout=30_000)
-    page.goto(f"{frontend_url}/login")
-    page.wait_for_selector("#username", timeout=30_000)
+    else:
+        page.goto(f"{frontend_url}/login")
+    page.locator("#username").wait_for(state="visible", timeout=30_000)
     page.fill("#username", ADMIN_USER)
     page.fill("#password", ADMIN_PASS)
     page.click("button[type=submit]")
