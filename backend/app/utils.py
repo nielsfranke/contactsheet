@@ -9,7 +9,7 @@ _10_MB = 10 * 1024 * 1024
 def read_limited(file: UploadFile, max_bytes: int = _10_MB) -> bytes:
     data = file.file.read(max_bytes + 1)
     if len(data) > max_bytes:
-        raise HTTPException(status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE, detail="File too large")
+        raise HTTPException(status_code=status.HTTP_413_CONTENT_TOO_LARGE, detail="File too large")
     return data
 
 

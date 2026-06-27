@@ -4,7 +4,6 @@
 from datetime import datetime, timedelta, timezone
 
 import jwt
-from jwt import InvalidTokenError
 
 from app.config import settings
 from app.runtime_config import get_secret_key, get_token_version

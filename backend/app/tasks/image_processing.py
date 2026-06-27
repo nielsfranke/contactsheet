@@ -13,7 +13,6 @@ from PIL.ExifTags import IFD, TAGS
 
 from app.config import settings
 from app.storage import format_detect, psd_thumbnail
-from app.storage.local import LocalStorage
 
 logger = logging.getLogger(__name__)
 
@@ -215,7 +214,6 @@ def process_image(image_id: str, gallery_id: str, stored_filename: str) -> None:
     from app.database import SessionLocal
     from app.repositories import image_repo, settings_repo
 
-    storage = LocalStorage(base_dir=settings.upload_dir)
     original_path = os.path.join(settings.upload_dir, gallery_id, "original", stored_filename)
 
     db = SessionLocal()

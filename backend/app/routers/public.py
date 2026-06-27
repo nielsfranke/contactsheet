@@ -3,7 +3,6 @@
 
 import json
 import os
-import re
 
 from fastapi import APIRouter, BackgroundTasks, Depends, File, Form, HTTPException, Query, Request, Response, UploadFile, status
 from fastapi.responses import FileResponse, StreamingResponse
@@ -22,7 +21,7 @@ from app.repositories import activity_repo, comment_repo, gallery_repo, image_re
 from app.schemas.auth import GalleryAuthRequest, GalleryAuthResponse
 from app.schemas.collection import CollectionCreate, CollectionResponse, CollectionUpdate
 from app.schemas.comment import CommentCreate, CommentResponse
-from app.schemas.gallery import GalleryMetaResponse, GalleryPublicResponse
+from app.schemas.gallery import GalleryMetaResponse
 from app.schemas.image import ImageResponse, PublicFlagRequest, PublicLikeRequest, PublicRateRequest, UploadResponse
 from app.schemas.vote import VoteCreate, VoteResponse
 from app.schemas.zip_job import PublicZipCreate, ZipJobResponse

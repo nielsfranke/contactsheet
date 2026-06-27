@@ -5,11 +5,9 @@ import json
 
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
 from pydantic import BaseModel
-from fastapi.responses import Response
 from sqlalchemy.orm import Session
 
 from app.auth.dependencies import get_current_admin
-from app.config import settings
 from app.database import get_db
 from app.dependencies import get_storage
 from app.repositories import comment_repo, gallery_repo, image_repo

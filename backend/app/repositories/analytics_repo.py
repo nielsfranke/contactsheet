@@ -12,7 +12,7 @@ gallery-level ZIP event (no per-image download record), so "top photos" ranks by
 per-image engagement instead.
 """
 
-from datetime import datetime, timezone
+from datetime import datetime
 
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session

@@ -1,7 +1,7 @@
 # SPDX-FileCopyrightText: 2026 Niels Franke
 # SPDX-License-Identifier: AGPL-3.0-or-later
 
-from fastapi import Cookie, Depends, Header, HTTPException, status
+from fastapi import Cookie, Header, HTTPException, status
 from jwt import InvalidTokenError
 
 from app.auth.jwt import decode_token

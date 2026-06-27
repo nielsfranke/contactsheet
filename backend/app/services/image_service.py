@@ -271,7 +271,7 @@ def upload_images(
                     # mid-stream before the chunk is written.
                     if file_size > size_cap or (max_total_bytes and total_bytes + file_size > max_total_bytes):
                         raise CodedHTTPException(
-                            status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+                            status_code=status.HTTP_413_CONTENT_TOO_LARGE,
                             code="upload_too_large",
                             detail="File exceeds maximum upload size",
                         )

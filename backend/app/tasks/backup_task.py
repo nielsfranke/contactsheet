@@ -20,7 +20,6 @@ import logging
 import os
 import sqlite3
 import tarfile
-import tempfile
 from datetime import datetime, timezone
 
 from app.backup_format import (

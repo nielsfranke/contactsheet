@@ -1,7 +1,7 @@
 # SPDX-FileCopyrightText: 2026 Niels Franke
 # SPDX-License-Identifier: AGPL-3.0-or-later
 
-from sqlalchemy import case, delete, select, update
+from sqlalchemy import case, select, update
 from sqlalchemy.orm import Session
 
 from app.models.image import Image
