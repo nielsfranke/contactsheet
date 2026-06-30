@@ -702,11 +702,13 @@
       "scope": {
         "galleries:read": "Galerien auflisten",
         "galleries:write": "Galerien erstellen & bearbeiten",
+        "images:read": "Client-Picks lesen",
         "images:write": "Bilder hochladen"
       },
       "scopeHint": {
         "galleries:read": "Deine Galerien sehen (um ein Upload-Ziel zu wählen).",
         "galleries:write": "Neue Galerien anlegen und ihre Einstellungen ändern.",
+        "images:read": "Client-Picks (Farb-Flags, Sterne) zurücklesen — z. B. nach Lightroom.",
         "images:write": "Fotos in eine Galerie hochladen."
       },
       "needScope": "Wähle mindestens eine Berechtigung.",

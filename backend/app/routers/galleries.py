@@ -26,7 +26,7 @@ from app.schemas.gallery import (
     GalleryUpdate,
     ShareTokenUpdate,
 )
-from app.schemas.image import ImageResponse, ImageTransfer, ReorderRequest, TransferResult
+from app.schemas.image import ImagePicks, ImageResponse, ImageTransfer, ReorderRequest, TransferResult
 from app.services import comment_service, gallery_service, image_service, semantic_search_service
 from app.storage.base import StorageProvider
 from app.tasks import image_processing
@@ -43,6 +43,30 @@ def list_galleries(
     _auth: str = Depends(require_scope("galleries:read")),
 ):
     return gallery_service.list_gallery_tree(db, storage)
+
+
+@router.get("/{gallery_id}/images/picks", response_model=list[ImagePicks])
+@limiter.limit("120/minute")
+def list_image_picks(
+    gallery_id: str,
+    request: Request,
+    db: Session = Depends(get_db),
+    _auth: str = Depends(require_scope("images:read")),
+):
+    """Per-image client review state (color flag / star rating / like count) for one
+    gallery — for the Lightroom plugin to read picks back into the catalog. A narrow,
+    token-readable projection: no comments, no PII, scoped to this gallery only."""
+    images = image_repo.get_by_gallery(db, gallery_id)
+    return [
+        ImagePicks(
+            image_id=img.id,
+            filename=img.original_filename,
+            color_flag=img.color_flag,
+            rating=img.rating,
+            like_count=img.likes,
+        )
+        for img in images
+    ]
 
 
 @router.post("", response_model=GalleryResponse, status_code=201)

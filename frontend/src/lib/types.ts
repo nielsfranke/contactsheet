@@ -646,7 +646,7 @@ export interface BackupJob {
   download_url: string | null;
 }
 
-export type ApiTokenScope = "galleries:read" | "galleries:write" | "images:write";
+export type ApiTokenScope = "galleries:read" | "galleries:write" | "images:read" | "images:write";
 
 export interface ApiToken {
   id: string;

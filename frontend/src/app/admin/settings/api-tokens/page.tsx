@@ -17,7 +17,7 @@ import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { ConfirmDialog } from "@/components/chrome/ConfirmDialog";
 
-const ALL_SCOPES: ApiTokenScope[] = ["galleries:read", "galleries:write", "images:write"];
+const ALL_SCOPES: ApiTokenScope[] = ["galleries:read", "galleries:write", "images:read", "images:write"];
 
 // Expiry presets → days (0 = never).
 const EXPIRY_DAYS = [0, 30, 90, 365] as const;
@@ -51,6 +51,7 @@ function CreateSection({ t, te }: { t: T; te: T }) {
   const [scopes, setScopes] = useState<Record<ApiTokenScope, boolean>>({
     "galleries:read": true,
     "galleries:write": true,
+    "images:read": false,
     "images:write": true,
   });
   const [expiryDays, setExpiryDays] = useState<number>(0);

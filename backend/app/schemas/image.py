@@ -15,6 +15,19 @@ Rating = Literal[0, 1, 2, 3, 4, 5]
 ProcessingStatus = Literal["pending", "done", "error"]
 
 
+class ImagePicks(BaseModel):
+    """Token-readable per-image client review state for one gallery (Lightroom readback).
+
+    A narrow projection — color flag, star rating, like count — with no comments, no PII,
+    and no cross-gallery enumeration. Gated by the `images:read` scope."""
+
+    image_id: str
+    filename: str
+    color_flag: str
+    rating: int
+    like_count: int
+
+
 class ImageResponse(BaseModel):
     model_config = {"from_attributes": True}
 

@@ -24,7 +24,7 @@ TOKEN_PREFIX = "cs_pat_"
 # The full scope vocabulary. Deliberately coarse and forward-compatible: enough for the Capture
 # One / Lightroom export flow (create galleries + upload), and explicitly excluding anything
 # destructive or administrative (settings, reset, backup, token management).
-SCOPES = {"galleries:read", "galleries:write", "images:write"}
+SCOPES = {"galleries:read", "galleries:write", "images:read", "images:write"}
 
 
 def _hash(raw: str) -> str:

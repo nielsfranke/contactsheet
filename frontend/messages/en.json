@@ -702,11 +702,13 @@
       "scope": {
         "galleries:read": "List galleries",
         "galleries:write": "Create & edit galleries",
+        "images:read": "Read client picks",
         "images:write": "Upload images"
       },
       "scopeHint": {
         "galleries:read": "See your galleries (to pick an upload destination).",
         "galleries:write": "Create new galleries and change their settings.",
+        "images:read": "Read back client picks (color flags, star ratings) — e.g. into Lightroom.",
         "images:write": "Upload photos into a gallery."
       },
       "needScope": "Pick at least one permission.",

@@ -166,3 +166,28 @@ def test_token_can_delete_image_with_write_scope(admin_client):
 
     writer = _pat_client(_mint(admin_client, ALL_SCOPES, name="rw").json()["token"])
     assert writer.delete(f"/api/images/{img_id}").status_code == 204
+
+
+def test_token_can_read_picks_with_read_scope(admin_client):
+    # Phase-2 readback: the Lightroom plugin pulls client picks (flag/rating/likes) for a
+    # gallery via the new images:read scope. A narrow projection, gallery-scoped.
+    from .helpers import add_image
+
+    gid = make_gallery(admin_client, "Picks")["id"]
+    img_id = add_image(gid)
+    assert admin_client.patch(f"/api/images/{img_id}", json={"color_flag": "red"}).status_code == 200
+
+    # A list/write token without images:read can't read picks.
+    no_read = _pat_client(
+        _mint(admin_client, ["galleries:read", "images:write"], name="nr").json()["token"])
+    assert no_read.get(f"/api/galleries/{gid}/images/picks").status_code == 403
+
+    reader = _pat_client(_mint(admin_client, ["images:read"], name="rd").json()["token"])
+    r = reader.get(f"/api/galleries/{gid}/images/picks")
+    assert r.status_code == 200, r.text
+    picks = r.json()
+    assert len(picks) == 1
+    assert picks[0]["image_id"] == img_id
+    assert picks[0]["color_flag"] == "red"
+    assert picks[0]["rating"] == 0
+    assert "like_count" in picks[0]
