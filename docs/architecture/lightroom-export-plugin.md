@@ -100,6 +100,36 @@ done. **No new upload/gallery endpoints.**
 Error mapping to surface in Lightroom: `401` (bad/expired token → re-auth prompt),
 `413` (file too large), moderation/`client_upload` cases, network/`5xx` (retry).
 
+## Publish Service (as built)
+
+The provider is **both** an Export Service Provider and a Publish Service
+(`supportsIncrementalPublish = true`) — the File > Export path is unchanged, and
+ContactSheet additionally appears under *Publish Services*. The publish callbacks
+live in `CSPublishSupport.lua`; the upload loop (`processRenderedPhotos`) is shared
+and branches on `exportContext.publishedCollectionInfo`.
+
+Model — **a Published Collection ↔ a ContactSheet gallery**:
+
+- **First publish:** create a gallery named after the collection
+  (`POST /api/galleries`) and record its id as the collection's remote id
+  (`exportSession:recordRemoteCollectionId`). The gallery's public URL is recorded as
+  the collection's remote URL (for *Show in ContactSheet*).
+- **Each photo** records its ContactSheet **image id** as the published photo id
+  (`rendition:recordPublishedPhotoId`, from the upload's `UploadResponse.id`).
+- **Re-publish** (edited photo): delete the old server image first
+  (`DELETE /api/images/{id}`), then upload the new render — no duplicate.
+- **Remove from collection:** `deletePhotosFromPublishedCollection` deletes each
+  image from ContactSheet.
+
+This needs **one backend change** beyond the MVP's three endpoints: `DELETE
+/api/images/{id}` was admin-cookie-only and is now gated by `require_scope(
+"images:write")`, so a PAT can delete an image (admin cookie still admitted). No new
+endpoint, no schema change. Gallery deletion stays admin-only, so deleting a
+*published collection* in Lightroom does not delete the ContactSheet gallery.
+
+Deferred publish polish: mapping a collection to an *existing* gallery (not only
+auto-create) via a per-collection settings panel (`viewForCollectionSettings`).
+
 ## Phase 2 — read client picks back into Lightroom (the differentiator)
 
 Lightroom can write per-photo metadata, so the publish plugin can pull each photo's
