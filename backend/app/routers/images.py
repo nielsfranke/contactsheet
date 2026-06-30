@@ -64,8 +64,10 @@ def reorder_images(
 def delete_image(
     image_id: str,
     db: Session = Depends(get_db),
-    _admin: str = Depends(get_current_admin),
+    _auth: str = Depends(require_scope("images:write")),
 ):
+    # images:write (admin cookie OR PAT) — the Lightroom publish service deletes the
+    # old server image when re-publishing an edited photo and on remove-from-collection.
     image_service.delete_image(db, image_id)
 
 

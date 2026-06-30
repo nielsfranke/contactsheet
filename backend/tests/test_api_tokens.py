@@ -151,3 +151,18 @@ def test_admin_cookie_still_authorizes_gated_endpoints(admin_client):
 def test_unauthenticated_rejected(client):
     assert client.get("/api/galleries").status_code == 401
     assert client.get("/api/admin/api-tokens").status_code == 401
+
+
+def test_token_can_delete_image_with_write_scope(admin_client):
+    # The Lightroom publish service deletes the old server image on re-publish / removal,
+    # so DELETE /images/{id} admits a PAT with images:write (not just the admin cookie).
+    from .helpers import add_image
+
+    gid = make_gallery(admin_client, "Del")["id"]
+    img_id = add_image(gid)
+
+    read_only = _pat_client(_mint(admin_client, ["galleries:read"], name="ro").json()["token"])
+    assert read_only.delete(f"/api/images/{img_id}").status_code == 403  # no images:write
+
+    writer = _pat_client(_mint(admin_client, ALL_SCOPES, name="rw").json()["token"])
+    assert writer.delete(f"/api/images/{img_id}").status_code == 204
