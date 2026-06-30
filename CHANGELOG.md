@@ -12,6 +12,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.4.1] - 2026-06-30
+
+### Changed
+
+- **API tokens can now delete images.** `DELETE /api/images/{id}` accepts a personal access token
+  with the `images:write` scope (previously admin-cookie only). This lets the Lightroom publish
+  service replace an edited photo without leaving a duplicate, and remove a photo from a published
+  collection. Gallery deletion stays admin-only.
+
 ## [1.4.0] - 2026-06-28
 
 ### Added
