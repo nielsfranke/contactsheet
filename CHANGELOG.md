@@ -12,6 +12,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.4.2] - 2026-06-30
+
+### Added
+
+- **Read client picks back into Lightroom.** A new `images:read` token scope and a narrow,
+  gallery-scoped endpoint `GET /api/galleries/{id}/images/picks` (returning each image's color
+  flag, star rating and like count) let the Lightroom plugin pull client picks back into the
+  catalog as color labels / star ratings. The token-creation page gains an **Read client picks**
+  permission toggle (off by default).
+
 ## [1.4.1] - 2026-06-30
 
 ### Changed
