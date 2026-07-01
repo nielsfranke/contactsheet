@@ -5,16 +5,20 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 # Lightroom export plugin
 
-**Status:** **proposed.** No code yet. The server-side prerequisite is **already
-shipped** — the generic personal-access-token (PAT) mechanism (migration `0041`)
-that the [Capture One export plugin](./captureone-export-plugin.md) introduced was
-built non-C1-specific exactly so Lightroom (and scripts/CI) could reuse it. The
-MVP upload flow needs **zero backend work**; only the optional two-way "read picks
-back" phase needs a small, additive endpoint.
+**Status:** **shipped.** All server-side pieces are on `main` — the generic
+personal-access-token (PAT) mechanism (migration `0041`) that the
+[Capture One export plugin](./captureone-export-plugin.md) introduced non-C1-specific
+so Lightroom could reuse it, the `images:write` gate on `DELETE /api/images/{id}`
+(publish re-uploads / removals), and the `images:read` scope + gallery-scoped
+`GET /api/galleries/{id}/images/picks` endpoint (client-picks readback). The
+**plugin is built, released, and working** in Lightroom Classic — it lives in its own
+MIT-licensed repo:
+[contactsheet-lightroom](https://github.com/nielsfranke/contactsheet-lightroom)
+(v0.8.0 release: export + Publish Service + client-picks readback, macOS + Windows).
 
 > This note follows the same split as the C1 plugin: the **plugin lives in its own
-> permissively-licensed repo** (e.g. `contactsheet-lightroom`); the only thing that
-> ever lands in *this* (AGPL) repo is the optional readback endpoint in Phase 2.
+> permissively-licensed repo** (`contactsheet-lightroom`); the only thing that lands
+> in *this* (AGPL) repo is the readback endpoint (Phase 2), now shipped.
 
 ## Goal
 
@@ -130,28 +134,28 @@ endpoint, no schema change. Gallery deletion stays admin-only, so deleting a
 Deferred publish polish: mapping a collection to an *existing* gallery (not only
 auto-create) via a per-collection settings panel (`viewForCollectionSettings`).
 
-## Phase 2 — read client picks back into Lightroom (the differentiator)
+## Phase 2 — read client picks back into Lightroom (the differentiator) — as built
 
-Lightroom can write per-photo metadata, so the publish plugin can pull each photo's
-ContactSheet engagement (color flag / like / star rating) and reflect it as a
+Lightroom can write per-photo metadata, so the publish plugin pulls each photo's
+ContactSheet engagement (color flag / like / star rating) and reflects it as a
 **Lightroom color label or star rating**. This is the picdrop/CloudSpot "review →
 back to my catalog" workflow, and it's where Lightroom's publish model beats C1's.
 
-**This is the one piece of backend work**, because the current read scope is
-deliberately list-only:
+This needed the one remaining piece of backend work, because the ordinary read scope
+is deliberately list-only:
 
-- `galleries:read` today grants only `GET /api/galleries` (the picker list).
+- `galleries:read` grants only `GET /api/galleries` (the picker list).
 - A single gallery's contents — `GET /api/galleries/{gallery_id}` and
-  `GET /api/galleries/{gallery_id}/images` — are **`get_current_admin` only**
-  (verified in `routers/galleries.py`), so a PAT cannot read picks.
+  `GET /api/galleries/{gallery_id}/images` — are **`get_current_admin` only**, so a
+  PAT cannot read the full gallery.
 
-**Proposed additive change (AGPL, this repo):** a narrow, token-readable projection
-of per-image review state for one gallery — e.g. `GET
-/api/galleries/{id}/images/picks` gated by a **new `images:read` scope**, returning
-only `{image_id, filename, color_flag, rating, like_count}` (no comments, no PII, no
-full library enumeration). Keeps the "read token = small blast radius" principle:
+**Shipped (AGPL, this repo):** a narrow, token-readable projection of per-image
+review state for one gallery — `GET /api/galleries/{id}/images/picks`
+(`routers/galleries.py`) gated by a **new `images:read` scope**, returning only
+`{image_id, filename, color_flag, rating, like_count}` (no comments, no PII, no full
+library enumeration). It keeps the "read token = small blast radius" principle:
 list-galleries and read-one-gallery's-picks are separate scopes, neither exposes the
-whole library or any other gallery's contents. New scope is additive — no schema
+whole library or any other gallery's contents. The scope was additive — no schema
 change (scopes are JSON), existing tokens unaffected.
 
 Mapping in the plugin: ContactSheet color flag → LR color label; star rating →
@@ -171,25 +175,25 @@ framework (it's a Lua host), so the licence story is even cleaner than C1's.
 The **optional Phase-2 `images:read` endpoint stays in this repo (AGPL)** — the only
 coupling point, and only if we do readback.
 
-## Rollout phases
+## Rollout phases — all shipped in v0.8.0
 
-1. **Plugin MVP (new MIT repo):** `.lrplugin` with settings (URL + token), gallery
+1. **Plugin MVP (MIT repo):** ✅ `.lrplugin` with settings (URL + token), gallery
    picker (existing/create), `processRenderedPhotos` upload with progress + error
-   handling (401 / 413 / moderation). **No backend work.**
-2. **Publish Service semantics:** persistent published-collection mapping
-   (store remote image ID in plugin metadata), re-publish on edit, deletion sync.
-3. **Phase 2 readback (small AGPL backend add + plugin):** `images:read` scope +
-   `…/images/picks` endpoint; map ContactSheet flags/ratings → LR labels/stars.
-4. **Distribution:** zip the `.lrplugin`, install docs; optional listing on
-   Adobe Exchange later.
+   handling (401 / 413 / moderation). No backend work.
+2. **Publish Service semantics:** ✅ persistent published-collection mapping
+   (remote image ID in plugin metadata), re-publish on edit, deletion sync.
+3. **Phase 2 readback:** ✅ `images:read` scope + `…/images/picks` endpoint;
+   ContactSheet flags/ratings mapped → LR color labels / stars.
+4. **Distribution:** ✅ zipped `.lrplugin` on the repo's Releases. Adobe Exchange
+   listing remains an optional later step.
 
-## Decisions to confirm
+## Decisions (resolved)
 
-- **Token storage:** `LrPrefs` (simple, matches other LR plugins) vs. macOS
-  Keychain shell-out (more secure, macOS-only). Lean `LrPrefs` for the MVP.
-- **Phase-2 readback:** ship it, and is `images:read` the right granularity (vs.
-  reusing/ widening `galleries:read`)? Keeping it a *separate* scope is the safer
-  default.
-- **Gallery UX:** create-on-publish, pick-existing, or both; target sub-gallery?
-  (mirrors the same open question in the C1 note).
-- **Lightroom Classic only** — confirm we're not chasing Lightroom cloud (no SDK).
+- **Token storage:** `LrPrefs` — simple, matches other LR plugins; the macOS
+  Keychain shell-out was left as a possible later option, not the MVP.
+- **Phase-2 readback:** shipped, with `images:read` as its **own** scope (not a
+  widened `galleries:read`) — the smaller blast radius won.
+- **Gallery UX:** create-on-publish is the default; mapping a collection to an
+  *existing* gallery (`viewForCollectionSettings`) stays a deferred polish item.
+- **Lightroom Classic only** — confirmed. Lightroom cloud has no local plugin SDK
+  and is out of scope.

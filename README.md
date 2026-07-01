@@ -66,6 +66,7 @@ are very welcome.
 - **Multilingual** — English & German out of the box, community-translatable via [Weblate](https://translate.nielsbox.cc).
 - **Mobile-first** — galleries and the admin dashboard reflow to a single column with a native swipe lightbox.
 - **Capture One plugin** *(macOS)* — publish straight from Capture One into a gallery, with editable export recipes ([separate repo](https://github.com/nielsfranke/contactsheet-captureone)).
+- **Lightroom plugin** *(macOS + Windows)* — publish from Lightroom Classic as a **Publish Service** with incremental re-publish, and read client picks back into your catalog as color labels / star ratings ([separate repo](https://github.com/nielsfranke/contactsheet-lightroom)).
 
 See the **[User guide](https://github.com/nielsfranke/contactsheet/wiki)** for the full tour.
 
@@ -121,6 +122,7 @@ Environment variables, the two-volume layout, reverse-proxy/HTTPS, updating, and
 | 🚀 **[Self-hosting](https://github.com/nielsfranke/contactsheet/wiki/Self-Hosting-and-Deployment)** | Docker Compose, env vars, reverse proxy, backups |
 | 🛠️ **[Development](https://github.com/nielsfranke/contactsheet/wiki/Development)** | Run the backend & frontend locally |
 | 🎞️ **[Capture One plugin](https://github.com/nielsfranke/contactsheet-captureone)** | Publish from Capture One straight into a gallery (macOS) |
+| 📸 **[Lightroom plugin](https://github.com/nielsfranke/contactsheet-lightroom)** | Publish from Lightroom Classic, with client-picks readback (macOS + Windows) |
 | 🏗️ **[Architecture](ARCHITECTURE.md)** | Full technical design |
 | 🌍 **[Translating](TRANSLATING.md)** | Help translate the app (no code required) |
 
