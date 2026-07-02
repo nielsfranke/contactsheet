@@ -9,9 +9,10 @@ import { ZoomIn } from "lucide-react";
 import type { LightboxTones } from "@/lib/lightbox-theme";
 
 /**
- * The desktop review-mode zoom pill (bottom-right of the lightbox image area): magnifier (= reset),
- * slider, live percentage. Subscribes to the zoom hook's external store so wheel/slider zooming
- * re-renders only this control, never the lightbox (see useZoomSlider).
+ * The desktop review-mode zoom control (right end of the lightbox bottom toolbar, on the same row
+ * as the flag/rating actions): magnifier (= reset), slider, live percentage. Subscribes to the zoom
+ * hook's external store so wheel/slider zooming re-renders only this control, never the lightbox
+ * (see useZoomSlider).
  */
 interface Props {
   getPercent: () => number;
@@ -30,11 +31,7 @@ export function LightboxZoomControl({ getPercent, subscribe, onChange, onReset, 
 
   const { light, muted, hoverStrong } = tones;
   return (
-    <div
-      className={`absolute bottom-4 right-4 z-10 flex items-center gap-2 rounded-full border px-3 py-1.5 backdrop-blur-sm ${
-        light ? "border-zinc-200 bg-white/85" : "border-white/10 bg-black/55"
-      }`}
-    >
+    <div className="flex items-center gap-2">
       <button
         onClick={onReset}
         title={t("zoomReset")}

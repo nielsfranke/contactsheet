@@ -223,8 +223,9 @@ Key non-obvious constraints — full details in `docs/architecture/`.
 - First zoom past ~1.2× swaps the slide `small` → `medium` (preloaded + decoded off-screen; watermark-aware via `variantSrc`). Originals are never fetched for zoom. See `docs/architecture/lightbox-pinch-zoom.md`.
 
 ### Lightbox zoom slider (desktop, review contexts)
-- The picdrop-style zoom pill (bottom-right) appears **only where reviewing happens**: `collabMode || adminGalleryId` — never in a Showcase lightbox. Desktop only; `compact` keeps it mutually exclusive with the pinch hook (both drive the same zoom layer).
-- Percent is **relative to fit** (100–400 %, same range as pinch). Originals are never fetched here either — zooming bumps the slide's `sizes` so srcset re-picks the largest preview. See `docs/architecture/lightbox-zoom-slider.md`.
+- The picdrop-style zoom control (right end of the bottom toolbar, same row as the flag/rating actions) appears **only where reviewing happens**: `collabMode || adminGalleryId` — never in a Showcase lightbox. Desktop only; `compact` keeps it mutually exclusive with the pinch hook (both drive the same zoom layer).
+- Percent is **relative to fit** (100–400 %, same range as pinch). Originals are never fetched here either — zooming bumps the slide's `sizes` so srcset re-picks the largest preview.
+- **Annotating while zoomed works**: zoom persists, wheel/slider stay live, only drag-pan stands down (the pen owns the drag). The note popover counter-scales via `--zoom-scale`. See `docs/architecture/lightbox-zoom-slider.md`.
 
 ### Watermarks
 - `watermark_service.is_active(ws)` is the single gate — used by the public serializer and the serving proxy. Composited on the fly for thumb/medium, cached to `{variant}-wm/` keyed on a settings hash. Originals and video are never watermarked.

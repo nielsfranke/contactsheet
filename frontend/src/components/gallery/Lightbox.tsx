@@ -252,18 +252,19 @@ export function Lightbox({
   // Desktop zoom slider (review contexts only — see docs/architecture/lightbox-zoom-slider.md).
   // Shares the zoom layer with the pinch hook; `compact` keeps the two mutually exclusive. On the
   // first zoom past ~1.2× the current slide's `sizes` is bumped so the srcset re-picks a larger
-  // preview (never the original — watermark/download gating stays intact).
+  // preview (never the original — watermark/download gating stays intact). Zoom stays active while
+  // annotating — the pen owns the drag (pan disabled), wheel + slider keep zooming.
   const [zoomBoost, setZoomBoost] = useState(false);
   const sliderZoomEnabled =
     !compact &&
     (collabMode || !!adminGalleryId) &&
-    !annotating &&
     !!image &&
     !image.is_video &&
     image.processing_status !== "no_preview";
   const desktopZoom = useZoomSlider({
     areaRef,
     enabled: sliderZoomEnabled,
+    panDisabled: annotating,
     currentIndex,
     onUpgrade: () => setZoomBoost(true),
   });
@@ -1050,16 +1051,6 @@ export function Lightbox({
           </div>
         )}
 
-        {sliderZoomEnabled && !immersive && (
-          <LightboxZoomControl
-            getPercent={desktopZoom.getPercent}
-            subscribe={desktopZoom.subscribe}
-            onChange={desktopZoom.setPercent}
-            onReset={desktopZoom.reset}
-            tones={tones}
-          />
-        )}
-
         {!compact && !immersive && (
           <button
             onClick={next}
@@ -1071,8 +1062,10 @@ export function Lightbox({
         )}
       </div>
 
-      {/* Collaboration toolbar — hidden in immersive mode */}
-      {showToolbar && !immersive && (
+      {/* Collaboration toolbar — hidden in immersive mode. Also hosts the desktop zoom control
+          (right-aligned, same row as the flag/rating actions), so it renders in review contexts
+          even when flags & likes are off. */}
+      {(showToolbar || sliderZoomEnabled) && !immersive && (
         <div className={`flex items-center gap-3 px-4 py-2 border-t ${borderTone} flex-shrink-0`}>
           {flagsEnabled && stars && (
             <>
@@ -1123,6 +1116,15 @@ export function Lightbox({
               <Heart size={16} className={liked ? "fill-red-500 text-red-500" : ""} />
               <span className="text-sm">{image.likes > 0 ? image.likes : ""}</span>
             </button>
+          )}
+          {sliderZoomEnabled && (
+            <LightboxZoomControl
+              getPercent={desktopZoom.getPercent}
+              subscribe={desktopZoom.subscribe}
+              onChange={desktopZoom.setPercent}
+              onReset={desktopZoom.reset}
+              tones={tones}
+            />
           )}
         </div>
       )}

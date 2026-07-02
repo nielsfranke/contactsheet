@@ -241,6 +241,12 @@ export function AnnotationLayer({
   }
   const popTx = popX < 0.2 ? "0%" : popX > 0.8 ? "-100%" : "-50%";
   const popTy = popAbove ? "calc(-100% - 8px)" : "8px";
+  // Counter-scale against the lightbox desktop zoom (--zoom-scale on the zoom layer, written
+  // imperatively by useZoomSlider) so the note stays 1:1 readable while annotating zoomed. The
+  // origin mirrors the translate direction, so the shrink stays anchored to the stroke. Unzoomed
+  // (and on the mobile pinch path, where drawing while zoomed doesn't exist) the var is 1/absent.
+  const popOrigin = `${popX < 0.2 ? "left" : popX > 0.8 ? "right" : "center"} ${popAbove ? "bottom" : "top"}`;
+  const popScale = "scale(calc(1 / var(--zoom-scale, 1)))";
 
   return (
     // z-20 lifts the layer above the photo (`relative z-10`) so the drawing surface and mark
@@ -426,7 +432,12 @@ export function AnnotationLayer({
         {pending && (
           <div
             className={`absolute pointer-events-auto z-10 w-60 rounded-lg border ${tones.panel} p-3 shadow-2xl`}
-            style={{ left: `${popX * 100}%`, top: `${popTopFrac * 100}%`, transform: `translate(${popTx}, ${popTy})` }}
+            style={{
+              left: `${popX * 100}%`,
+              top: `${popTopFrac * 100}%`,
+              transform: `translate(${popTx}, ${popTy}) ${popScale}`,
+              transformOrigin: popOrigin,
+            }}
             onPointerDown={(e) => e.stopPropagation()}
           >
             <textarea

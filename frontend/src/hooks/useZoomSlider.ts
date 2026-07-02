@@ -33,8 +33,10 @@ const PINCH_SENSITIVITY = 0.01;
 interface Options {
   /** The lightbox image area — wheel/pointer surface and the geometry reference. */
   areaRef: React.RefObject<HTMLDivElement | null>;
-  /** !compact && review context && a zoomable photo is current && !annotating. */
+  /** !compact && review context && a zoomable photo is current. */
   enabled: boolean;
+  /** While annotating the pen owns the drag — pan stands down, wheel/slider keep zooming. */
+  panDisabled?: boolean;
   currentIndex: number;
   /** First zoom-in on the current photo — the lightbox bumps `sizes` so srcset re-picks. */
   onUpgrade: () => void;
@@ -91,7 +93,10 @@ export function useZoomSlider(opts: Options): ZoomSliderApi {
       if (!layer) return;
       const zoomed = nt.scale > MIN_SCALE + 0.001;
       layer.style.transform = zoomed ? `translate(${nt.tx}px, ${nt.ty}px) scale(${nt.scale})` : "";
-      layer.style.cursor = zoomed ? (panning ? "grabbing" : "grab") : "";
+      layer.style.cursor = zoomed && !optsRef.current.panDisabled ? (panning ? "grabbing" : "grab") : "";
+      // Read by the AnnotationLayer's note popover to counter-scale itself (stay readable while
+      // annotating zoomed) — flows through CSS, so a zoom change never re-renders the layer.
+      layer.style.setProperty("--zoom-scale", String(nt.scale));
       paintedEl.current = zoomed ? layer : null;
       activeRef.current = zoomed;
     }
@@ -127,6 +132,7 @@ export function useZoomSlider(opts: Options): ZoomSliderApi {
       if (paintedEl.current) {
         paintedEl.current.style.transform = "";
         paintedEl.current.style.cursor = "";
+        paintedEl.current.style.removeProperty("--zoom-scale");
         paintedEl.current = null;
       }
       emit();
@@ -164,7 +170,7 @@ export function useZoomSlider(opts: Options): ZoomSliderApi {
     }
 
     function onPointerDown(e: PointerEvent) {
-      if (e.button !== 0 || t.current.scale <= MIN_SCALE + 0.001) return;
+      if (e.button !== 0 || optsRef.current.panDisabled || t.current.scale <= MIN_SCALE + 0.001) return;
       // Chrome inside the area (chevrons, the slider pill) keeps its own pointer behavior.
       if (e.target instanceof Element && e.target.closest("button, input, a")) return;
       pan.current = { x: e.clientX, y: e.clientY, start: { ...t.current }, moved: false };
@@ -238,6 +244,12 @@ export function useZoomSlider(opts: Options): ZoomSliderApi {
     api.reset();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [opts.currentIndex]);
+
+  // Toggling annotate flips pan availability — repaint so the grab cursor appears/disappears.
+  useEffect(() => {
+    api._paint(t.current, false);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [opts.panDisabled]);
 
   return api;
 }

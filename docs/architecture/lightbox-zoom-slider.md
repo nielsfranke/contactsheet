@@ -67,18 +67,23 @@ originals) breaks two security invariants — off the table.
 - While zoomed, the desktop *touch* swipe handlers (`handleTouchStart` & co. — active on
   non-compact touch screens) stand down, exactly like the mobile dismiss handlers do
   while pinch-zoomed.
-- Entering annotate mode resets to fit and hides the control (the pen owns the pointer;
-  `AnnotationLayer` geometry is measured at fit).
+- **Annotating while zoomed works.** The zoom persists into annotate mode; wheel and
+  slider keep zooming, only the drag-pan stands down (the pen owns the drag —
+  `panDisabled`). Coordinates need no special handling: the pen's input normalization
+  (`frac()`) uses `getBoundingClientRect`, which reflects the zoom transform, so strokes
+  land exactly where drawn; the marks render in layer space and are scaled visually by
+  the same transform. Only the note popover counter-scales itself
+  (`scale(calc(1 / var(--zoom-scale)))`, written imperatively by the hook onto the zoom
+  layer) so the textarea stays 1:1 readable at 4×.
 - Immersive mode hides the control with the rest of the chrome; the zoom itself persists.
 
 ## Placement & look
 
-A floating pill **bottom-right of the image area** (like the nav chevrons, `absolute
-right-4 bottom-4 z-10`): magnifier icon (also the reset button), a slim slider
-(~110 px), and the percentage text. Styled with the existing `lightboxTones` so it flips
-correctly on white/transparent backdrops, matching the chevrons/chrome. It overlays the
-photo (picdrop puts it in the bottom bar, but our bottom bar — the collaboration toolbar
-— is conditional on flags/likes, and the control must not jump around).
+The control sits at the **right end of the lightbox bottom toolbar**, on the same row as
+the flag/rating actions (picdrop's layout): magnifier icon (also the reset button), a
+slim slider (~96 px), and the percentage text, styled from `lightboxTones`. The toolbar
+row renders in review contexts even when flags & likes are off, so the control never
+jumps around; on video / `no_preview` slides it's absent.
 
 No shadcn Slider is installed; a thin styled native `<input type="range">` keeps it
 dependency-free (one small component, `LightboxZoomControl`).
