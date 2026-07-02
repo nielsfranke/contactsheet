@@ -12,6 +12,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.4.3] - 2026-07-02
+
+### Fixed
+
+- **Settings no longer overflow on mobile.** On narrow (<640px) screens several settings controls
+  ran off the right edge: labelled rows now stack their control beneath the label instead of
+  crushing it, the rating-style buttons (Color flags / Stars) stack full-width so the long label
+  no longer clips, and the gallery-defaults preset modal (whose footer buttons blew the dialog past
+  the viewport) now stacks its footer on mobile. Desktop layout is unchanged.
+
 ## [1.4.2] - 2026-06-30
 
 ### Added
