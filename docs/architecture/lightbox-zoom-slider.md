@@ -61,7 +61,7 @@ originals) breaks two security invariants — off the table.
 | Mouse drag on the photo | — (click = immersive, unchanged) | pans the photo (grab/grabbing cursor), clamped to the photo edges |
 | Click (no movement > ~5 px) | toggle immersive (unchanged) | toggle immersive |
 | Magnifier icon click | — | back to fit (quick reset) |
-| Arrow keys / chevrons | navigate (unchanged) | navigate; zoom resets to fit |
+| Arrow keys / chevrons | navigate (unchanged) | navigate; zoom resets to fit — **even with the slider focused** (the control preventDefaults ←/→ and `lightbox-keys` exempts range inputs from its editable-target guard; ↑/↓ still step the zoom for keyboard users) |
 | Esc | close (unchanged) | close |
 
 - While zoomed, the desktop *touch* swipe handlers (`handleTouchStart` & co. — active on

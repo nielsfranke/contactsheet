@@ -13,13 +13,16 @@ export interface LightboxKeyInput {
   ctrlKey?: boolean;
   metaKey?: boolean;
   shiftKey?: boolean;
-  target?: { tagName?: string; isContentEditable?: boolean } | null;
+  target?: { tagName?: string; type?: string; isContentEditable?: boolean } | null;
 }
 
 function isEditableTarget(target: LightboxKeyInput["target"]): boolean {
   if (!target) return false;
   const tag = (target.tagName ?? "").toUpperCase();
-  if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") return true;
+  // A focused zoom slider must not swallow photo navigation: ←/→ always change the slide, never
+  // the zoom (the control preventDefaults the native value step; ↑/↓ keep stepping the slider).
+  if (tag === "INPUT") return (target.type ?? "").toLowerCase() !== "range";
+  if (tag === "TEXTAREA" || tag === "SELECT") return true;
   return target.isContentEditable === true;
 }
 

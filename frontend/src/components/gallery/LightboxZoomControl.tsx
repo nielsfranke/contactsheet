@@ -49,6 +49,12 @@ export function LightboxZoomControl({ getPercent, subscribe, onChange, onReset, 
         step={1}
         value={percent}
         onChange={(e) => onChange(Number(e.target.value))}
+        // ←/→ always navigate photos, even with the slider focused: block the native value step
+        // here and let the keydown bubble to the window nav handler (lightbox-keys exempts range
+        // inputs from its editable-target guard). ↑/↓ still step the zoom for keyboard users.
+        onKeyDown={(e) => {
+          if (e.key === "ArrowLeft" || e.key === "ArrowRight") e.preventDefault();
+        }}
         aria-label={t("zoom")}
         className={`h-1 w-24 cursor-pointer appearance-none rounded-full outline-none focus-visible:ring-2 ${
           light ? "bg-black/15 focus-visible:ring-black/60" : "bg-white/25 focus-visible:ring-white"

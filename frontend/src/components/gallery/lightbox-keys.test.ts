@@ -39,6 +39,13 @@ describe("lightboxKeyAction", () => {
     expect(lightboxKeyAction({ key: "ArrowRight", target: { tagName: "BUTTON" } })).toBe("next");
   });
 
+  it("navigates from a focused zoom slider (range inputs are not editable targets)", () => {
+    expect(lightboxKeyAction({ key: "ArrowRight", target: { tagName: "INPUT", type: "range" } })).toBe("next");
+    expect(lightboxKeyAction({ key: "ArrowLeft", target: { tagName: "INPUT", type: "range" } })).toBe("prev");
+    // text-ish inputs keep the caret guard
+    expect(lightboxKeyAction({ key: "ArrowRight", target: { tagName: "INPUT", type: "text" } })).toBeNull();
+  });
+
   it("closes on Escape even from within an input", () => {
     expect(lightboxKeyAction({ key: "Escape", target: { tagName: "INPUT" } })).toBe("close");
   });
