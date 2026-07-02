@@ -12,6 +12,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.5.0] - 2026-07-02
+
+### Added
+
+- **Clients can switch a Showcase gallery into Review mode.** A new per-gallery opt-in
+  ("Let clients switch to Review", off by default) shows a "Review photos" button beside the
+  download button in the public gallery. It flips the gallery into the full Review experience —
+  flags/ratings, likes, comments, collections, per the gallery's feedback toggles — without the
+  photographer changing the gallery's mode for everyone; "Back to showcase" in the sidebar returns.
+  The client's choice sticks for the session and follows them into sub-galleries. With the switch
+  on, the gallery settings modal exposes the Review tab for Showcase galleries so the feedback
+  tools can be configured, and the Showcase mode preset can enable the switch for new galleries
+  by default. The setting cascades to sub-galleries like the other look & behaviour settings.
+
 ## [1.4.3] - 2026-07-02
 
 ### Fixed
@@ -632,7 +646,11 @@ contract are considered stable as of this release.
   caps (stricter for public uploads).
 - Docker Compose deployment (backend + frontend + nginx); SQLite + local filesystem.
 
-[Unreleased]: https://github.com/nielsfranke/contactsheet/compare/v1.4.0...HEAD
+[Unreleased]: https://github.com/nielsfranke/contactsheet/compare/v1.5.0...HEAD
+[1.5.0]: https://github.com/nielsfranke/contactsheet/compare/v1.4.3...v1.5.0
+[1.4.3]: https://github.com/nielsfranke/contactsheet/compare/v1.4.2...v1.4.3
+[1.4.2]: https://github.com/nielsfranke/contactsheet/compare/v1.4.1...v1.4.2
+[1.4.1]: https://github.com/nielsfranke/contactsheet/compare/v1.4.0...v1.4.1
 [1.4.0]: https://github.com/nielsfranke/contactsheet/compare/v1.3.5...v1.4.0
 [1.3.5]: https://github.com/nielsfranke/contactsheet/compare/v1.3.4...v1.3.5
 [1.3.4]: https://github.com/nielsfranke/contactsheet/compare/v1.3.3...v1.3.4
