@@ -100,8 +100,11 @@ def backend_url():
 @pytest.fixture(scope="session")
 def frontend_url(backend_url):
     """A production Next server (`build` + `start`) on a free port, whose `/api`+`/uploads` rewrites
-    point at the ephemeral backend via NEXT_PUBLIC_API_BASE (read by next.config.ts at server boot).
-    `next start` (not `next dev`) sidesteps the dev-daemon reuse trap that ignores the port/env."""
+    point at the ephemeral backend via NEXT_PUBLIC_API_BASE. The env must be set on the *build*:
+    `next build` evaluates next.config.ts and bakes the rewrite destinations into
+    .next/routes-manifest.json — `next start` only serves that manifest and ignores the env, so a
+    prebuilt .next cannot be repointed. `next start` (not `next dev`) sidesteps the dev-daemon
+    reuse trap that ignores the port/env."""
     port = _free_port()
     env = {**os.environ, "NEXT_PUBLIC_API_BASE": backend_url, "PORT": str(port)}
 

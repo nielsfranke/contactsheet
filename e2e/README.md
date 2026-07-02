@@ -21,7 +21,9 @@ renders + the thumbnail serves → client flags + comments → client downloads 
 1. A temp data dir + `alembic upgrade head`, then `uvicorn` on a random free port.
 2. `next build` + `next start` on another random port, with `NEXT_PUBLIC_API_BASE`
    pointed at the ephemeral backend (the `next.config.ts` rewrites proxy `/api` +
-   `/uploads` there — same routing nginx does in prod, minus nginx).
+   `/uploads` there — same routing nginx does in prod, minus nginx). The env must be
+   set on the **build**: rewrite destinations are baked into `routes-manifest.json`
+   at build time; `next start` ignores it, so a prebuilt `.next` can't be repointed.
 
 Auth + the public gallery render go through the browser UI; the data steps use
 Playwright's request context (shares the browser cookie, still real HTTP through the

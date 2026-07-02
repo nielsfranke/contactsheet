@@ -38,7 +38,11 @@ const nextConfig: NextConfig = {
     proxyClientMaxBodySize: 300 * 1024 * 1024, // 300 MB — matches backend max_upload_bytes
   },
   async rewrites() {
-    // In development: proxy /api and /uploads to the FastAPI backend
+    // Proxy /api and /uploads to the FastAPI backend. NEXT_PUBLIC_API_BASE is resolved when this
+    // config is evaluated: live on every request under `next dev`, but at BUILD time for
+    // production — `next build` bakes the destinations into .next/routes-manifest.json and
+    // `next start` only serves that manifest. To repoint a production server (e2e does this),
+    // set the env on the build, not on start.
     return [
       {
         source: "/api/:path*",

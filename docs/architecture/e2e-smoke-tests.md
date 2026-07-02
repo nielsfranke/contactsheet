@@ -74,12 +74,15 @@ Niels' running `:3000`/`:8000` dev stack** (see [[local-dev-environment]]). The
 2. **Backend** — `alembic upgrade head` against the temp DB, then launch
    `uvicorn app.main:app` on an **ephemeral free port** (bind `:0`, read it back)
    as a subprocess; poll `/api/health` until green.
-3. **Frontend** — `next build` once, then `next start` on another ephemeral port
-   with **`NEXT_PUBLIC_API_BASE=http://127.0.0.1:<backend-port>`**. The
-   `next.config.ts` rewrites (`/api`, `/uploads`, `/branding`) read that env at
-   server boot, so the standalone server proxies to *our* backend — exactly how
-   nginx routes in prod, minus nginx. (`next start` avoids the dev-daemon reuse
-   trap that would otherwise ignore the port/env locally.)
+3. **Frontend** — `next build` once, then `next start` on another ephemeral port,
+   both with **`NEXT_PUBLIC_API_BASE=http://127.0.0.1:<backend-port>`**. The env
+   must be on the *build*: `next build` evaluates the `next.config.ts` rewrites
+   (`/api`, `/uploads`, `/branding`) and bakes their destinations into
+   `.next/routes-manifest.json`; `next start` only serves that manifest and
+   ignores the env — a prebuilt `.next` can't be repointed. With it baked in, the
+   standalone server proxies to *our* backend — exactly how nginx routes in prod,
+   minus nginx. (`next start` avoids the dev-daemon reuse trap that would
+   otherwise ignore the port/env locally.)
 4. **Teardown** — terminate both subprocesses, remove the temp dir.
 
 Playwright drives `http://127.0.0.1:<frontend-port>`. Ephemeral ports + a private
