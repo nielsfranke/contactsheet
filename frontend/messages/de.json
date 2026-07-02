@@ -106,6 +106,8 @@
       "like": "Gefällt mir",
       "enterFullscreen": "Vollbild",
       "exitFullscreen": "Vollbild beenden",
+      "zoom": "Zoom",
+      "zoomReset": "Zoom zurücksetzen",
       "exif": "Aufnahmedaten",
       "iptc": "Fotoinfos",
       "flag": "Markierung:",

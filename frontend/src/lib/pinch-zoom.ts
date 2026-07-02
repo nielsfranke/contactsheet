@@ -89,6 +89,20 @@ export function settle(t: ZoomTransform, fit: FitBox, cw: number, ch: number): Z
   return clampPan({ scale, tx: t.tx * k, ty: t.ty * k }, fit, cw, ch);
 }
 
+/** Absolute zoom to a target scale around a focal point (the desktop slider/wheel — see
+ *  docs/architecture/lightbox-zoom-slider.md). Hard-clamped on both axes: unlike a finger gesture
+ *  there is no release event to snap back on, so no rubber-band mid-interaction. */
+export function zoomTo(
+  t: ZoomTransform,
+  scale: number,
+  focal: { x: number; y: number },
+  fit: FitBox,
+  cw: number,
+  ch: number,
+): ZoomTransform {
+  return clampPan(zoomAround(t, focal, clamp(scale, MIN_SCALE, MAX_SCALE)), fit, cw, ch);
+}
+
 /** Double-tap toggle: zoomed → back to fit; at fit → DOUBLE_TAP_SCALE anchored at the tap point,
  *  clamped so the jump never reveals space beyond a photo edge. */
 export function doubleTapTarget(

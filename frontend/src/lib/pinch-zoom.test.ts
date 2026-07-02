@@ -13,6 +13,7 @@ import {
   settle,
   softClampScale,
   zoomAround,
+  zoomTo,
   type ZoomTransform,
 } from "./pinch-zoom";
 
@@ -129,6 +130,40 @@ describe("settle", () => {
   it("pulls a rubber-banded pan back inside the bounds", () => {
     const s = settle({ scale: 2, tx: 425, ty: -330 }, fit, CW, CH);
     expect(s).toEqual({ scale: 2, tx: 400, ty: -300 });
+  });
+});
+
+describe("zoomTo", () => {
+  const fit = fitSize(3000, 2000, CW, CH); // 900×600
+
+  it("zooming around the center from fit stays centered", () => {
+    expect(zoomTo({ ...FIT }, 2, { x: 0, y: 0 }, fit, CW, CH)).toEqual({ scale: 2, tx: 0, ty: 0 });
+  });
+
+  it("keeps the photo point under the cursor (wheel anchor invariant)", () => {
+    const start: ZoomTransform = { scale: 2, tx: 100, ty: -50 };
+    const focal = { x: 200, y: 100 };
+    const qx = (focal.x - start.tx) / start.scale;
+    const qy = (focal.y - start.ty) / start.scale;
+    const next = zoomTo(start, 3, focal, fit, CW, CH);
+    expect(qx * next.scale + next.tx).toBeCloseTo(focal.x);
+    expect(qy * next.scale + next.ty).toBeCloseTo(focal.y);
+  });
+
+  it("hard-clamps the scale to [MIN, MAX] and lands exactly on FIT at the floor", () => {
+    expect(zoomTo({ scale: 2, tx: 100, ty: -50 }, 0.4, { x: 0, y: 0 }, fit, CW, CH)).toEqual({
+      scale: 1,
+      tx: 0,
+      ty: 0,
+    });
+    expect(zoomTo({ ...FIT }, 9, { x: 0, y: 0 }, fit, CW, CH).scale).toBe(MAX_SCALE);
+  });
+
+  it("clamps the pan so a focal-anchored zoom never reveals space beyond a photo edge", () => {
+    // Anchoring at the far corner would demand tx beyond the ±400 bound at 2× — it clamps.
+    const t = zoomTo({ ...FIT }, 2, { x: -490, y: -290 }, fit, CW, CH);
+    expect(t.tx).toBe(400);
+    expect(t.ty).toBe(290);
   });
 });
 

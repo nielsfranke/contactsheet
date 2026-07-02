@@ -20,6 +20,8 @@ import { previewSrcSet } from "@/lib/gridLayout";
 import { Icons } from "@/lib/ui-icons";
 import { useLightboxKeys } from "./lightbox-keys";
 import { usePinchZoom } from "@/hooks/usePinchZoom";
+import { useZoomSlider } from "@/hooks/useZoomSlider";
+import { LightboxZoomControl } from "./LightboxZoomControl";
 import { photoSrc as resolvePhotoSrc, variantSrc as resolveVariantSrc } from "./lightbox-image-src";
 import type { Anchor, ColorFlag, CollabFeatures, LightboxBackdrop, Rating } from "@/lib/types";
 import {
@@ -247,6 +249,25 @@ export function Lightbox({
     onUpgrade: upgradeZoomRendition,
   });
 
+  // Desktop zoom slider (review contexts only — see docs/architecture/lightbox-zoom-slider.md).
+  // Shares the zoom layer with the pinch hook; `compact` keeps the two mutually exclusive. On the
+  // first zoom past ~1.2× the current slide's `sizes` is bumped so the srcset re-picks a larger
+  // preview (never the original — watermark/download gating stays intact).
+  const [zoomBoost, setZoomBoost] = useState(false);
+  const sliderZoomEnabled =
+    !compact &&
+    (collabMode || !!adminGalleryId) &&
+    !annotating &&
+    !!image &&
+    !image.is_video &&
+    image.processing_status !== "no_preview";
+  const desktopZoom = useZoomSlider({
+    areaRef,
+    enabled: sliderZoomEnabled,
+    currentIndex,
+    onUpgrade: () => setZoomBoost(true),
+  });
+
   // Track local flag/likes optimistically; reset them when the lightbox moves to a
   // different image. This is a render-time reset (React's recommended alternative to
   // a setState-in-effect, which triggers cascading-render warnings).
@@ -266,6 +287,7 @@ export function Lightbox({
     setAnnotating(false);
     setHoveredAnno(null);
     setShowAnnotations(false);
+    setZoomBoost(false);
   }
 
   const effectiveFlag: ColorFlag = teamVoting
@@ -607,7 +629,8 @@ export function Lightbox({
   }
 
   function handleTouchStart(e: React.TouchEvent) {
-    if (annotating || image?.is_video || e.touches.length !== 1) return;
+    // While the slider zoom is past fit, the zoom hook's pointer pan owns one-finger drags.
+    if (annotating || image?.is_video || desktopZoom.activeRef.current || e.touches.length !== 1) return;
     pendingCommit.current?.(); // settle a still-animating previous swipe before starting a new one
     touchStart.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
     axis.current = null;
@@ -713,7 +736,7 @@ export function Lightbox({
         {/* Zoom layer — the pinch/double-tap transform target (written imperatively by usePinchZoom
             on the current slide). Wraps exactly the photo + its annotation marks so they scale and
             pan together; the flag/star badges below stay outside as unscaled chrome. */}
-        <div ref={isCurrent ? zoomLayerRef : undefined} className="absolute inset-0">
+        <div ref={isCurrent ? (compact ? zoomLayerRef : desktopZoom.layerRef) : undefined} className="absolute inset-0">
         {/* Cached-thumbnail underlay — always painted behind the photo, never the backdrop. */}
         {showThumb && im.thumb_url && (
           // eslint-disable-next-line @next/next/no-img-element
@@ -734,7 +757,7 @@ export function Lightbox({
             data-lightbox-photo=""
             src={compact && upgradedIds.has(im.id) ? variantSrc(im, "medium") : photoSrc(im)}
             srcSet={compact ? undefined : previewSrcSet(im, highRes)}
-            sizes={compact ? undefined : "100vw"}
+            sizes={compact ? undefined : isCurrent && zoomBoost ? "200vw" : "100vw"}
             alt={isCurrent ? im.original_filename : ""}
             fetchPriority={isCurrent ? "high" : "auto"}
             // Force a decode as soon as the slide downloads so it's paint-ready before it's revealed.
@@ -1025,6 +1048,16 @@ export function Lightbox({
             })}
            </div>
           </div>
+        )}
+
+        {sliderZoomEnabled && !immersive && (
+          <LightboxZoomControl
+            getPercent={desktopZoom.getPercent}
+            subscribe={desktopZoom.subscribe}
+            onChange={desktopZoom.setPercent}
+            onReset={desktopZoom.reset}
+            tones={tones}
+          />
         )}
 
         {!compact && !immersive && (

@@ -106,6 +106,8 @@
       "like": "Like",
       "enterFullscreen": "Full screen",
       "exitFullscreen": "Exit full screen",
+      "zoom": "Zoom",
+      "zoomReset": "Reset zoom",
       "exif": "Capture data",
       "iptc": "Photo info",
       "flag": "Flag:",

@@ -123,6 +123,7 @@ Static files (`/uploads`, `/branding`) are mounted at startup via `app.mount(...
 | `src/store/lightbox.ts` | Zustand store for lightbox open/index/intent state |
 | `src/hooks/useImageUpload.ts` | Aggregate upload progress; shared hidden `<input>` |
 | `src/hooks/usePinchZoom.ts` | Touch-lightbox pinch/double-tap zoom — suspends the scroll-snap carousel while zoomed |
+| `src/hooks/useZoomSlider.ts` | Desktop review-lightbox zoom (slider/wheel/drag-pan) — shares the zoom layer + math with `usePinchZoom` |
 | `src/hooks/useGallerySettingsAutosave.ts` | Autosave hook for `GallerySettingsModal` |
 | `src/components/admin/AdminDnd.tsx` | `AdminDndProvider` — one DndContext for all reparenting |
 | `src/components/admin/GallerySettingsModal.tsx` | Per-gallery settings (tabbed, autosaves) |
@@ -220,6 +221,10 @@ Key non-obvious constraints — full details in `docs/architecture/`.
 - On touch, **single taps route through the hook** (double-tap window) — the photo `onClick` (immersive toggle) is desktop-only.
 - `AnnotationLayer` measures with **layout offsets, not `getBoundingClientRect`** — the zoom layer's CSS transform would otherwise double-scale the marks.
 - First zoom past ~1.2× swaps the slide `small` → `medium` (preloaded + decoded off-screen; watermark-aware via `variantSrc`). Originals are never fetched for zoom. See `docs/architecture/lightbox-pinch-zoom.md`.
+
+### Lightbox zoom slider (desktop, review contexts)
+- The picdrop-style zoom pill (bottom-right) appears **only where reviewing happens**: `collabMode || adminGalleryId` — never in a Showcase lightbox. Desktop only; `compact` keeps it mutually exclusive with the pinch hook (both drive the same zoom layer).
+- Percent is **relative to fit** (100–400 %, same range as pinch). Originals are never fetched here either — zooming bumps the slide's `sizes` so srcset re-picks the largest preview. See `docs/architecture/lightbox-zoom-slider.md`.
 
 ### Watermarks
 - `watermark_service.is_active(ws)` is the single gate — used by the public serializer and the serving proxy. Composited on the fly for thumb/medium, cached to `{variant}-wm/` keyed on a settings hash. Originals and video are never watermarked.
