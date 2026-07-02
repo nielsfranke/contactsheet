@@ -159,6 +159,8 @@ class GalleryUpdate(BaseModel):
     opener_font: FontType | None = None
     opener_font_size: SizeType | None = None
     opener_title_position: TitlePositionType | None = None
+    opener_scrim: bool | None = None
+    opener_title_shadow: bool | None = None
     preview_size: SizeType | None = None
     preview_spacing: SizeType | None = None
     preview_corners: CornersType | None = None
@@ -227,6 +229,8 @@ class GalleryResponse(BaseModel):
     opener_font: str = "sans"
     opener_font_size: str = "medium"
     opener_title_position: str = "center"
+    opener_scrim: bool = True
+    opener_title_shadow: bool = False
     preview_size: str = "medium"
     preview_spacing: str = "medium"
     preview_corners: str = "round"
@@ -308,6 +312,8 @@ class GalleryPublicResponse(BaseModel):
     opener_font: str = "sans"
     opener_font_size: str = "medium"
     opener_title_position: str = "center"
+    opener_scrim: bool = True
+    opener_title_shadow: bool = False
     preview_size: str = "medium"
     preview_spacing: str = "medium"
     preview_corners: str = "round"

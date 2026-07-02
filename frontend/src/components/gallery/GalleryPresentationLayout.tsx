@@ -77,6 +77,12 @@ export function GalleryPresentationLayout({
     handleDownload,
   } = vm;
 
+  // Title/subtitle legibility: a stronger drop-shadow when opted in (e.g. a bright header
+  // shown without the scrim), otherwise the subtle default.
+  const titleShadow = gallery.opener_title_shadow
+    ? "drop-shadow-[0_2px_10px_rgba(0,0,0,0.85)]"
+    : "drop-shadow-md";
+
   return (
     /* Full-width layout for presentation galleries */
     <>
@@ -96,8 +102,10 @@ export function GalleryPresentationLayout({
               className="absolute inset-0 w-full h-full object-cover select-none [-webkit-touch-callout:none]"
               style={{ objectPosition: `${gallery.header_focus_x ?? 50}% ${gallery.header_focus_y ?? 50}%` }}
             />
-            {/* Scrim overlay for legibility of the centered title */}
-            <div className="absolute inset-0 bg-gradient-to-b from-black/40 via-black/25 to-black/55" />
+            {/* Scrim overlay for legibility of the centered title (per-gallery toggle) */}
+            {gallery.opener_scrim && (
+              <div className="absolute inset-0 bg-gradient-to-b from-black/40 via-black/25 to-black/55" />
+            )}
 
             {/* Studio identity pinned top-left over the hero */}
             {gallery.instance_name && (
@@ -117,13 +125,13 @@ export function GalleryPresentationLayout({
               }`}
             >
               <h1
-                className={`drop-shadow-md line-clamp-2 ${HERO_TITLE_SIZE[gallery.opener_font_size] ?? HERO_TITLE_SIZE.medium} text-white`}
+                className={`${titleShadow} line-clamp-2 ${HERO_TITLE_SIZE[gallery.opener_font_size] ?? HERO_TITLE_SIZE.medium} text-white`}
                 style={openerFont}
               >
                 {gallery.name}
               </h1>
               {gallery.headline && (
-                <p className={`mt-3 max-w-2xl text-white/85 drop-shadow-md ${HERO_SUBTITLE_SIZE[gallery.opener_font_size] ?? HERO_SUBTITLE_SIZE.medium}`}>{gallery.headline}</p>
+                <p className={`mt-3 max-w-2xl text-white/85 ${titleShadow} ${HERO_SUBTITLE_SIZE[gallery.opener_font_size] ?? HERO_SUBTITLE_SIZE.medium}`}>{gallery.headline}</p>
               )}
               <p className="mt-3 text-xs text-white/60">{t("photoCount", { count: gallery.image_count })}</p>
             </div>

@@ -92,6 +92,8 @@ export function GallerySettingsModal({
     opener_font: gallery.opener_font,
     opener_font_size: gallery.opener_font_size,
     opener_title_position: gallery.opener_title_position,
+    opener_scrim: gallery.opener_scrim,
+    opener_title_shadow: gallery.opener_title_shadow,
   });
 
   // Review — client feedback interactions (Review only)

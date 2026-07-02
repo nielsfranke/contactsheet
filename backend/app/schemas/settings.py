@@ -35,6 +35,8 @@ class GalleryPreset(BaseModel):
     opener_font: FontType | None = None
     opener_font_size: SizeType | None = None
     opener_title_position: TitlePositionType | None = None
+    opener_scrim: bool | None = None
+    opener_title_shadow: bool | None = None
     preview_size: SizeType | None = None
     preview_spacing: SizeType | None = None
     preview_corners: CornersType | None = None

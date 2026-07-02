@@ -175,6 +175,8 @@ Migrations live in `backend/alembic/versions/`. Always create a new file — nev
 0038 — opener title position: galleries.opener_title_position
 0039 — star ratings: app_settings.rating_mode + images.rating + image_votes.rating
 0040 — backup_jobs table (async full-instance backup builds)
+0041 — api_tokens table (personal access tokens for third-party clients)
+0042 — showcase hero legibility: galleries.opener_scrim + opener_title_shadow
 ```
 
 ## Feature invariants

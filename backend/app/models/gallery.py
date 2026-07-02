@@ -59,6 +59,10 @@ class Gallery(Base):
     opener_font_size: Mapped[str] = mapped_column(String(10), nullable=False, default="medium")
     # Anchor of the title over the presentation hero image (e.g. "top-left", "center").
     opener_title_position: Mapped[str] = mapped_column(String(20), nullable=False, default="center")
+    # Showcase hero legibility: dark scrim over the header image (default on), and an optional
+    # stronger drop-shadow on the title/subtitle (for a bright header shown without the scrim).
+    opener_scrim: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
+    opener_title_shadow: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     preview_size: Mapped[str] = mapped_column(String(10), nullable=False, default="medium")
     preview_spacing: Mapped[str] = mapped_column(String(10), nullable=False, default="medium")
     preview_corners: Mapped[str] = mapped_column(String(10), nullable=False, default="round")

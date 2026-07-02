@@ -65,6 +65,8 @@ export interface GallerySettings {
   opener_font: FontType;
   opener_font_size: SizeType;
   opener_title_position: TitlePositionType;
+  opener_scrim: boolean;
+  opener_title_shadow: boolean;
   preview_size: SizeType;
   preview_spacing: SizeType;
   preview_corners: CornersType;
@@ -234,6 +236,8 @@ export interface GalleryPreset {
   opener_font?: FontType;
   opener_font_size?: SizeType;
   opener_title_position?: TitlePositionType;
+  opener_scrim?: boolean;
+  opener_title_shadow?: boolean;
   preview_size?: SizeType;
   preview_spacing?: SizeType;
   preview_corners?: CornersType;

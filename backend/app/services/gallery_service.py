@@ -57,6 +57,7 @@ def _random_token(db: Session, exclude_id: str | None = None) -> str:
 _PASSTHROUGH_UPDATE_FIELDS = (
     "mode", "layout", "sort_order", "downloads_enabled", "enable_team_voting",
     "opener_font", "opener_font_size", "opener_title_position",
+    "opener_scrim", "opener_title_shadow",
     "preview_size", "preview_spacing",
     "preview_corners", "bg_brightness",
     "color_flags_enabled", "likes_enabled", "comments_enabled", "annotations_enabled",
@@ -77,6 +78,7 @@ _INHERIT_CREATE_FIELDS = _CASCADE_FIELDS - {"sort_order", "hide_parent_nav"}
 # Mirrors schemas.settings.GalleryPreset.
 _PRESET_FIELDS = frozenset({
     "layout", "opener_font", "opener_font_size", "opener_title_position",
+    "opener_scrim", "opener_title_shadow",
     "preview_size", "preview_spacing",
     "preview_corners", "bg_brightness", "bg_dimmed_color",
     "downloads_enabled", "enable_team_voting", "color_flags_enabled",

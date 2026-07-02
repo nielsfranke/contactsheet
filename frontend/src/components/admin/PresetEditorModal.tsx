@@ -27,6 +27,8 @@ const BUILTIN: Required<Omit<GalleryPreset, "bg_dimmed_color">> = {
   opener_font: "sans",
   opener_font_size: "medium",
   opener_title_position: "center",
+  opener_scrim: true,
+  opener_title_shadow: false,
   preview_size: "medium",
   preview_spacing: "medium",
   preview_corners: "round",
@@ -75,6 +77,8 @@ export function PresetEditorModal({ open, onOpenChange, mode, preset }: Props) {
         opener_font: merged.opener_font,
         opener_font_size: merged.opener_font_size,
         opener_title_position: merged.opener_title_position,
+        opener_scrim: merged.opener_scrim,
+        opener_title_shadow: merged.opener_title_shadow,
       } satisfies OpenerValues,
       review: {
         color_flags_enabled: merged.color_flags_enabled,

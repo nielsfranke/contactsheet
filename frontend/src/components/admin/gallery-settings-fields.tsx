@@ -253,6 +253,8 @@ export interface OpenerValues {
   opener_font: FontType;
   opener_font_size: SizeType;
   opener_title_position: TitlePositionType;
+  opener_scrim: boolean;
+  opener_title_shadow: boolean;
 }
 
 export function OpenerFields({
@@ -281,6 +283,18 @@ export function OpenerFields({
           onChange={(v) => onChange({ opener_title_position: v })}
         />
       </Row>
+      <Toggle
+        label={t("openerScrim")}
+        hint={t("openerScrimHint")}
+        checked={value.opener_scrim}
+        onChange={(v) => onChange({ opener_scrim: v })}
+      />
+      <Toggle
+        label={t("titleShadow")}
+        hint={t("titleShadowHint")}
+        checked={value.opener_title_shadow}
+        onChange={(v) => onChange({ opener_title_shadow: v })}
+      />
     </>
   );
 }
