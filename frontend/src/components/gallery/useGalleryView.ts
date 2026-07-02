@@ -17,6 +17,7 @@ import { useGalleryRealtime } from "@/hooks/useGalleryRealtime";
 import { useImageSelection } from "@/hooks/useImageSelection";
 import { useLightboxStore } from "@/store/lightbox";
 import { useReviewerStore } from "@/store/reviewer";
+import { useReviewSwitchStore } from "@/store/review-switch";
 
 export const FLAG_GROUP_ORDER: ColorFlag[] = ["green", "red", "yellow", "blue", "none"];
 // Rating group buckets, highest first, unrated last.
@@ -35,12 +36,27 @@ export function useGalleryView(
   const t = useTranslations("gallery");
   const te = useTranslations("errors");
   const photosRef = useRef<HTMLElement>(null);
-  const collabMode = gallery.mode === "collaboration";
+  // Client review-mode switch: a Showcase gallery whose photographer opted in lets the client
+  // flip into the full Review experience. The choice is client-side view state, keyed per
+  // visible subtree so it survives sub-gallery navigation (the backend opens the review write
+  // endpoints whenever the switch is enabled — see gallery_service.review_active).
+  const canSwitchMode = gallery.mode === "presentation" && gallery.client_mode_switch_enabled;
+  const switchKey = gallery.ancestors[0]?.share_token ?? shareToken;
+  const reviewSwitched = useReviewSwitchStore((s) => !!s.switched[switchKey]);
+  const setSwitched = useReviewSwitchStore((s) => s.setSwitched);
+  const collabMode = gallery.mode === "collaboration" || (canSwitchMode && reviewSwitched);
   const teamVoting = collabMode && gallery.enable_team_voting;
   const watermarkEnabled = gallery.watermark_enabled;
   const reviewerName = useReviewerStore((s) => s.name);
   const qc = useQueryClient();
   const [showPrompt, setShowPrompt] = useState(teamVoting && !reviewerName);
+
+  function toggleReviewMode() {
+    const next = !reviewSwitched;
+    setSwitched(switchKey, next);
+    // Entering review with team voting needs a reviewer identity, same as a Review gallery.
+    if (next && gallery.enable_team_voting && !reviewerName) setShowPrompt(true);
+  }
   const [downloadOpen, setDownloadOpen] = useState(false);
   const [toolsOpen, setToolsOpen] = useState(false); // mobile collaboration sidebar drawer
   const zip = useGalleryZip(shareToken, galleryToken);
@@ -285,6 +301,8 @@ export function useGalleryView(
     photosRef,
     // mode flags
     collabMode,
+    canSwitchMode,
+    reviewSwitched,
     teamVoting,
     watermarkEnabled,
     reviewerName,
@@ -338,6 +356,7 @@ export function useGalleryView(
     handleRatingVote,
     toggleLike,
     handleDownload,
+    toggleReviewMode,
   };
 }
 

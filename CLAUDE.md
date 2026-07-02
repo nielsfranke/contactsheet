@@ -177,6 +177,7 @@ Migrations live in `backend/alembic/versions/`. Always create a new file — nev
 0040 — backup_jobs table (async full-instance backup builds)
 0041 — api_tokens table (personal access tokens for third-party clients)
 0042 — showcase hero legibility: galleries.opener_scrim + opener_title_shadow
+0043 — client review-mode switch: galleries.client_mode_switch_enabled
 ```
 
 ## Feature invariants
@@ -201,6 +202,9 @@ Key non-obvious constraints — full details in `docs/architecture/`.
 
 ### Sub-gallery navigation (public)
 - A gallery is a **container** when `image_count === 0 && subgalleries.length > 0` — the photo grid is suppressed and children render as cover cards. This gate uses the `image_count` from the public response (which is `only_approved` for moderated galleries).
+
+### Client review-mode switch (Showcase → Review)
+- `galleries.client_mode_switch_enabled` (Showcase-only opt-in) lets clients flip the gallery into the Review experience themselves. **Enabling it opens the review write endpoints server-side** — the single gate is `gallery_service.review_active(gallery)` (Review mode *or* switch on); the client toggle is pure view state (`store/review-switch.ts`, sessionStorage, keyed per visible subtree so it survives sub-gallery navigation). With the switch on, the settings modal shows the Review tab for Showcase galleries too. See `docs/architecture/client-review-mode-switch.md`.
 
 ### Client uploads & moderation
 - `image_service.client_upload_images` enforces `client_upload_enabled` (403) and a per-request cap of 50 files.

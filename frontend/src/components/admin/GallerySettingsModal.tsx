@@ -71,6 +71,7 @@ export function GallerySettingsModal({
   const [name, setName] = useState(gallery.name);
   const [headline, setHeadline] = useState(gallery.headline ?? "");
   const [mode, setMode] = useState<ModeType>(gallery.mode);
+  const [clientModeSwitch, setClientModeSwitch] = useState(gallery.client_mode_switch_enabled);
   const [downloads, setDownloads] = useState(gallery.downloads_enabled);
   const [notificationsEnabled, setNotificationsEnabled] = useState(gallery.notifications_enabled);
 
@@ -147,8 +148,9 @@ export function GallerySettingsModal({
   function pickMode(next: ModeType) {
     setMode(next);
     save({ mode: next });
-    // Leaving Review mode hides the Review tab — fall back so the body isn't blank.
-    if (next === "presentation" && tab === "review") setTab("look");
+    // Leaving Review mode hides the Review tab (unless the client switch keeps it visible) —
+    // fall back so the body isn't blank.
+    if (next === "presentation" && !clientModeSwitch && tab === "review") setTab("look");
   }
 
   function patchLook(patch: Partial<LookValues>) {
@@ -185,6 +187,7 @@ export function GallerySettingsModal({
       ...opener,
       ...review,
       downloads_enabled: downloads,
+      client_mode_switch_enabled: clientModeSwitch,
       client_upload_enabled: clientUpload,
       client_upload_moderation: clientUploadModeration,
       hide_parent_nav: hideParentNav,
@@ -198,11 +201,13 @@ export function GallerySettingsModal({
     { value: "presentation", label: MODE_LABELS.presentation, icon: ImageIcon, hint: t("presentationHint") },
   ];
 
-  // The Review tab only applies in Review mode, so it's hidden for Showcase galleries.
+  // The Review tab applies in Review mode — and for Showcase galleries whose clients may
+  // switch to review (the photographer still configures the review features there).
+  const reviewConfigurable = mode === "collaboration" || clientModeSwitch;
   const tabs: { value: SettingsTab; label: string; icon: typeof Zap }[] = [
     { value: "general", label: t("tabGeneral"), icon: SlidersHorizontal },
     { value: "look", label: t("tabLook"), icon: ImageIcon },
-    ...(mode === "collaboration"
+    ...(reviewConfigurable
       ? [{ value: "review" as const, label: MODE_LABELS.collaboration, icon: MessagesSquare }]
       : []),
     { value: "security", label: t("tabSecurity"), icon: Shield },
@@ -258,6 +263,19 @@ export function GallerySettingsModal({
               );
             })}
           </div>
+          {/* Showcase-only: let clients flip this gallery into the review experience themselves */}
+          {mode === "presentation" && (
+            <Toggle
+              label={t("clientModeSwitchLabel")}
+              hint={t("clientModeSwitchHint")}
+              checked={clientModeSwitch}
+              onChange={(v) => {
+                setClientModeSwitch(v);
+                save({ client_mode_switch_enabled: v });
+                if (!v && tab === "review") setTab("look");
+              }}
+            />
+          )}
         </div>
 
         {/* Tabs */}
@@ -359,7 +377,7 @@ export function GallerySettingsModal({
             </div>
           )}
 
-          {tab === "review" && mode === "collaboration" && (
+          {tab === "review" && reviewConfigurable && (
             <div className="divide-y divide-border/60">
               <p className="flex items-center gap-1.5 py-2.5 text-xs text-muted-foreground">
                 <MessagesSquare size={13} /> {t("reviewIntro", { mode: MODE_LABELS.collaboration })}

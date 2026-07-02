@@ -44,6 +44,7 @@ class GalleryPreset(BaseModel):
     bg_dimmed_color: str | None = Field(default=None, pattern=r"^#[0-9a-fA-F]{3,8}$")
     # Behaviour
     downloads_enabled: bool | None = None
+    client_mode_switch_enabled: bool | None = None
     enable_team_voting: bool | None = None
     color_flags_enabled: bool | None = None
     likes_enabled: bool | None = None

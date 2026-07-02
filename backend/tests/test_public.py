@@ -264,6 +264,33 @@ def test_flag_requires_collaboration_mode(admin_client):
     assert r.status_code == 400
 
 
+def test_client_mode_switch_opens_review_endpoints(admin_client):
+    """Showcase + client mode switch: the review write endpoints accept requests."""
+    g = make_gallery(admin_client, "Show", mode="presentation")
+    admin_client.patch(
+        f"/api/galleries/{g['id']}", json={"client_mode_switch_enabled": True, "likes_enabled": True}
+    )
+    img = add_image(g["id"])
+    t = g["share_token"]
+    assert admin_client.post(f"/api/public/g/{t}/images/{img}/flag", json={"flag": "green"}).status_code == 200
+    assert admin_client.post(f"/api/public/g/{t}/images/{img}/rate", json={"rating": 4}).status_code == 200
+    assert admin_client.post(f"/api/public/g/{t}/images/{img}/like", json={"reviewer": "Bob"}).status_code == 200
+    r = admin_client.post(
+        f"/api/public/g/{t}/images/{img}/comments", json={"author_name": "Bob", "text": "nice"}
+    )
+    assert r.status_code == 201
+
+
+def test_client_mode_switch_public_field_and_inheritance(admin_client):
+    g = make_gallery(admin_client, "Show", mode="presentation")
+    admin_client.patch(f"/api/galleries/{g['id']}", json={"client_mode_switch_enabled": True})
+    pub = admin_client.get(f"/api/public/g/{g['share_token']}").json()
+    assert pub["client_mode_switch_enabled"] is True
+    # New sub-galleries copy the parent's setting.
+    sub = make_gallery(admin_client, "Sub", parent_id=g["id"])
+    assert sub["client_mode_switch_enabled"] is True
+
+
 def test_annotation_requires_toggle(admin_client):
     g = make_gallery(admin_client, "Collab", mode="collaboration")
     admin_client.patch(f"/api/galleries/{g['id']}", json={"annotations_enabled": False})

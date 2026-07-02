@@ -15,6 +15,7 @@ import { StudioMasthead } from "./StudioMasthead";
 import {
   Loader2, Folder, FolderOpen, Plus, CheckSquare, Download, Trash2, Pencil, Layers, X,
 } from "lucide-react";
+import { Icons } from "@/lib/ui-icons";
 
 interface CollabSidebarProps {
   gallery: GalleryPublicResponse;
@@ -38,6 +39,9 @@ interface CollabSidebarProps {
   onRenameCollection: (id: string, name: string) => void;
   toolsOpen: boolean;
   setToolsOpen: (open: boolean) => void;
+  // Client review-mode switch: the client entered review from a showcase gallery and may go back.
+  canSwitchBack?: boolean;
+  onSwitchBack?: () => void;
 }
 
 /**
@@ -49,7 +53,7 @@ export function CollabSidebar({
   gallery, shareToken, galleryToken, collabMode, teamVoting, reviewerName,
   lightboxImages, filterActive, onDownload, zip, collectionsEnabled, selection, collections,
   activeCollection, setActiveCollection, onSaveSelection, onSaveFilter, onDeleteCollection, onRenameCollection,
-  toolsOpen, setToolsOpen,
+  toolsOpen, setToolsOpen, canSwitchBack, onSwitchBack,
 }: CollabSidebarProps) {
   const t = useTranslations("gallery");
   const tc = useTranslations("common");
@@ -282,6 +286,13 @@ export function CollabSidebar({
           <p className="text-xs text-muted-foreground">
             {t("view.collabHint")}
           </p>
+        )}
+
+        {/* Back to the showcase view (client review-mode switch) */}
+        {canSwitchBack && (
+          <Button className="w-full justify-start" size="sm" variant="outline" onClick={onSwitchBack}>
+            <Icons.modeShowcase size={15} className="mr-2" /> {t("view.backToShowcase")}
+          </Button>
         )}
       </div>
     </aside>

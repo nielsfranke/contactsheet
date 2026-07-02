@@ -73,6 +73,8 @@ export interface GallerySettings {
   bg_brightness: BrightnessType;
   bg_dimmed_color: string | null;
   // Collaboration feature toggles
+  // Showcase-only opt-in: clients may switch this gallery into the Review experience themselves.
+  client_mode_switch_enabled: boolean;
   color_flags_enabled: boolean;
   likes_enabled: boolean;
   comments_enabled: boolean;
@@ -244,6 +246,7 @@ export interface GalleryPreset {
   bg_brightness?: BrightnessType;
   bg_dimmed_color?: string;
   downloads_enabled?: boolean;
+  client_mode_switch_enabled?: boolean;
   enable_team_voting?: boolean;
   color_flags_enabled?: boolean;
   likes_enabled?: boolean;

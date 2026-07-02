@@ -8,6 +8,7 @@ import { useTranslations } from "next-intl";
 import { ClientUploadButton } from "./ClientUploadButton";
 import { StudioMasthead } from "./StudioMasthead";
 import { Loader2, Download } from "lucide-react";
+import { Icons } from "@/lib/ui-icons";
 import type { GalleryViewModel } from "./useGalleryView";
 
 const OPENER_SIZE: Record<string, string> = {
@@ -73,8 +74,10 @@ export function GalleryPresentationLayout({
     bright,
     openerFont,
     canDownload,
+    canSwitchMode,
     zip,
     handleDownload,
+    toggleReviewMode,
   } = vm;
 
   // Title/subtitle legibility: a stronger drop-shadow when opted in (e.g. a bright header
@@ -149,24 +152,36 @@ export function GalleryPresentationLayout({
             </button>
           </div>
 
-          {/* Download button — centred between hero and photo grid, equal gap on both sides */}
-          {canDownload && (
-            <div className={`flex justify-center py-6 ${bright ? "bg-zinc-50" : "bg-zinc-950"}`}>
-              <button
-                onClick={handleDownload}
-                disabled={zip.preparing}
-                className={`inline-flex items-center gap-2 rounded-full px-6 py-2.5 text-sm font-medium transition-colors disabled:opacity-60 ${
-                  bright ? "bg-zinc-900 text-white hover:bg-zinc-700" : "bg-zinc-100 text-zinc-900 hover:bg-white"
-                }`}
-              >
-                {zip.preparing ? <Loader2 size={15} className="animate-spin" /> : <Download size={15} />}
-                {zip.preparing ? t("view.preparing") : t("view.downloadAll")}
-              </button>
+          {/* Download + review-switch buttons — one centred row between hero and photo grid */}
+          {(canDownload || canSwitchMode) && (
+            <div className={`flex flex-wrap justify-center gap-3 py-6 ${bright ? "bg-zinc-50" : "bg-zinc-950"}`}>
+              {canDownload && (
+                <button
+                  onClick={handleDownload}
+                  disabled={zip.preparing}
+                  className={`inline-flex items-center gap-2 rounded-full px-6 py-2.5 text-sm font-medium transition-colors disabled:opacity-60 ${
+                    bright ? "bg-zinc-900 text-white hover:bg-zinc-700" : "bg-zinc-100 text-zinc-900 hover:bg-white"
+                  }`}
+                >
+                  {zip.preparing ? <Loader2 size={15} className="animate-spin" /> : <Download size={15} />}
+                  {zip.preparing ? t("view.preparing") : t("view.downloadAll")}
+                </button>
+              )}
+              {canSwitchMode && (
+                <button
+                  onClick={toggleReviewMode}
+                  className={`inline-flex items-center gap-2 rounded-full px-6 py-2.5 text-sm font-medium border transition-colors ${
+                    bright ? "border-zinc-300 text-zinc-800 hover:bg-zinc-100" : "border-zinc-700 text-zinc-100 hover:bg-zinc-800"
+                  }`}
+                >
+                  <Icons.modeReview size={15} /> {t("view.switchToReview")}
+                </button>
+              )}
             </div>
           )}
 
           {gallery.client_upload_enabled && (
-            <div className={`flex justify-center pb-6 ${canDownload ? "" : "pt-6"} ${bright ? "bg-zinc-50" : "bg-zinc-950"}`}>
+            <div className={`flex justify-center pb-6 ${canDownload || canSwitchMode ? "" : "pt-6"} ${bright ? "bg-zinc-50" : "bg-zinc-950"}`}>
               <ClientUploadButton
                 shareToken={shareToken}
                 galleryToken={galleryToken}
@@ -211,6 +226,16 @@ export function GalleryPresentationLayout({
                 <p className={`text-xs mt-2 ${bright ? "text-zinc-500" : "text-zinc-600"}`}>{t("photoCount", { count: gallery.image_count })}</p>
               </div>
               <div className="flex items-center gap-2 sm:shrink-0">
+                {canSwitchMode && (
+                  <button
+                    onClick={toggleReviewMode}
+                    className={`inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium border transition-colors ${
+                      bright ? "border-zinc-300 text-zinc-800 hover:bg-zinc-100" : "border-zinc-700 text-zinc-100 hover:bg-zinc-800"
+                    }`}
+                  >
+                    <Icons.modeReview size={15} /> {t("view.switchToReview")}
+                  </button>
+                )}
                 {gallery.client_upload_enabled && (
                   <ClientUploadButton
                     shareToken={shareToken}

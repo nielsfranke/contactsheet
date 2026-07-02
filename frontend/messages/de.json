@@ -60,6 +60,8 @@
       "emptyGallery": "Noch keine Bilder in dieser Galerie.",
       "emptyFilter": "Keine Bilder entsprechen dem Filter.",
       "collabHint": "Markieren oder liken Sie Fotos, um Ihre Auswahl zu teilen.",
+      "switchToReview": "Fotos bewerten",
+      "backToShowcase": "Zurück zum Showcase",
       "upToParent": "Zurück zur übergeordneten Galerie"
     },
     "collections": {
@@ -982,6 +984,8 @@
       "clientUploadHint": "Besucher können eigene Fotos zu dieser Galerie hinzufügen (beide Modi)",
       "clientUploadModerationLabel": "Freigabe erforderlich",
       "clientUploadModerationHint": "Kunden-Uploads zurückhalten, bis du sie freigibst – bis dahin bleiben sie privat",
+      "clientModeSwitchLabel": "Kunden dürfen in den Review-Modus wechseln",
+      "clientModeSwitchHint": "Zeigt einen Button, mit dem Besucher dieses Showcase selbst in den Review-Modus umschalten können",
       "openerIntro": "Der Cover-Opener, angezeigt im {mode}-Modus.",
       "openerHeaderImage": "Opener-Header-Bild",
       "reviewIntro": "Kunden-Feedback-Werkzeuge, angezeigt im {mode}-Modus.",

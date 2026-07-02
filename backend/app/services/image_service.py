@@ -17,7 +17,7 @@ from app.models.image import Image
 from app.realtime import publish as realtime_publish
 from app.repositories import activity_repo, comment_repo, gallery_repo, image_repo, like_repo, vote_repo
 from app.schemas.image import GlobalSearchResult, ImageResponse, ImageUpdate, PhotoPage, UploadResponse
-from app.services import notification_service
+from app.services import gallery_service, notification_service
 from app.storage import format_detect
 from app.storage.base import StorageProvider
 from app.tasks.image_processing import resize_bytes, submit_image_processing
@@ -592,7 +592,7 @@ def reorder_images(db: Session, gallery_id: str, image_ids: list[str]) -> None:
 def public_set_flag(
     db: Session, gallery: Gallery, image_id: str, flag: str, reviewer_name: str = "client"
 ) -> Image:
-    if gallery.mode != "collaboration":
+    if not gallery_service.review_active(gallery):
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Gallery is not in collaboration mode")
     image = image_repo.get_by_id(db, image_id)
     if not image or image.gallery_id != gallery.id or image.moderation_status != "approved":
@@ -612,7 +612,7 @@ def public_set_rating(
 ) -> Image:
     """Set the shared 1–5 star rating (0 clears) — the stars-mode parallel to public_set_flag.
     Rides the same activity/notification/realtime channel so the grid invalidates identically."""
-    if gallery.mode != "collaboration":
+    if not gallery_service.review_active(gallery):
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Gallery is not in collaboration mode")
     image = image_repo.get_by_id(db, image_id)
     if not image or image.gallery_id != gallery.id or image.moderation_status != "approved":
@@ -630,7 +630,7 @@ def public_set_rating(
 def public_toggle_like(db: Session, gallery: Gallery, image_id: str, reviewer_name: str) -> Image:
     """Toggle this reviewer's like (one like per person). Notifies / logs only when liking,
     not on un-like, to avoid noise."""
-    if gallery.mode != "collaboration":
+    if not gallery_service.review_active(gallery):
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Gallery is not in collaboration mode")
     image = image_repo.get_by_id(db, image_id)
     if not image or image.gallery_id != gallery.id or image.moderation_status != "approved":

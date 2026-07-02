@@ -55,7 +55,8 @@ def _random_token(db: Session, exclude_id: str | None = None) -> str:
 
 # Fields copied straight from GalleryUpdate to the model when not None.
 _PASSTHROUGH_UPDATE_FIELDS = (
-    "mode", "layout", "sort_order", "downloads_enabled", "enable_team_voting",
+    "mode", "client_mode_switch_enabled",
+    "layout", "sort_order", "downloads_enabled", "enable_team_voting",
     "opener_font", "opener_font_size", "opener_title_position",
     "opener_scrim", "opener_title_shadow",
     "preview_size", "preview_spacing",
@@ -81,7 +82,7 @@ _PRESET_FIELDS = frozenset({
     "opener_scrim", "opener_title_shadow",
     "preview_size", "preview_spacing",
     "preview_corners", "bg_brightness", "bg_dimmed_color",
-    "downloads_enabled", "enable_team_voting", "color_flags_enabled",
+    "downloads_enabled", "client_mode_switch_enabled", "enable_team_voting", "color_flags_enabled",
     "likes_enabled", "comments_enabled", "annotations_enabled", "sets_enabled",
     "show_filename", "show_filename_lightbox", "show_exif", "show_iptc",
 })
@@ -107,6 +108,15 @@ def _resolve_create_defaults(db: Session, data: GalleryCreate, parent: Gallery |
             if field in preset and field not in explicit:
                 defaults[field] = preset[field]
     return defaults
+
+
+def review_active(gallery: Gallery) -> bool:
+    """Whether the review write endpoints (flag/rate/like/comment) are open for this gallery.
+
+    True for Review galleries, and for Showcase galleries whose photographer opted into the
+    client mode switch — the server can't know whether an individual client has toggled the
+    view, so enabling the switch opens the endpoints (same trust model as Review mode)."""
+    return gallery.mode == "collaboration" or gallery.client_mode_switch_enabled
 
 
 def _header_image_url(gallery: Gallery) -> str | None:

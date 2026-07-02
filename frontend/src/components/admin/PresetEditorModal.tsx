@@ -34,6 +34,7 @@ const BUILTIN: Required<Omit<GalleryPreset, "bg_dimmed_color">> = {
   preview_corners: "round",
   bg_brightness: "dark",
   downloads_enabled: true,
+  client_mode_switch_enabled: false,
   enable_team_voting: false,
   color_flags_enabled: true,
   likes_enabled: false,
@@ -55,6 +56,7 @@ interface Props {
 
 export function PresetEditorModal({ open, onOpenChange, mode, preset }: Props) {
   const t = useTranslations("settings.preset");
+  const tg = useTranslations("settings.gallery");
   const tc = useTranslations("common");
   const qc = useQueryClient();
   const settingsKey = mode === "collaboration" ? "preset_collaboration" : "preset_presentation";
@@ -89,6 +91,7 @@ export function PresetEditorModal({ open, onOpenChange, mode, preset }: Props) {
         sets_enabled: merged.sets_enabled,
       } satisfies ReviewValues,
       downloads: merged.downloads_enabled,
+      clientModeSwitch: merged.client_mode_switch_enabled,
     };
   }
 
@@ -96,6 +99,7 @@ export function PresetEditorModal({ open, onOpenChange, mode, preset }: Props) {
   const [opener, setOpener] = useState<OpenerValues>(() => initial().opener);
   const [review, setReview] = useState<ReviewValues>(() => initial().review);
   const [downloads, setDownloads] = useState(() => initial().downloads);
+  const [clientModeSwitch, setClientModeSwitch] = useState(() => initial().clientModeSwitch);
 
   // Re-seed from the stored preset each time the modal opens (no effect needed).
   const [prevOpen, setPrevOpen] = useState(open);
@@ -107,6 +111,7 @@ export function PresetEditorModal({ open, onOpenChange, mode, preset }: Props) {
       setOpener(init.opener);
       setReview(init.review);
       setDownloads(init.downloads);
+      setClientModeSwitch(init.clientModeSwitch);
     }
   }
 
@@ -121,9 +126,12 @@ export function PresetEditorModal({ open, onOpenChange, mode, preset }: Props) {
   });
 
   function handleSave() {
-    // Each mode's preset only carries the fields that apply to it: Showcase = look + opener,
-    // Review = look + feedback. Downloads applies to both.
-    const modeFields = mode === "presentation" ? opener : review;
+    // Each mode's preset only carries the fields that apply to it: Showcase = look + opener +
+    // client mode switch, Review = look + feedback. Downloads applies to both.
+    const modeFields =
+      mode === "presentation"
+        ? { ...opener, client_mode_switch_enabled: clientModeSwitch }
+        : review;
     save.mutate({ ...look, ...modeFields, downloads_enabled: downloads });
   }
 
@@ -145,6 +153,12 @@ export function PresetEditorModal({ open, onOpenChange, mode, preset }: Props) {
             <div className="py-1">
               <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground pt-2">{t("opener")}</p>
               <OpenerFields value={opener} onChange={(patch) => setOpener({ ...opener, ...patch })} />
+              <Toggle
+                label={tg("clientModeSwitchLabel")}
+                hint={tg("clientModeSwitchHint")}
+                checked={clientModeSwitch}
+                onChange={setClientModeSwitch}
+              />
             </div>
           ) : (
             <div className="py-1">

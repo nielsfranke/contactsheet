@@ -523,7 +523,7 @@ def add_comment(
     gallery, _ = gallery_service.get_public_gallery(db, share_token, storage)
     _require_gallery_access(gallery, gallery_id_from_token)
 
-    if gallery.mode != "collaboration":
+    if not gallery_service.review_active(gallery):
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Gallery is not in collaboration mode")
 
     image = image_repo.get_by_id(db, image_id)

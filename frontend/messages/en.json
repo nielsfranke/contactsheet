@@ -60,6 +60,8 @@
       "emptyGallery": "No images in this gallery yet.",
       "emptyFilter": "No images match the filter.",
       "collabHint": "Flag or like photos to share your selection.",
+      "switchToReview": "Review photos",
+      "backToShowcase": "Back to showcase",
       "upToParent": "Back to the parent gallery"
     },
     "collections": {
@@ -982,6 +984,8 @@
       "clientUploadHint": "Visitors can add their own photos to this gallery (both modes)",
       "clientUploadModerationLabel": "Require approval",
       "clientUploadModerationHint": "Hold client uploads until you approve them — they stay private until then",
+      "clientModeSwitchLabel": "Let clients switch to Review",
+      "clientModeSwitchHint": "Adds a button so visitors can flip this Showcase into the Review experience themselves",
       "openerIntro": "The cover opener, shown in {mode} mode.",
       "openerHeaderImage": "Opener header image",
       "reviewIntro": "Client feedback tools, shown in {mode} mode.",

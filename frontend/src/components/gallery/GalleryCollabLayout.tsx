@@ -104,6 +104,8 @@ export function GalleryCollabLayout({
         onRenameCollection={(cid, name) => renameCollectionMutation.mutate({ collectionId: cid, name })}
         toolsOpen={toolsOpen}
         setToolsOpen={setToolsOpen}
+        canSwitchBack={vm.canSwitchMode && vm.reviewSwitched}
+        onSwitchBack={vm.toggleReviewMode}
       />
 
       {/* Mobile backdrop for the tools drawer */}

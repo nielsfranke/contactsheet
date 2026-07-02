@@ -34,6 +34,10 @@ class Gallery(Base):
     hide_parent_nav: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
 
     mode: Mapped[str] = mapped_column(String(20), nullable=False, default="presentation")
+    # Showcase-only opt-in: clients may switch this gallery into the Review experience themselves.
+    # Enabling it opens the review write endpoints for the gallery (same trust model as Review
+    # mode); ignored when mode is already "collaboration".
+    client_mode_switch_enabled: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     layout: Mapped[str] = mapped_column(String(20), nullable=False, default="grid")
     sort_order: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     # Admin-only favorite flag: pinned galleries surface in a shelf atop the overview. Never

@@ -145,6 +145,7 @@ class GalleryUpdate(BaseModel):
     # None = don't touch, "" = remove password, non-empty = set new password
     password: str | None = None
     mode: ModeType | None = None
+    client_mode_switch_enabled: bool | None = None  # Showcase-only: clients may switch to Review
     layout: LayoutType | None = None
     sort_order: int | None = None
     pinned: bool | None = None              # admin favorite flag (never cascades)
@@ -214,6 +215,7 @@ class GalleryResponse(BaseModel):
     has_password: bool
     share_token: str
     mode: str
+    client_mode_switch_enabled: bool = False
     layout: str
     sort_order: int
     pinned: bool = False
@@ -291,6 +293,8 @@ class GalleryPublicResponse(BaseModel):
     name: str
     description: str
     mode: str
+    # Showcase-only opt-in: the client may switch this gallery into the Review experience.
+    client_mode_switch_enabled: bool = False
     layout: str
     downloads_enabled: bool
     enable_team_voting: bool = False
