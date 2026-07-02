@@ -141,7 +141,7 @@ export default function GalleryDefaultsPage() {
           <h2 className="text-sm font-medium text-foreground">{t("ratingStyle")}</h2>
           <p className="text-xs text-muted-foreground mt-1">{t("ratingStyleHint")}</p>
         </div>
-        <div className="grid grid-cols-2 gap-2">
+        <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
           {RATING_MODES.map((opt) => {
             const active = effRatingMode === opt.value;
             return (
@@ -149,19 +149,19 @@ export default function GalleryDefaultsPage() {
                 key={opt.value}
                 type="button"
                 onClick={() => save({ rating_mode: opt.value })}
-                className={`flex items-center justify-center gap-2 rounded-md border p-3 transition-colors ${
+                className={`flex min-w-0 items-center justify-center gap-2 rounded-md border p-3 transition-colors ${
                   active ? "border-primary ring-1 ring-primary" : "border-border hover:border-muted-foreground"
                 }`}
               >
                 {opt.value === "stars" ? (
-                  <Icons.rating size={16} className="text-amber-400" fill="currentColor" />
+                  <Icons.rating size={16} className="shrink-0 text-amber-400" fill="currentColor" />
                 ) : (
-                  <span className="flex gap-0.5">
+                  <span className="flex shrink-0 gap-0.5">
                     <span className="h-3 w-3 rounded-full bg-green-500" />
                     <span className="h-3 w-3 rounded-full bg-red-500" />
                   </span>
                 )}
-                <span className="text-sm text-foreground">{t(opt.labelKey)}</span>
+                <span className="min-w-0 text-center text-sm text-foreground">{t(opt.labelKey)}</span>
               </button>
             );
           })}

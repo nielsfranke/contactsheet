@@ -158,21 +158,21 @@ export function PresetEditorModal({ open, onOpenChange, mode, preset }: Props) {
             />
           </div>
         </div>
-        <div className="flex items-center justify-between gap-4 pt-2 border-t border-border">
+        <div className="flex flex-col gap-3 pt-2 border-t border-border sm:flex-row sm:items-center sm:justify-between sm:gap-4">
           <Button
             variant="ghost"
             size="sm"
-            className="text-muted-foreground"
+            className="text-muted-foreground max-sm:w-full"
             disabled={save.isPending || preset === null}
             onClick={() => save.mutate(null)}
           >
             {t("resetDefaults")}
           </Button>
-          <div className="flex gap-2">
-            <Button variant="outline" size="sm" onClick={() => onOpenChange(false)}>
+          <div className="flex gap-2 max-sm:w-full">
+            <Button variant="outline" size="sm" className="max-sm:flex-1" onClick={() => onOpenChange(false)}>
               {tc("cancel")}
             </Button>
-            <Button size="sm" onClick={handleSave} disabled={save.isPending}>
+            <Button size="sm" className="max-sm:flex-1" onClick={handleSave} disabled={save.isPending}>
               {save.isPending ? tc("saving") : tc("save")}
             </Button>
           </div>

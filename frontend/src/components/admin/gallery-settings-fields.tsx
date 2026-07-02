@@ -34,7 +34,7 @@ export function Segmented<T extends string>({
   options: { value: T; label: string; icon?: ReactNode }[];
 }) {
   return (
-    <div className="inline-flex gap-0.5 rounded-lg bg-muted p-0.5">
+    <div className="inline-flex max-w-full flex-wrap gap-0.5 rounded-lg bg-muted p-0.5">
       {options.map((o) => (
         <button
           key={o.value}
@@ -80,12 +80,12 @@ export function Row({
   children: React.ReactNode;
 }) {
   return (
-    <div className="flex items-center justify-between gap-4 py-2.5">
+    <div className="flex flex-col items-start gap-1.5 py-2.5 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
       <div className="min-w-0">
         <Label className="font-medium">{label}</Label>
         {hint && <p className="text-xs text-muted-foreground mt-0.5">{hint}</p>}
       </div>
-      <div className="flex-shrink-0">{children}</div>
+      <div className="max-w-full flex-shrink-0">{children}</div>
     </div>
   );
 }
