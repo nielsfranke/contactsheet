@@ -125,6 +125,13 @@ export function Lightbox({
   const [showComments, setShowComments] = useState(
     intent.panel === "comments" || intent.panel === "annotations",
   );
+  // Marks follow the comment panel: anchored comments list in the panel, so opening it (icon or a
+  // tile's comment-pill intent) reveals their pen marks too; the eye toggle stays for standalone
+  // control.
+  const [showAnnotations, setShowAnnotations] = useState(
+    intent.panel === "annotations" ||
+      (intent.panel === "comments" && (images[currentIndex]?.annotation_count ?? 0) > 0),
+  );
   const [isFullscreen, setIsFullscreen] = useState(false);
   // Immersive mode: tapping the photo hides all chrome for a clean full-bleed view (tap again to
   // restore). Works on iOS, where the real Fullscreen API only applies to <video>.
@@ -132,7 +139,6 @@ export function Lightbox({
   const [annotating, setAnnotating] = useState(false);
   const [needName, setNeedName] = useState(false);
   const [hoveredAnno, setHoveredAnno] = useState<string | null>(null);
-  const [showAnnotations, setShowAnnotations] = useState(intent.panel === "annotations");
   const [pendingDeleteAnno, setPendingDeleteAnno] = useState<string | null>(null);
   const [strokeWidth, setStrokeWidth] = useState<number>(3.5);
   const reviewerName = useReviewerStore((s) => s.name);
@@ -824,7 +830,13 @@ export function Lightbox({
               variant="ghost"
               size="sm"
               className={`${muted} ${hoverStrong} ${showComments ? strong : ""}`}
-              onClick={() => setShowComments((v) => !v)}
+              onClick={() => {
+                const next = !showComments;
+                setShowComments(next);
+                // Anchored comments list in the panel — reveal/hide their pen marks along with it
+                // (drawing mode forces marks on regardless, so don't touch the flag mid-annotate).
+                if (annotationCount > 0 && !annotating) setShowAnnotations(next);
+              }}
               title={t("comments")}
               aria-label={t("comments")}
               aria-pressed={showComments}
