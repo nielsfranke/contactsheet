@@ -162,6 +162,20 @@ Mapping in the plugin: ContactSheet color flag → LR color label; star rating �
 LR rating; configurable, opt-in (don't clobber the photographer's own labels
 silently).
 
+**Two client-side readback commands** (both use the same `/images/picks` endpoint;
+no further backend work):
+
+- **Sync client picks** (v0.8.0) — for **Publish Service** collections. Matches catalog
+  photos to ContactSheet images by the remote id stored at publish time (exact).
+- **Import client picks from a gallery…** (**v0.9.0**) — for galleries made with plain
+  **Export** or on the web, which have no publish mapping in the catalog. Matches by
+  **filename** (basename, case-insensitive; `IMG_1234.jpg` ↔ `IMG_1234.CR3`), applied to
+  the current Library selection. Duplicate basenames — on either side — are skipped, not
+  guessed. This closes the "readback only works for published galleries" gap (the
+  original limitation a user hit when a gallery had been created via Export). Verified
+  end-to-end in Lightroom Classic (3/60 filename-matched photos correctly labelled/rated;
+  non-matching photos untouched). See `contactsheet-lightroom` `DESIGN-import-picks.md`.
+
 ## Repo & licence
 
 The **plugin lives in its own repo** (e.g. `contactsheet-lightroom`, Forgejo
