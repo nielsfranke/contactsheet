@@ -417,7 +417,10 @@ export function Lightbox({
 
   function toggleAnnotate() {
     if (annotating) {
+      // Mirror the comment icon's toggle: the pen opened the comment panel, so deactivating the
+      // pen closes it again.
       setAnnotating(false);
+      setShowComments(false);
       return;
     }
     if (!reviewerName) {
