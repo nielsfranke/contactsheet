@@ -52,6 +52,21 @@ interface Rect {
   height: number;
 }
 
+/** Layout-space page offset (summed offsetLeft/Top up the offsetParent chain). Unlike
+ *  getBoundingClientRect this ignores CSS transforms — essential here: the lightbox zoom layer
+ *  scales this whole subtree, and client rects would bake that scale into the measured rect,
+ *  double-scaling the marks. Layout offsets keep the rect in the layer's own coordinate space. */
+function layoutOffset(el: HTMLElement): { x: number; y: number } {
+  let x = 0, y = 0;
+  let node: HTMLElement | null = el;
+  while (node) {
+    x += node.offsetLeft;
+    y += node.offsetTop;
+    node = node.offsetParent as HTMLElement | null;
+  }
+  return { x, y };
+}
+
 /** Measure the rendered image's content box relative to its offset parent (the layer root).
  *  Computes the object-contain content rect from the element box + the image's natural size, so it
  *  aligns whether the <img> hugs its content (max-w/max-h) or fills the slide (w/h-full) and is
@@ -71,8 +86,9 @@ function useContentRect(
       const i = imgRef.current;
       const r = rootRef.current;
       if (!i || !r) return;
-      const ib = i.getBoundingClientRect();
-      const rb = r.getBoundingClientRect();
+      const io = layoutOffset(i);
+      const ro = layoutOffset(r);
+      const ib = { left: io.x, top: io.y, width: i.offsetWidth, height: i.offsetHeight };
       // Object-contain content box within the element box (centered, aspect-preserved). For an
       // element that already hugs its content this is a no-op; for a filled element it backs out the
       // letterbox margins so marks land on the photo, not the slide.
@@ -86,7 +102,7 @@ function useContentRect(
         cl = ib.left + (ib.width - cw) / 2;
         ct = ib.top + (ib.height - ch) / 2;
       }
-      setRect({ left: cl - rb.left, top: ct - rb.top, width: cw, height: ch });
+      setRect({ left: cl - ro.x, top: ct - ro.y, width: cw, height: ch });
     }
 
     measure();

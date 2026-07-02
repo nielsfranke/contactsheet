@@ -122,6 +122,7 @@ Static files (`/uploads`, `/branding`) are mounted at startup via `app.mount(...
 | `src/store/reviewer.ts` | Zustand persist store for team voting reviewer name |
 | `src/store/lightbox.ts` | Zustand store for lightbox open/index/intent state |
 | `src/hooks/useImageUpload.ts` | Aggregate upload progress; shared hidden `<input>` |
+| `src/hooks/usePinchZoom.ts` | Touch-lightbox pinch/double-tap zoom — suspends the scroll-snap carousel while zoomed |
 | `src/hooks/useGallerySettingsAutosave.ts` | Autosave hook for `GallerySettingsModal` |
 | `src/components/admin/AdminDnd.tsx` | `AdminDndProvider` — one DndContext for all reparenting |
 | `src/components/admin/GallerySettingsModal.tsx` | Per-gallery settings (tabbed, autosaves) |
@@ -213,6 +214,12 @@ Key non-obvious constraints — full details in `docs/architecture/`.
 ### Annotations
 - An annotation **is a comment** with a nullable `anchor` JSON column. `annotation_count` counts only rows where `anchor` is not null (via `json_extract`). Anchored comments still increment `comment_count`.
 - Annotations require comments — the toggle is nested under Comments and disabled without it.
+
+### Lightbox pinch-zoom (touch)
+- The mobile carousel stays a **native scroll-snap** container (`touch-action: pan-x`); `usePinchZoom` takes over on a second finger / double-tap and *suspends* the native scroll while zoomed. Its `getRestoreStyle` must mirror the carousel's rendered inline styles — keep them in sync.
+- On touch, **single taps route through the hook** (double-tap window) — the photo `onClick` (immersive toggle) is desktop-only.
+- `AnnotationLayer` measures with **layout offsets, not `getBoundingClientRect`** — the zoom layer's CSS transform would otherwise double-scale the marks.
+- First zoom past ~1.2× swaps the slide `small` → `medium` (preloaded + decoded off-screen; watermark-aware via `variantSrc`). Originals are never fetched for zoom. See `docs/architecture/lightbox-pinch-zoom.md`.
 
 ### Watermarks
 - `watermark_service.is_active(ws)` is the single gate — used by the public serializer and the serving proxy. Composited on the fly for thumb/medium, cached to `{variant}-wm/` keyed on a settings hash. Originals and video are never watermarked.

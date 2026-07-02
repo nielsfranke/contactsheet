@@ -19,6 +19,7 @@ import { lightboxTones } from "@/lib/lightbox-theme";
 import { previewSrcSet } from "@/lib/gridLayout";
 import { Icons } from "@/lib/ui-icons";
 import { useLightboxKeys } from "./lightbox-keys";
+import { usePinchZoom } from "@/hooks/usePinchZoom";
 import { photoSrc as resolvePhotoSrc, variantSrc as resolveVariantSrc } from "./lightbox-image-src";
 import type { Anchor, ColorFlag, CollabFeatures, LightboxBackdrop, Rating } from "@/lib/types";
 import {
@@ -177,9 +178,8 @@ export function Lightbox({
   // Swipe-down-to-dismiss on the mobile scroll carousel. The container scrolls horizontally
   // natively; these passive handlers only engage on a clearly-vertical *downward* drag (which the
   // container doesn't scroll natively — overflow-y is hidden), so they never fight the horizontal
-  // gesture. suppressClick swallows the click that follows a drag so it doesn't toggle immersive.
+  // gesture. They stand down entirely while the pinch-zoom owns the carousel (zoomActive).
   const dismiss = useRef<{ x: number; y: number; axis: "h" | "v" | null; dy: number } | null>(null);
-  const suppressClick = useRef(false);
   const imgRef = useRef<HTMLImageElement>(null);
   const hoverClearTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -194,11 +194,12 @@ export function Lightbox({
     }
   }
 
-  // Tap the photo to toggle immersive (chrome-hidden) mode. Skipped while annotating (the pen owns
-  // the pointer); a real swipe suppresses the click, so navigation gestures don't toggle it.
+  // Tap/click the photo to toggle immersive (chrome-hidden) mode. Desktop only as a click handler —
+  // on touch, taps route through the pinch-zoom hook (which must tell a single tap apart from a
+  // double-tap zoom) and land in onSingleTap below. Skipped while annotating (the pen owns the
+  // pointer).
   function toggleImmersive() {
     if (annotating) return;
-    if (suppressClick.current) { suppressClick.current = false; return; }
     setImmersive((v) => !v);
   }
 
@@ -211,6 +212,40 @@ export function Lightbox({
   }
 
   const image = images[currentIndex];
+
+  // Pinch-to-zoom (touch lightbox only — see docs/architecture/lightbox-pinch-zoom.md). The hook
+  // owns two-finger/double-tap gestures on the scroll carousel and suspends the native scroll while
+  // zoomed; zoomActive gates the dismiss handlers below. Slides that zoomed past ~1.2× get their
+  // rendition upgraded small → medium (decoded off-screen first, so the swap never flashes).
+  const [upgradedIds, setUpgradedIds] = useState<Set<string>>(() => new Set());
+  function upgradeZoomRendition() {
+    const im = images[currentIndex];
+    if (!im || im.is_video || upgradedIds.has(im.id)) return;
+    const target = variantSrc(im, "medium");
+    if (!target || target === variantSrc(im, "small")) return;
+    const pre = new window.Image();
+    pre.onload = () => {
+      const apply = () => setUpgradedIds((prev) => new Set(prev).add(im.id));
+      if (pre.decode) pre.decode().then(apply, apply);
+      else apply();
+    };
+    pre.src = target;
+  }
+  const zoomEnabled =
+    compact && !annotating && !!image && !image.is_video && image.processing_status !== "no_preview";
+  const { layerRef: zoomLayerRef, activeRef: zoomActive } = usePinchZoom({
+    scrollRef,
+    enabled: zoomEnabled,
+    currentIndex,
+    // Must mirror the carousel's rendered inline styles for the current mode (see the JSX below).
+    getRestoreStyle: () => ({
+      overflowX: annotating ? "hidden" : "auto",
+      scrollSnapType: annotating ? "none" : "x mandatory",
+      touchAction: annotating ? "none" : "pan-x",
+    }),
+    onSingleTap: toggleImmersive,
+    onUpgrade: upgradeZoomRendition,
+  });
 
   // Track local flag/likes optimistically; reset them when the lightbox moves to a
   // different image. This is a render-time reset (React's recommended alternative to
@@ -490,7 +525,7 @@ export function Lightbox({
   // when scrolling stops, not on every frame (which would re-render the heavy lightbox mid-scroll).
   function handleScroll() {
     const el = scrollRef.current;
-    if (!el) return;
+    if (!el || zoomActive.current) return;
     if (scrollSettle.current) clearTimeout(scrollSettle.current);
     scrollSettle.current = setTimeout(() => {
       const idx = Math.round(el.scrollLeft / el.clientWidth);
@@ -502,8 +537,7 @@ export function Lightbox({
   // a horizontal drag is left entirely to the native scroll. Translates the whole carousel down +
   // fades, then closes past a threshold (else snaps back). Skipped while annotating.
   function onDismissStart(e: React.TouchEvent) {
-    suppressClick.current = false;
-    if (annotating || e.touches.length !== 1) { dismiss.current = null; return; }
+    if (annotating || zoomActive.current || e.touches.length !== 1) { dismiss.current = null; return; }
     dismiss.current = { x: e.touches[0].clientX, y: e.touches[0].clientY, axis: null, dy: 0 };
   }
   function onDismissMove(e: React.TouchEvent) {
@@ -518,7 +552,6 @@ export function Lightbox({
     }
     if (d.axis === "v") {
       d.dy = Math.max(0, dy);
-      if (d.dy > 6) suppressClick.current = true;
       const el = scrollRef.current;
       if (el) {
         el.style.transition = "none";
@@ -677,6 +710,10 @@ export function Lightbox({
     }
     return (
       <>
+        {/* Zoom layer — the pinch/double-tap transform target (written imperatively by usePinchZoom
+            on the current slide). Wraps exactly the photo + its annotation marks so they scale and
+            pan together; the flag/star badges below stay outside as unscaled chrome. */}
+        <div ref={isCurrent ? zoomLayerRef : undefined} className="absolute inset-0">
         {/* Cached-thumbnail underlay — always painted behind the photo, never the backdrop. */}
         {showThumb && im.thumb_url && (
           // eslint-disable-next-line @next/next/no-img-element
@@ -694,14 +731,16 @@ export function Lightbox({
           <img
             key="photo"
             ref={isCurrent ? (el) => { imgRef.current = el; } : undefined}
-            src={photoSrc(im)}
+            data-lightbox-photo=""
+            src={compact && upgradedIds.has(im.id) ? variantSrc(im, "medium") : photoSrc(im)}
             srcSet={compact ? undefined : previewSrcSet(im, highRes)}
             sizes={compact ? undefined : "100vw"}
             alt={isCurrent ? im.original_filename : ""}
             fetchPriority={isCurrent ? "high" : "auto"}
             // Force a decode as soon as the slide downloads so it's paint-ready before it's revealed.
             onLoad={(e) => { void e.currentTarget.decode?.().catch(() => {}); }}
-            onClick={isCurrent ? toggleImmersive : undefined}
+            // Touch taps route through usePinchZoom (single vs double tap); desktop keeps the click.
+            onClick={isCurrent && !compact ? toggleImmersive : undefined}
             onContextMenu={protectImages ? (e) => e.preventDefault() : undefined}
             draggable={false}
             className={`relative z-10 w-full h-full object-contain select-none ${protectImages ? "[-webkit-touch-callout:none]" : ""}`}
@@ -726,6 +765,7 @@ export function Lightbox({
             tones={tones}
           />
         )}
+        </div>
         {/* Flag color badge — ring flips to black on a light/white backdrop so it stays visible. */}
         {isCurrent && (collabMode || adminGalleryId) && flagsEnabled && !stars && effectiveFlag !== "none" && activeFlagColor && (
           <div key="flag" className={`absolute top-3 right-16 w-4 h-4 rounded-full ring-2 ${light ? "ring-black/70" : "ring-white"} shadow-[0_0_3px_rgba(0,0,0,0.4)] ${activeFlagColor.bg}`} />
@@ -919,7 +959,9 @@ export function Lightbox({
               // source; `overscroll-contain` is a belt-and-suspenders against any residual chaining.
               // While annotating: "none" — the pen owns the gesture and the browser must NOT
               // pinch/double-tap-zoom the whole page (that zoom was the bug). Normal viewing keeps
-              // pan-x for the horizontal carousel (also no zoom).
+              // pan-x for the horizontal carousel (no *browser* zoom — photo zoom is usePinchZoom,
+              // which temporarily overrides these three styles while zoomed; its getRestoreStyle
+              // above must stay in sync with them).
               touchAction: annotating ? "none" : "pan-x",
               overscrollBehavior: "contain",
             }}
