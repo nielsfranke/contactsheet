@@ -190,6 +190,9 @@ export function Lightbox({
   const dismiss = useRef<{ x: number; y: number; axis: "h" | "v" | null; dy: number } | null>(null);
   const imgRef = useRef<HTMLImageElement>(null);
   const hoverClearTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Measured top-toolbar height — the bare bottom strip mirrors it for an even photo frame.
+  const topBarRef = useRef<HTMLDivElement>(null);
+  const [topBarH, setTopBarH] = useState(0);
 
   // Hover highlight with a short grace period on clear, so the pointer can travel from a stroke to
   // its floating trash button (or comment row) without the highlight flickering off.
@@ -515,6 +518,18 @@ export function Lightbox({
     };
   }, []);
 
+  // Mirror the top toolbar's rendered height (its buttons/padding may change) into state. The bar
+  // is conditionally mounted (immersive), so re-bind when it returns.
+  useLayoutEffect(() => {
+    const el = topBarRef.current;
+    if (!el) return;
+    const update = () => setTopBarH(el.offsetHeight);
+    update();
+    const ro = new ResizeObserver(update);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [immersive]);
+
   // Track browser fullscreen so the toggle reflects the real state (incl. Esc-to-exit).
   useEffect(() => {
     function onFsChange() {
@@ -725,6 +740,15 @@ export function Lightbox({
   // the annotation tools don't push Download/Fullscreen/Close off the right edge. Hide the
   // non-annotation actions then; they're not needed mid-drawing and return on "Done".
   const annoCompact = compact && annotating;
+  // Showcase framing: when the filename strip is the only bottom chrome (no collab toolbar, no
+  // open panel), it stretches to the measured top-toolbar height (topBarH) so the photo sits in an
+  // even frame top and bottom.
+  const bottomBare =
+    !showToolbar &&
+    !sliderZoomEnabled &&
+    !(showCommentToggle && showComments) &&
+    !(showExif && exif) &&
+    !(showIptc && hasIptc);
 
   // The inner content of a slide — shared by the desktop transform carousel and the mobile scroll-snap
   // carousel, so the two never drift. `showThumb`/`showPhoto` let the mobile path window which slides
@@ -820,7 +844,7 @@ export function Lightbox({
     >
       {/* Top toolbar — hidden in immersive mode */}
       {!immersive && (
-      <div className="flex items-center justify-between px-4 py-3 flex-shrink-0">
+      <div ref={topBarRef} className="flex items-center justify-between px-4 py-3 flex-shrink-0">
         <span className={`${muted} text-sm`}>
           {currentIndex + 1} / {images.length}
         </span>
@@ -1221,7 +1245,10 @@ export function Lightbox({
           text, so the image keeps the same bottom margin whether or not a caption is shown — instead
           of running to the bottom edge when the caption is off. */}
       {!immersive && (
-        <div className="px-4 py-2 flex-shrink-0">
+        <div
+          className={`px-4 py-2 flex-shrink-0 ${bottomBare ? "grid content-center" : ""}`}
+          style={bottomBare && topBarH > 0 ? { minHeight: topBarH } : undefined}
+        >
           {annotating ? (
             <p className={`text-xs text-center truncate ${strong}`}>{ta("hint")}</p>
           ) : showFilename ? (
