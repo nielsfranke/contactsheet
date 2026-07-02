@@ -98,6 +98,9 @@ class AppSettingsUpdate(BaseModel):
     # Admin UI language. Keep in sync with the frontend SUPPORTED_LOCALES (src/i18n/request.ts).
     admin_locale: Literal["en", "de"] | None = None
     lightbox_backdrop: Literal["dimmed", "black", "white", "transparent"] | None = None
+    # Desktop review-lightbox zoom: on/off + max level (fit-relative percent, or "original" = 1:1).
+    lightbox_zoom_enabled: bool | None = None
+    lightbox_zoom_max: Literal["200", "300", "400", "original"] | None = None
     # Masthead branding. brand_color/tagline: "" clears, value sets, None = no change.
     brand_display: Literal["logo_name", "logo_only", "name_only"] | None = None
     brand_font: FontType | None = None
@@ -175,6 +178,8 @@ class AppSettingsResponse(BaseModel):
     admin_theme: str
     admin_locale: str = "en"
     lightbox_backdrop: str = "dimmed"
+    lightbox_zoom_enabled: bool = True
+    lightbox_zoom_max: str = "400"
     brand_display: str = "logo_name"
     brand_font: str = "sans"
     brand_color: str | None = None

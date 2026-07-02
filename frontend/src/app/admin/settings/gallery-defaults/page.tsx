@@ -8,7 +8,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
 import { api } from "@/lib/api";
 import { SettingsPageSkeleton } from "@/components/admin/SettingsPageSkeleton";
-import { MODE_LABELS, type LightboxBackdrop, type ModeType, type RatingMode } from "@/lib/types";
+import { MODE_LABELS, type LightboxBackdrop, type LightboxZoomMax, type ModeType, type RatingMode } from "@/lib/types";
 import { Icons } from "@/lib/ui-icons";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -26,6 +26,13 @@ const MODES: { value: ModeType; descKey: string; icon: React.ReactNode }[] = [
 const RATING_MODES: { value: RatingMode; labelKey: string }[] = [
   { value: "flags", labelKey: "ratingModeFlags" },
   { value: "stars", labelKey: "ratingModeStars" },
+];
+
+const ZOOM_MAX_OPTIONS: { value: LightboxZoomMax; labelKey: string }[] = [
+  { value: "200", labelKey: "zoomMax200" },
+  { value: "300", labelKey: "zoomMax300" },
+  { value: "400", labelKey: "zoomMax400" },
+  { value: "original", labelKey: "zoomMaxOriginal" },
 ];
 
 const BACKDROP_OPTIONS: { value: LightboxBackdrop; labelKey: string; swatch: string }[] = [
@@ -133,6 +140,35 @@ export default function GalleryDefaultsPage() {
             {t("backdropHint")}
           </p>
         </div>
+        {/* Desktop review-lightbox zoom control (slider/wheel). Mobile pinch-zoom is unaffected. */}
+        <Toggle
+          label={t("zoom")}
+          hint={t("zoomHint")}
+          checked={settings.lightbox_zoom_enabled}
+          onChange={(on) => save({ lightbox_zoom_enabled: on })}
+        />
+        {settings.lightbox_zoom_enabled && (
+          <div className="space-y-1.5">
+            <Label>{t("zoomMax")}</Label>
+            <div className="grid grid-cols-4 gap-2">
+              {ZOOM_MAX_OPTIONS.map((opt) => (
+                <button
+                  key={opt.value}
+                  type="button"
+                  onClick={() => save({ lightbox_zoom_max: opt.value })}
+                  className={`rounded-md border p-2 text-xs text-foreground transition-colors ${
+                    settings.lightbox_zoom_max === opt.value
+                      ? "border-primary ring-1 ring-primary"
+                      : "border-border hover:border-muted-foreground"
+                  }`}
+                >
+                  {t(opt.labelKey)}
+                </button>
+              ))}
+            </div>
+            <p className="text-xs text-muted-foreground">{t("zoomMaxHint")}</p>
+          </div>
+        )}
       </section>
 
       {/* Rating style — instance-wide: color flags vs. 1–5 stars (never both) */}

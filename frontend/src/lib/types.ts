@@ -41,6 +41,8 @@ export const MODE_LABELS: Record<ModeType, string> = {
   presentation: "Showcase",
 };
 export type ColorFlag = "none" | "green" | "red" | "yellow" | "blue";
+// Desktop review-lightbox zoom ceiling: fit-relative percent, or "original" = the photo's 1:1 size.
+export type LightboxZoomMax = "200" | "300" | "400" | "original";
 // Instance-wide rating style (app_settings.rating_mode). Never both at once.
 export type RatingMode = "flags" | "stars";
 // 0 = unrated, 1–5 = stars.
@@ -137,6 +139,8 @@ export interface GalleryPublicResponse extends GallerySettings {
   watermark_enabled: boolean;
   high_res_previews: boolean;
   lightbox_backdrop: LightboxBackdrop;
+  lightbox_zoom_enabled: boolean;
+  lightbox_zoom_max: LightboxZoomMax;
   rating_mode: RatingMode;
   default_sort: GallerySortKey;
   default_sort_dir: SortDir;
@@ -354,6 +358,8 @@ export interface AppSettings {
   admin_theme: "light" | "dark";
   admin_locale: Locale;
   lightbox_backdrop: LightboxBackdrop;
+  lightbox_zoom_enabled: boolean;
+  lightbox_zoom_max: LightboxZoomMax;
   brand_display: BrandDisplay;
   brand_font: string;
   brand_color: string | null;
@@ -426,6 +432,8 @@ export interface AppSettingsUpdate {
   admin_theme?: "light" | "dark";
   admin_locale?: Locale;
   lightbox_backdrop?: LightboxBackdrop;
+  lightbox_zoom_enabled?: boolean;
+  lightbox_zoom_max?: LightboxZoomMax;
   brand_display?: BrandDisplay;
   brand_font?: string;
   brand_color?: string;

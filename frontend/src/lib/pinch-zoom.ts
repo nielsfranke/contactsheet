@@ -91,7 +91,8 @@ export function settle(t: ZoomTransform, fit: FitBox, cw: number, ch: number): Z
 
 /** Absolute zoom to a target scale around a focal point (the desktop slider/wheel — see
  *  docs/architecture/lightbox-zoom-slider.md). Hard-clamped on both axes: unlike a finger gesture
- *  there is no release event to snap back on, so no rubber-band mid-interaction. */
+ *  there is no release event to snap back on, so no rubber-band mid-interaction. `maxScale` is the
+ *  configured ceiling (settings: 2/3/4×, or the photo's original-size scale). */
 export function zoomTo(
   t: ZoomTransform,
   scale: number,
@@ -99,8 +100,9 @@ export function zoomTo(
   fit: FitBox,
   cw: number,
   ch: number,
+  maxScale: number = MAX_SCALE,
 ): ZoomTransform {
-  return clampPan(zoomAround(t, focal, clamp(scale, MIN_SCALE, MAX_SCALE)), fit, cw, ch);
+  return clampPan(zoomAround(t, focal, clamp(scale, MIN_SCALE, Math.max(MIN_SCALE, maxScale))), fit, cw, ch);
 }
 
 /** Double-tap toggle: zoomed → back to fit; at fit → DOUBLE_TAP_SCALE anchored at the tap point,

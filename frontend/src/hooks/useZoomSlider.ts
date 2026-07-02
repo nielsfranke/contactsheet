@@ -4,7 +4,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef } from "react";
-import { FIT, MIN_SCALE, clampPan, fitSize, zoomTo, type ZoomTransform } from "@/lib/pinch-zoom";
+import { FIT, MAX_SCALE, MIN_SCALE, clampPan, fitSize, zoomTo, type FitBox, type ZoomTransform } from "@/lib/pinch-zoom";
 
 /**
  * Desktop lightbox zoom for review contexts — slider / wheel / drag-to-pan (see
@@ -37,9 +37,21 @@ interface Options {
   enabled: boolean;
   /** While annotating the pen owns the drag — pan stands down, wheel/slider keep zooming. */
   panDisabled?: boolean;
+  /** Configured ceiling (settings): a fit-relative scale (2/3/4), or "original" — the current
+   *  photo's 1:1 original pixel size (varies per photo, derived from originalWidth / fit width). */
+  zoomMax?: number | "original";
+  /** The current photo's original pixel width (image.width) — only used for zoomMax "original". */
+  originalWidth?: number | null;
   currentIndex: number;
   /** First zoom-in on the current photo — the lightbox bumps `sizes` so srcset re-picks. */
   onUpgrade: () => void;
+}
+
+export interface ZoomSliderState {
+  /** Current zoom percent, 100 = fit. */
+  percent: number;
+  /** Slider ceiling in percent (≥ 100; == 100 means nothing to zoom — the control hides). */
+  maxPercent: number;
 }
 
 export interface ZoomSliderApi {
@@ -47,10 +59,9 @@ export interface ZoomSliderApi {
   layerRef: React.RefObject<HTMLDivElement | null>;
   /** True exactly while zoomed past fit. Read by the desktop touch-swipe handlers. */
   activeRef: React.RefObject<boolean>;
-  /** Current zoom percent, 100 (fit) … 400. */
-  getPercent: () => number;
+  getState: () => ZoomSliderState;
   /** Control-only subscription — returns the unsubscribe. */
-  subscribe: (cb: (percent: number) => void) => () => void;
+  subscribe: (cb: (state: ZoomSliderState) => void) => () => void;
   /** Slider input: zoom to a percent around the viewport center. */
   setPercent: (percent: number) => void;
   /** Back to fit (magnifier button; also runs on navigation / disable). */
@@ -75,7 +86,7 @@ export function useZoomSlider(opts: Options): ZoomSliderApi {
   /** The element last painted with a non-identity transform — reset must clear *that* element,
    *  even if layerRef has already moved on to another slide's layer. */
   const paintedEl = useRef<HTMLElement | null>(null);
-  const listeners = useRef(new Set<(percent: number) => void>());
+  const listeners = useRef(new Set<(state: ZoomSliderState) => void>());
 
   // Stable across renders: paint/apply/reset close over refs only.
   const api = useMemo(() => {
@@ -83,9 +94,32 @@ export function useZoomSlider(opts: Options): ZoomSliderApi {
       return Math.round(scale * 100);
     }
 
+    /** The photo's object-contain box at fit scale (container box until the img has decoded). */
+    function fitOf(cw: number, ch: number) {
+      const img = layerRef.current?.querySelector<HTMLImageElement>("img[data-lightbox-photo]");
+      return fitSize(img?.naturalWidth ?? 0, img?.naturalHeight ?? 0, cw, ch);
+    }
+
+    /** The configured zoom ceiling for the current photo. "original" derives it from the photo's
+     *  original pixel width vs. the rendered fit width (≥ 1 — a photo smaller than its fit box has
+     *  nothing to zoom into). Unknown original → the built-in 4× default. */
+    function maxScaleOf(fit: FitBox): number {
+      const zm = optsRef.current.zoomMax ?? MAX_SCALE;
+      if (zm !== "original") return Math.max(MIN_SCALE, zm);
+      const ow = optsRef.current.originalWidth;
+      if (!ow || fit.w <= 0) return MAX_SCALE;
+      return Math.max(MIN_SCALE, ow / fit.w);
+    }
+
+    function state(): ZoomSliderState {
+      const area = optsRef.current.areaRef.current;
+      const fit = area ? fitOf(area.clientWidth, area.clientHeight) : { w: 0, h: 0 };
+      return { percent: percentOf(t.current.scale), maxPercent: percentOf(maxScaleOf(fit)) };
+    }
+
     function emit() {
-      const p = percentOf(t.current.scale);
-      for (const cb of listeners.current) cb(p);
+      const s = state();
+      for (const cb of listeners.current) cb(s);
     }
 
     function paint(nt: ZoomTransform, panning: boolean) {
@@ -101,19 +135,14 @@ export function useZoomSlider(opts: Options): ZoomSliderApi {
       activeRef.current = zoomed;
     }
 
-    /** The photo's object-contain box at fit scale (container box until the img has decoded). */
-    function fitOf(cw: number, ch: number) {
-      const img = layerRef.current?.querySelector<HTMLImageElement>("img[data-lightbox-photo]");
-      return fitSize(img?.naturalWidth ?? 0, img?.naturalHeight ?? 0, cw, ch);
-    }
-
     /** Zoom to an absolute scale around a center-relative focal point. */
     function apply(scale: number, focal: { x: number; y: number }) {
       const area = optsRef.current.areaRef.current;
       if (!area) return;
       const cw = area.clientWidth;
       const ch = area.clientHeight;
-      const nt = zoomTo(t.current, scale, focal, fitOf(cw, ch), cw, ch);
+      const fit = fitOf(cw, ch);
+      const nt = zoomTo(t.current, scale, focal, fit, cw, ch, maxScaleOf(fit));
       t.current = nt;
       paint(nt, false);
       emit();
@@ -141,8 +170,8 @@ export function useZoomSlider(opts: Options): ZoomSliderApi {
     return {
       layerRef,
       activeRef,
-      getPercent: () => percentOf(t.current.scale),
-      subscribe: (cb: (percent: number) => void) => {
+      getState: state,
+      subscribe: (cb: (state: ZoomSliderState) => void) => {
         listeners.current.add(cb);
         return () => listeners.current.delete(cb);
       },

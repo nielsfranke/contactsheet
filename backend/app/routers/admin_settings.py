@@ -45,6 +45,8 @@ def _to_response(s) -> AppSettingsResponse:
         admin_theme=s.admin_theme,
         admin_locale=s.admin_locale,
         lightbox_backdrop=s.lightbox_backdrop,
+        lightbox_zoom_enabled=s.lightbox_zoom_enabled,
+        lightbox_zoom_max=s.lightbox_zoom_max,
         brand_display=s.brand_display,
         brand_font=s.brand_font,
         brand_color=s.brand_color,
@@ -101,6 +103,10 @@ def update_settings(
         updates["admin_locale"] = body.admin_locale
     if body.lightbox_backdrop is not None:
         updates["lightbox_backdrop"] = body.lightbox_backdrop
+    if body.lightbox_zoom_enabled is not None:
+        updates["lightbox_zoom_enabled"] = body.lightbox_zoom_enabled
+    if body.lightbox_zoom_max is not None:
+        updates["lightbox_zoom_max"] = body.lightbox_zoom_max
     # "" clears the override/default, a URL sets it; omitted leaves it unchanged.
     for url_field in ("public_base_url", "source_url"):
         if url_field in body.model_fields_set:

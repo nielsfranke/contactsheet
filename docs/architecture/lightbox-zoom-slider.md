@@ -108,6 +108,20 @@ i18n: two or three keys under `gallery.lightbox` (`zoom`, `zoomReset` aria/label
 `en.json` is the source of truth, German lands via Weblate. Validate with
 `node scripts/validate-i18n.mjs`.
 
+## Configuration (Settings → Gallery defaults → Viewing)
+
+Instance-wide, on `app_settings` (migration 0044), surfaced in the public gallery payload
+next to `lightbox_backdrop` and in the admin settings for the admin lightbox:
+
+- `lightbox_zoom_enabled` (default on) — hides the control entirely when off (wheel zoom
+  included; the whole desktop zoom hook disengages). Mobile pinch-zoom is unaffected.
+- `lightbox_zoom_max` (default `"400"`) — the slider/wheel ceiling: `"200"`, `"300"`,
+  `"400"` (fit-relative percent), or `"original"` = the photo's 1:1 original pixel size,
+  derived per photo from `image.width / fit width` (can exceed 400 % for large originals,
+  and collapses to nothing for photos smaller than their fit box — the control hides
+  then). The readout stays fit-relative; the pixels stay the `medium` rendition either
+  way (originals are never fetched).
+
 ## Testing
 
 - Vitest: percent↔scale mapping (fit% floor, 100 % ceiling, null-width fallback) beside
@@ -121,5 +135,6 @@ i18n: two or three keys under `gallery.lightbox` (`zoom`, `zoomReset` aria/label
 
 ## Deployment impact
 
-Frontend-only. No migration, no nginx/compose change — a normal image pull & `up -d`
-delivers it.
+Migration 0044 (two `app_settings` columns) — applied automatically by the backend's
+`start.sh` (`alembic upgrade head`) on container start, so a normal image pull &
+`up -d` delivers it. No nginx/compose change.

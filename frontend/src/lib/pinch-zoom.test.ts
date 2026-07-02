@@ -165,6 +165,14 @@ describe("zoomTo", () => {
     expect(t.tx).toBe(400);
     expect(t.ty).toBe(290);
   });
+
+  it("respects a configured ceiling (settings: 2× / original-size scale)", () => {
+    expect(zoomTo({ ...FIT }, 3, { x: 0, y: 0 }, fit, CW, CH, 2).scale).toBe(2);
+    // "original" can exceed the built-in 4× default (e.g. a 6000px original in a 900px fit ≈ 6.7×)
+    expect(zoomTo({ ...FIT }, 9, { x: 0, y: 0 }, fit, CW, CH, 6000 / 900).scale).toBeCloseTo(6000 / 900);
+    // a ceiling below fit never inverts the range
+    expect(zoomTo({ ...FIT }, 2, { x: 0, y: 0 }, fit, CW, CH, 0.5).scale).toBe(1);
+  });
 });
 
 describe("doubleTapTarget", () => {

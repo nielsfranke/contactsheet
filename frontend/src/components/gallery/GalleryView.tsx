@@ -246,6 +246,8 @@ export function GalleryView({ gallery, shareToken, galleryToken }: Props) {
           onToggleLike={toggleLike}
           watermarkEnabled={watermarkEnabled}
           highRes={gallery.high_res_previews}
+          zoomEnabled={gallery.lightbox_zoom_enabled}
+          zoomMax={gallery.lightbox_zoom_max}
           features={features}
           showFilename={gallery.show_filename_lightbox}
           showExif={gallery.show_exif}

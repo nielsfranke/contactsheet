@@ -37,6 +37,12 @@ class AppSettings(Base):
     # Public lightbox backdrop tone: "dimmed" (black/95, default), "black", "white", "transparent".
     lightbox_backdrop: Mapped[str] = mapped_column(String(20), nullable=False, default="dimmed")
 
+    # Desktop review-lightbox zoom control (slider/wheel): on/off + how far it may zoom.
+    # Max is relative to fit: "200" | "300" | "400" (percent), or "original" = the photo's 1:1
+    # original pixel size (varies per photo). Mobile pinch-zoom is unaffected.
+    lightbox_zoom_enabled: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
+    lightbox_zoom_max: Mapped[str] = mapped_column(String(10), nullable=False, default="400")
+
     # High-resolution renditions (800px thumbs / 2560px mediums) vs. the lighter
     # 300px / 1920px set; toggling regenerates existing files in the background.
     high_res_previews: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)

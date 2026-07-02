@@ -529,6 +529,8 @@ def get_public_gallery(
         "watermark_enabled": watermark_enabled,
         "high_res_previews": app_settings.high_res_previews,
         "lightbox_backdrop": app_settings.lightbox_backdrop,
+        "lightbox_zoom_enabled": app_settings.lightbox_zoom_enabled,
+        "lightbox_zoom_max": app_settings.lightbox_zoom_max,
         "rating_mode": app_settings.rating_mode,
         "default_sort": app_settings.gallery_sort,
         "default_sort_dir": app_settings.gallery_sort_dir,

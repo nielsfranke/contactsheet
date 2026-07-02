@@ -303,6 +303,10 @@ class GalleryPublicResponse(BaseModel):
     high_res_previews: bool = True
     # Instance-wide public lightbox backdrop tone (dimmed/black/white/transparent).
     lightbox_backdrop: str = "dimmed"
+    # Instance-wide desktop review-lightbox zoom control: on/off + max ("200"/"300"/"400" percent
+    # relative to fit, or "original" = the photo's 1:1 pixel size).
+    lightbox_zoom_enabled: bool = True
+    lightbox_zoom_max: str = "400"
     # Instance-wide rating style: "flags" (color flags) | "stars" (1–5). Tells the client which to render.
     rating_mode: str = "flags"
     # Instance-wide default photo sort — the client gallery seeds its initial sort from this.

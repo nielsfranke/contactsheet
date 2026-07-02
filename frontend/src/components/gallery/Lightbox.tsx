@@ -23,7 +23,7 @@ import { usePinchZoom } from "@/hooks/usePinchZoom";
 import { useZoomSlider } from "@/hooks/useZoomSlider";
 import { LightboxZoomControl } from "./LightboxZoomControl";
 import { photoSrc as resolvePhotoSrc, variantSrc as resolveVariantSrc } from "./lightbox-image-src";
-import type { Anchor, ColorFlag, CollabFeatures, LightboxBackdrop, Rating } from "@/lib/types";
+import type { Anchor, ColorFlag, CollabFeatures, LightboxBackdrop, LightboxZoomMax, Rating } from "@/lib/types";
 import {
   X,
   ChevronLeft,
@@ -86,6 +86,9 @@ interface Props {
   /** Public client galleries: deter casual saving (right-click / drag / long-press).
    *  A deterrent only — the dedicated Download button still works. */
   protectImages?: boolean;
+  /** Instance settings: desktop review-lightbox zoom control on/off + its ceiling. */
+  zoomEnabled?: boolean;
+  zoomMax?: LightboxZoomMax;
 }
 
 const DEFAULT_FEATURES: CollabFeatures = { colorFlags: true, ratingMode: "flags", likes: false, comments: true, annotations: false };
@@ -111,6 +114,8 @@ export function Lightbox({
   showIptc: iptcEnabled = false,
   adminGalleryId,
   protectImages = false,
+  zoomEnabled = true,
+  zoomMax = "400",
 }: Props) {
   const t = useTranslations("gallery.lightbox");
   const ti = useTranslations("gallery.iptc");
@@ -242,11 +247,11 @@ export function Lightbox({
     };
     pre.src = target;
   }
-  const zoomEnabled =
+  const pinchZoomEnabled =
     compact && !annotating && !!image && !image.is_video && image.processing_status !== "no_preview";
   const { layerRef: zoomLayerRef, activeRef: zoomActive } = usePinchZoom({
     scrollRef,
-    enabled: zoomEnabled,
+    enabled: pinchZoomEnabled,
     currentIndex,
     // Must mirror the carousel's rendered inline styles for the current mode (see the JSX below).
     getRestoreStyle: () => ({
@@ -265,6 +270,7 @@ export function Lightbox({
   // annotating — the pen owns the drag (pan disabled), wheel + slider keep zooming.
   const [zoomBoost, setZoomBoost] = useState(false);
   const sliderZoomEnabled =
+    zoomEnabled &&
     !compact &&
     (collabMode || !!adminGalleryId) &&
     !!image &&
@@ -274,6 +280,8 @@ export function Lightbox({
     areaRef,
     enabled: sliderZoomEnabled,
     panDisabled: annotating,
+    zoomMax: zoomMax === "original" ? "original" : Number(zoomMax) / 100,
+    originalWidth: image?.width,
     currentIndex,
     onUpgrade: () => setZoomBoost(true),
   });
@@ -1158,7 +1166,7 @@ export function Lightbox({
           )}
           {sliderZoomEnabled && (
             <LightboxZoomControl
-              getPercent={desktopZoom.getPercent}
+              getState={desktopZoom.getState}
               subscribe={desktopZoom.subscribe}
               onChange={desktopZoom.setPercent}
               onReset={desktopZoom.reset}

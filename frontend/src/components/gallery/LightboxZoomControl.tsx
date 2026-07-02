@@ -7,16 +7,18 @@ import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
 import { ZoomIn } from "lucide-react";
 import type { LightboxTones } from "@/lib/lightbox-theme";
+import type { ZoomSliderState } from "@/hooks/useZoomSlider";
 
 /**
  * The desktop review-mode zoom control (right end of the lightbox bottom toolbar, on the same row
  * as the flag/rating actions): magnifier (= reset), slider, live percentage. Subscribes to the zoom
  * hook's external store so wheel/slider zooming re-renders only this control, never the lightbox
- * (see useZoomSlider).
+ * (see useZoomSlider). The slider ceiling comes from the instance settings (200/300/400 % or the
+ * photo's original size); when a photo has nothing to zoom into (ceiling ≈ fit) the control hides.
  */
 interface Props {
-  getPercent: () => number;
-  subscribe: (cb: (percent: number) => void) => () => void;
+  getState: () => ZoomSliderState;
+  subscribe: (cb: (state: ZoomSliderState) => void) => () => void;
   /** Slider input — zooms around the viewport center. */
   onChange: (percent: number) => void;
   /** Magnifier click — back to fit. */
@@ -24,10 +26,13 @@ interface Props {
   tones: LightboxTones;
 }
 
-export function LightboxZoomControl({ getPercent, subscribe, onChange, onReset, tones }: Props) {
+export function LightboxZoomControl({ getState, subscribe, onChange, onReset, tones }: Props) {
   const t = useTranslations("gallery.lightbox");
-  const [percent, setPercent] = useState(getPercent);
-  useEffect(() => subscribe(setPercent), [subscribe]);
+  const [{ percent, maxPercent }, setState] = useState(getState);
+  useEffect(() => subscribe(setState), [subscribe]);
+
+  // "original" ceiling on a photo no bigger than its fit box — nothing to zoom into.
+  if (maxPercent <= 100) return null;
 
   const { light, muted, hoverStrong } = tones;
   return (
@@ -45,9 +50,9 @@ export function LightboxZoomControl({ getPercent, subscribe, onChange, onReset, 
       <input
         type="range"
         min={100}
-        max={400}
+        max={maxPercent}
         step={1}
-        value={percent}
+        value={Math.min(percent, maxPercent)}
         onChange={(e) => onChange(Number(e.target.value))}
         // ←/→ always navigate photos, even with the slider focused: block the native value step
         // here and let the keydown bubble to the window nav handler (lightbox-keys exempts range

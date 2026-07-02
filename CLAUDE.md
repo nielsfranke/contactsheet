@@ -180,6 +180,7 @@ Migrations live in `backend/alembic/versions/`. Always create a new file — nev
 0041 — api_tokens table (personal access tokens for third-party clients)
 0042 — showcase hero legibility: galleries.opener_scrim + opener_title_shadow
 0043 — client review-mode switch: galleries.client_mode_switch_enabled
+0044 — lightbox zoom settings: app_settings.lightbox_zoom_enabled + lightbox_zoom_max
 ```
 
 ## Feature invariants
@@ -224,7 +225,7 @@ Key non-obvious constraints — full details in `docs/architecture/`.
 
 ### Lightbox zoom slider (desktop, review contexts)
 - The picdrop-style zoom control (right end of the bottom toolbar, same row as the flag/rating actions) appears **only where reviewing happens**: `collabMode || adminGalleryId` — never in a Showcase lightbox. Desktop only; `compact` keeps it mutually exclusive with the pinch hook (both drive the same zoom layer).
-- Percent is **relative to fit** (100–400 %, same range as pinch). Originals are never fetched here either — zooming bumps the slide's `sizes` so srcset re-picks the largest preview.
+- Percent is **relative to fit**. Configurable in Settings → Gallery defaults (`app_settings.lightbox_zoom_enabled` / `lightbox_zoom_max`): on/off + ceiling 200/300/400 % or `"original"` (the photo's 1:1 size, derived per photo). Originals are never fetched — zooming bumps the slide's `sizes` so srcset re-picks the largest preview.
 - **Annotating while zoomed works**: zoom persists, wheel/slider stay live, only drag-pan stands down (the pen owns the drag). The note popover counter-scales via `--zoom-scale`. See `docs/architecture/lightbox-zoom-slider.md`.
 
 ### Watermarks

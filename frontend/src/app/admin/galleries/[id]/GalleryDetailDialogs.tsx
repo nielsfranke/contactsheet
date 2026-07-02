@@ -280,6 +280,8 @@ export function GalleryDetailDialogs({
           downloadsEnabled
           backdrop={adminSettings?.lightbox_backdrop}
           highRes={adminSettings?.high_res_previews ?? false}
+          zoomEnabled={adminSettings?.lightbox_zoom_enabled ?? true}
+          zoomMax={adminSettings?.lightbox_zoom_max ?? "400"}
           collabMode={false}
           showExif
           showIptc

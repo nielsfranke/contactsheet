@@ -232,6 +232,30 @@ def test_meta_is_side_effect_free(admin_client, db):
     assert any(r.event_type == "view" for r in notification_repo.list_pending(db))
 
 
+def test_lightbox_zoom_settings_roundtrip_and_public(admin_client):
+    """Instance lightbox-zoom config (on/off + ceiling) persists and reaches the public payload."""
+    s = admin_client.get("/api/admin/settings").json()
+    assert s["lightbox_zoom_enabled"] is True
+    assert s["lightbox_zoom_max"] == "400"
+
+    r = admin_client.patch(
+        "/api/admin/settings",
+        json={"lightbox_zoom_enabled": False, "lightbox_zoom_max": "original"},
+    )
+    assert r.status_code == 200
+    s = admin_client.get("/api/admin/settings").json()
+    assert s["lightbox_zoom_enabled"] is False
+    assert s["lightbox_zoom_max"] == "original"
+
+    g = make_gallery(admin_client, "Zoomy", mode="collaboration")
+    pub = admin_client.get(f"/api/public/g/{g['share_token']}").json()
+    assert pub["lightbox_zoom_enabled"] is False
+    assert pub["lightbox_zoom_max"] == "original"
+
+    # Only the known ceilings are accepted.
+    assert admin_client.patch("/api/admin/settings", json={"lightbox_zoom_max": "150"}).status_code == 422
+
+
 def test_pending_moderated_uploads_hidden_from_public(admin_client):
     g = make_gallery(admin_client, "Mod", mode="collaboration")
     add_image(g["id"], moderation_status="approved")
