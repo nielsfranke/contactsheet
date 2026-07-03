@@ -267,9 +267,9 @@ Key non-obvious constraints — full details in `docs/architecture/`.
 - **Likes** (`likes_enabled`) — per-reviewer, one like per person (`image_likes` table).
 - **Team voting** (`enable_team_voting`) — per-reviewer flags in `image_votes`. Depends on Color flags (nested/disabled without it). With team voting on, likes are hidden.
 
-### Rating style: flags vs stars (`app_settings.rating_mode`)
-- Instance-wide switch — `"flags"` (default) shows color flags, `"stars"` shows 1–5 stars. Never both. `color_flags_enabled` is the generic per-gallery "ratings enabled" gate in both modes (kept its name to avoid churning the cascade/preset field lists).
-- **Non-destructive & no conversion.** Stars live in their own columns (`images.rating`, `image_votes.rating`) beside the flag columns; switching modes only changes what's rendered — neither system is converted or cleared. Shared star = `images.rating`; per-reviewer star (team voting) = `image_votes.rating` (one row holds both a reviewer's flag and star). See `docs/architecture/star-ratings.md`.
+### Rating style: flags, stars, or both (`app_settings.rating_mode`)
+- Instance-wide switch — `"flags"` (default) shows color flags, `"stars"` shows 1–5 stars, `"both"` shows the two side by side (independent values, Lightroom-style). `color_flags_enabled` is the generic per-gallery "ratings enabled" gate in every mode (kept its name to avoid churning the cascade/preset field lists).
+- **Non-destructive & no conversion.** Stars live in their own columns (`images.rating`, `image_votes.rating`) beside the flag columns; switching modes only changes what's rendered — neither system is converted or cleared. Shared star = `images.rating`; per-reviewer star (team voting) = `image_votes.rating` (one row holds both a reviewer's flag and star). The endpoints are never mode-gated, which is why `"both"` is a pure rendering change (`showsFlags`/`showsStars` in `lib/types.ts`). See `docs/architecture/star-ratings.md` + `docs/architecture/rating-mode-both.md`.
 - Public shared rating: `POST /api/public/g/{share_token}/images/{image_id}/rate` (sibling to `/flag`); per-reviewer rides the same `/vote` endpoint (`vote_repo.upsert` writes only the field sent).
 
 ### PWA icons

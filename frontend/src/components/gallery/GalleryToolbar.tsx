@@ -6,6 +6,7 @@
 import { useState } from "react";
 import { useTranslations } from "next-intl";
 import type { ColorFlag, RatingMode } from "@/lib/types";
+import { showsFlags, showsStars } from "@/lib/types";
 import { Input } from "@/components/ui/input";
 import { ToolbarBand } from "@/components/gallery/ToolbarBand";
 import { InputClearButton } from "@/components/chrome/InputClearButton";
@@ -41,7 +42,7 @@ export interface ToolbarContentSearch {
 export interface ToolbarFeatures {
   colorFlags: boolean;
   comments: boolean;
-  /** Rating style — chips/group/sort switch between flags and stars. Defaults to flags. */
+  /** Rating style — drives which filter chips, group buckets, and sort keys show. Defaults to flags. */
   ratingMode?: RatingMode;
 }
 
@@ -96,15 +97,17 @@ export function GalleryToolbar({
   const ts = useTranslations("gallery.stars");
   const tc = useTranslations("common");
   const [sheetOpen, setSheetOpen] = useState(false);
-  const stars = features.ratingMode === "stars";
+  const starsUI = showsStars(features.ratingMode ?? "flags");
+  const flagUI = showsFlags(features.ratingMode ?? "flags");
 
   // Content-search mode: the input is the primary field; while a query is active the filter/sort
   // controls step aside (results are a similarity ranking, not a client-side filter/sort).
   const searchMode = !!search;
   const searching = searchMode && search!.query.trim() !== "";
 
-  // The active rating filter set drives chips/count in stars mode; flags use flagFilters.
-  const ratingFilterCount = stars ? arrange.ratingFilters.size : arrange.flagFilters.size;
+  // Active rating filters across whichever chip sets are visible ("both" mode counts both).
+  const ratingFilterCount =
+    (flagUI ? arrange.flagFilters.size : 0) + (starsUI ? arrange.ratingFilters.size : 0);
   const filterActive =
     arrange.filterName.trim() !== "" || ratingFilterCount > 0 || arrange.commentsOnly;
   // Drives the trigger badge — the controls that live in the sheet. In content-search mode the
@@ -133,14 +136,18 @@ export function GalleryToolbar({
 
   // Drop "Capture Date" when no photo carries the metadata. If it was the active sort, fall back
   // to filename in the select (the grid does the same), so the control never renders blank.
-  // Sort-by-rating is offered only in stars mode (flags have no numeric order).
+  // Sort-by-rating is offered whenever stars are visible (flags have no numeric order).
   const sortKeys: ToolbarSortKey[] = [
     ...(captureSortAvailable ? SORT_KEYS : SORT_KEYS.filter((k) => k !== "captured")),
-    ...(stars ? (["rating"] as ToolbarSortKey[]) : []),
+    ...(starsUI ? (["rating"] as ToolbarSortKey[]) : []),
   ];
   const sortValue = sortKeys.includes(arrange.sortKey) ? arrange.sortKey : "filename";
-  // Group offers flag buckets in flags mode, rating buckets in stars mode.
-  const groupKeys: ToolbarGroupKey[] = ["none", stars ? "rating" : "flag"];
+  // Group offers the buckets of whichever rating systems are visible ("both" offers both).
+  const groupKeys: ToolbarGroupKey[] = [
+    "none",
+    ...(flagUI ? (["flag"] as ToolbarGroupKey[]) : []),
+    ...(starsUI ? (["rating"] as ToolbarGroupKey[]) : []),
+  ];
 
   // Shared control renderers — used inline (desktop) and inside the bottom sheet (mobile), so the
   // wiring lives in one place and only the surrounding layout differs.
@@ -295,7 +302,12 @@ export function GalleryToolbar({
           filter + grouping there). While a query is active the whole filter row steps aside. */}
       {!searching && (features.colorFlags || features.comments) && (
         <div className="hidden sm:flex items-center gap-1.5">
-          {features.colorFlags && (stars ? ratingChips("h-6 px-2") : flagChips("w-5 h-5"))}
+          {features.colorFlags && flagUI && flagChips("w-5 h-5")}
+          {features.colorFlags && starsUI && (
+            <span className={`inline-flex items-center gap-1.5 ${flagUI ? "ml-1.5" : ""}`}>
+              {ratingChips("h-6 px-2")}
+            </span>
+          )}
           {features.comments && (
             <button
               onClick={() => setArrange({ ...arrange, commentsOnly: !arrange.commentsOnly })}
@@ -390,10 +402,17 @@ export function GalleryToolbar({
               </div>
             )}
 
-            {features.colorFlags && (
+            {features.colorFlags && flagUI && (
               <div className="space-y-2">
-                <p className="text-xs font-medium text-muted-foreground">{stars ? t("ratingLabel") : t("flagsLabel")}</p>
-                <div className="flex items-center gap-2 flex-wrap">{stars ? ratingChips("h-9 px-3") : flagChips("w-8 h-8")}</div>
+                <p className="text-xs font-medium text-muted-foreground">{t("flagsLabel")}</p>
+                <div className="flex items-center gap-2 flex-wrap">{flagChips("w-8 h-8")}</div>
+              </div>
+            )}
+
+            {features.colorFlags && starsUI && (
+              <div className="space-y-2">
+                <p className="text-xs font-medium text-muted-foreground">{t("ratingLabel")}</p>
+                <div className="flex items-center gap-2 flex-wrap">{ratingChips("h-9 px-3")}</div>
               </div>
             )}
 

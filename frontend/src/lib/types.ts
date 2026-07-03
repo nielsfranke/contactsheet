@@ -43,8 +43,11 @@ export const MODE_LABELS: Record<ModeType, string> = {
 export type ColorFlag = "none" | "green" | "red" | "yellow" | "blue";
 // Desktop review-lightbox zoom ceiling: fit-relative percent, or "original" = the photo's 1:1 size.
 export type LightboxZoomMax = "200" | "300" | "400" | "original";
-// Instance-wide rating style (app_settings.rating_mode). Never both at once.
-export type RatingMode = "flags" | "stars";
+// Instance-wide rating style (app_settings.rating_mode). "both" shows flags and stars side by side.
+export type RatingMode = "flags" | "stars" | "both";
+/** Derived render gates: in "flags"/"stars" mode exactly one is true; "both" turns on both UIs. */
+export const showsStars = (mode: RatingMode) => mode !== "flags";
+export const showsFlags = (mode: RatingMode) => mode !== "stars";
 // 0 = unrated, 1–5 = stars.
 export type Rating = 0 | 1 | 2 | 3 | 4 | 5;
 // "no_preview" = stored & downloadable but has no thumbnail (e.g. a PSB with no embedded preview).
@@ -165,7 +168,7 @@ export interface GalleryPublicResponse extends GallerySettings {
 
 /** Which collaboration interactions are exposed to clients (subset of GallerySettings). */
 export interface CollabFeatures {
-  /** Ratings enabled (per-gallery gate). The rendered UI is flags or stars per `ratingMode`. */
+  /** Ratings enabled (per-gallery gate). The rendered UI is flags, stars, or both per `ratingMode`. */
   colorFlags: boolean;
   /** Which rating UI to show when ratings are enabled (instance-wide setting). */
   ratingMode: RatingMode;

@@ -34,7 +34,7 @@ export interface CardProps {
   onOpen?: (img: ImageResponse, intent?: LightboxIntent) => void;
   rounded: string;
   highRes: boolean;
-  /** Instance rating style — flag dots vs. 1–5 stars. */
+  /** Instance rating style — flag dots, 1–5 stars, or both. */
   ratingMode: RatingMode;
   onSetHeaderImage?: (img: ImageResponse) => void;
   onSetCoverImage?: (img: ImageResponse) => void;

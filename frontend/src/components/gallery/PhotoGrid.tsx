@@ -6,6 +6,7 @@
 import { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import type { ColorFlag, CollabFeatures, GridPresentation, ImageResponse, LayoutType } from "@/lib/types";
+import { showsFlags, showsStars } from "@/lib/types";
 import { useLightboxStore, type LightboxIntent } from "@/store/lightbox";
 import { api } from "@/lib/api";
 import { GAP_PX, JUSTIFIED_ROW_HEIGHT, cornerRounding, gridSizes, imageAspect, previewSrcSet } from "@/lib/gridLayout";
@@ -233,7 +234,8 @@ function PhotoTile({
   const effectiveFlag: ColorFlag = teamVoting ? (reviewerFlag ?? "none") : localFlag;
 
   // Star rating mirrors the flag state exactly (optimistic local + render-time external sync).
-  const stars = features.ratingMode === "stars";
+  const starsUI = showsStars(features.ratingMode);
+  const flagUI = showsFlags(features.ratingMode);
   const [localRating, setLocalRating] = useState<number>(img.rating);
   const [syncedRating, setSyncedRating] = useState<number>(img.rating);
   if (img.rating !== syncedRating) {
@@ -357,21 +359,23 @@ function PhotoTile({
           </div>
         )}
 
-        {/* Persistent active-flag dot (hidden while hovering, where the picker takes over).
-            White ring + soft dark shadow so it reads on both bright and dark photos. */}
-        {collabMode && showFlags && !stars && effectiveFlag !== "none" && (
-          <div className={`absolute top-2 right-2 w-3.5 h-3.5 rounded-full ring-2 ring-white shadow-[0_0_3px_rgba(0,0,0,0.6)] ${activeFlagColor?.bg ?? ""} sm:group-hover:opacity-0 transition-opacity pointer-events-none`} />
-        )}
-
-        {/* Persistent star rating (stars mode) — same hide-on-hover behaviour as the flag dot. */}
-        {collabMode && showFlags && stars && effectiveRating > 0 && (
-          <div className="absolute top-2 right-2 sm:group-hover:opacity-0 transition-opacity pointer-events-none">
-            <StarRating
-              value={effectiveRating}
-              size={13}
-              starClassName="text-amber-400 drop-shadow-[0_0_2px_rgba(0,0,0,0.7)]"
-              emptyClassName="text-white/40 drop-shadow-[0_0_2px_rgba(0,0,0,0.7)]"
-            />
+        {/* Persistent rating badge (hidden while hovering, where the pickers take over): active-flag
+            dot and/or star row in one line — white ring + soft dark shadow so it reads on both
+            bright and dark photos. In "both" mode the dot sits left of the stars. */}
+        {collabMode && showFlags &&
+          ((flagUI && effectiveFlag !== "none") || (starsUI && effectiveRating > 0)) && (
+          <div className="absolute top-2 right-2 flex items-center gap-1.5 sm:group-hover:opacity-0 transition-opacity pointer-events-none">
+            {flagUI && effectiveFlag !== "none" && (
+              <div className={`w-3.5 h-3.5 rounded-full ring-2 ring-white shadow-[0_0_3px_rgba(0,0,0,0.6)] ${activeFlagColor?.bg ?? ""}`} />
+            )}
+            {starsUI && effectiveRating > 0 && (
+              <StarRating
+                value={effectiveRating}
+                size={13}
+                starClassName="text-amber-400 drop-shadow-[0_0_2px_rgba(0,0,0,0.7)]"
+                emptyClassName="text-white/40 drop-shadow-[0_0_2px_rgba(0,0,0,0.7)]"
+              />
+            )}
           </div>
         )}
 
@@ -393,37 +397,37 @@ function PhotoTile({
           <div className="absolute inset-0 pointer-events-none hidden sm:block opacity-0 sm:group-hover:opacity-100 transition-opacity">
             <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-black/30" />
 
-            {/* Top-right: star picker (stars mode) */}
-            {showToolbar && showFlags && stars && (
-              <div className="absolute top-2 right-2 pointer-events-auto">
-                <StarRating
-                  value={effectiveRating}
-                  onChange={handleRating}
-                  size={18}
-                  starClassName="text-amber-400 drop-shadow-[0_0_2px_rgba(0,0,0,0.7)]"
-                  emptyClassName="text-white/50 drop-shadow-[0_0_2px_rgba(0,0,0,0.7)]"
-                />
-              </div>
-            )}
-
-            {/* Top-right: flag picker */}
-            {showToolbar && showFlags && !stars && (
-              <div className="absolute top-2 right-2 flex items-center gap-1.5 sm:gap-1 pointer-events-auto">
-                {FLAG_COLORS.map((f) => (
-                  <button
-                    key={f.value}
-                    onClick={(e) => { e.stopPropagation(); handleFlag(f.value); }}
-                    disabled={!teamVoting && flagMutation.isPending}
-                    title={tf(f.value)}
-                    aria-label={tf(f.value)}
-                    aria-pressed={effectiveFlag === f.value}
-                    className={`w-7 h-7 sm:w-5 sm:h-5 rounded-full transition-all outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-1 focus-visible:ring-offset-black/40 ${f.bg} ${
-                      effectiveFlag === f.value
-                        ? "opacity-100 ring-2 ring-white/70 scale-110"
-                        : "opacity-60 hover:opacity-100"
-                    }`}
+            {/* Top-right: rating pickers — star picker above the flag-dot row ("both" mode stacks them). */}
+            {showToolbar && showFlags && (
+              <div className="absolute top-2 right-2 flex flex-col items-end gap-1.5 pointer-events-auto">
+                {starsUI && (
+                  <StarRating
+                    value={effectiveRating}
+                    onChange={handleRating}
+                    size={18}
+                    starClassName="text-amber-400 drop-shadow-[0_0_2px_rgba(0,0,0,0.7)]"
+                    emptyClassName="text-white/50 drop-shadow-[0_0_2px_rgba(0,0,0,0.7)]"
                   />
-                ))}
+                )}
+                {flagUI && (
+                  <div className="flex items-center gap-1.5 sm:gap-1">
+                    {FLAG_COLORS.map((f) => (
+                      <button
+                        key={f.value}
+                        onClick={(e) => { e.stopPropagation(); handleFlag(f.value); }}
+                        disabled={!teamVoting && flagMutation.isPending}
+                        title={tf(f.value)}
+                        aria-label={tf(f.value)}
+                        aria-pressed={effectiveFlag === f.value}
+                        className={`w-7 h-7 sm:w-5 sm:h-5 rounded-full transition-all outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-1 focus-visible:ring-offset-black/40 ${f.bg} ${
+                          effectiveFlag === f.value
+                            ? "opacity-100 ring-2 ring-white/70 scale-110"
+                            : "opacity-60 hover:opacity-100"
+                        }`}
+                      />
+                    ))}
+                  </div>
+                )}
               </div>
             )}
 

@@ -970,9 +970,10 @@
       "zoomMaxOriginal": "Original size",
       "zoomMaxHint": "How far clients can zoom in, relative to the fitted photo. Original size stops at the photo's real 1:1 pixel size.",
       "ratingStyle": "Rating style",
-      "ratingStyleHint": "How reviewers rate photos across the whole instance — color flags or 1–5 stars. Switching is non-destructive; existing flags and stars are both kept.",
+      "ratingStyleHint": "How reviewers rate photos across the whole instance — color flags, 1–5 stars, or both side by side. Switching is non-destructive; existing flags and stars are always kept.",
       "ratingModeFlags": "Color flags",
-      "ratingModeStars": "Stars 1–5"
+      "ratingModeStars": "Stars 1–5",
+      "ratingModeBoth": "Both"
     },
     "gallery": {
       "title": "Gallery Settings",

@@ -278,7 +278,8 @@ export function useGalleryView(
   const isContainer = gallery.image_count === 0 && gallery.subgalleries.length > 0;
   const canDownload = gallery.downloads_enabled && (gallery.image_count > 0 || gallery.subgalleries.length > 0);
   const filterActive =
-    arrange.filterName.trim() !== "" || arrange.flagFilters.size > 0 || arrange.commentsOnly;
+    arrange.filterName.trim() !== "" || arrange.flagFilters.size > 0 ||
+    arrange.ratingFilters.size > 0 || arrange.commentsOnly;
   function handleDownload() {
     // Active filter → download exactly the visible photos. Otherwise offer the sub-gallery
     // picker (or download everything directly when there are no sub-galleries).

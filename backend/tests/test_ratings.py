@@ -23,6 +23,14 @@ def test_rating_mode_round_trips(admin_client):
     assert pub["rating_mode"] == "stars"
 
 
+def test_rating_mode_both_round_trips(admin_client):
+    r = admin_client.patch("/api/admin/settings", json={"rating_mode": "both"})
+    assert r.status_code == 200 and r.json()["rating_mode"] == "both"
+    g = make_gallery(admin_client, "Both", mode="collaboration")
+    pub = _pub().get(f"/api/public/g/{g['share_token']}").json()
+    assert pub["rating_mode"] == "both"
+
+
 def test_rating_mode_rejects_unknown(admin_client):
     assert admin_client.patch("/api/admin/settings", json={"rating_mode": "hearts"}).status_code == 422
 

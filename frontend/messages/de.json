@@ -970,9 +970,10 @@
       "zoomMaxOriginal": "Originalgröße",
       "zoomMaxHint": "Wie weit Kund:innen einzoomen können, relativ zum eingepassten Foto. Originalgröße endet bei der echten 1:1-Pixelgröße des Fotos.",
       "ratingStyle": "Bewertungsstil",
-      "ratingStyleHint": "Wie Prüfer Fotos in der gesamten Instanz bewerten — Farbmarkierungen oder 1–5 Sterne. Das Umschalten ist verlustfrei; vorhandene Markierungen und Sterne bleiben beide erhalten.",
+      "ratingStyleHint": "Wie Prüfer Fotos in der gesamten Instanz bewerten — Farbmarkierungen, 1–5 Sterne oder beides nebeneinander. Das Umschalten ist verlustfrei; vorhandene Markierungen und Sterne bleiben immer erhalten.",
       "ratingModeFlags": "Farbmarkierungen",
-      "ratingModeStars": "Sterne 1–5"
+      "ratingModeStars": "Sterne 1–5",
+      "ratingModeBoth": "Beides"
     },
     "gallery": {
       "title": "Galerie-Einstellungen",

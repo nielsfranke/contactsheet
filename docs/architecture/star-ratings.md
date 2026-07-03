@@ -5,6 +5,10 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 # Star ratings (alternative to color flags)
 
+> **Superseded in part** by [rating-mode-both.md](rating-mode-both.md): `rating_mode`
+> now has a third value `"both"` that renders flags and stars side by side. The
+> "never both at once" invariant below only holds for the `"flags"`/`"stars"` modes.
+
 ## Goal
 
 Offer a classic **1–5 star rating** as an alternative to color flags, chosen by a

@@ -8,6 +8,7 @@ import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { api } from "@/lib/api";
 import type { ColorFlag, ImageResponse, Rating } from "@/lib/types";
+import { showsFlags, showsStars } from "@/lib/types";
 import { previewSrcSet } from "@/lib/gridLayout";
 import { cn } from "@/lib/utils";
 import { AlertCircle, Loader2, Trash2, Ban, MoreVertical, Frame, Image as ImageIcon, FolderInput, UploadCloud, Check, Clock, Layers } from "lucide-react";
@@ -47,7 +48,8 @@ export function AdminTile({
   const t = useTranslations("admin.imageGrid");
   const tflag = useTranslations("gallery.flags");
   const qc = useQueryClient();
-  const stars = ratingMode === "stars";
+  const starsUI = showsStars(ratingMode);
+  const flagUI = showsFlags(ratingMode);
   const [localFlag, setLocalFlag] = useState<ColorFlag>(img.color_flag);
   // Adopt the stored flag when it changes from outside this tile (e.g. set in the lightbox) —
   // render-time sync, keyed on the value. An in-flight optimistic change is safe: img.color_flag
@@ -180,20 +182,21 @@ export function AdminTile({
           </div>
         )}
 
-        {/* Persistent flag dot — white ring + soft dark shadow so it reads on both bright and dark photos */}
-        {!stars && localFlag !== "none" && (
-          <div className={cn("absolute top-2 right-2 w-3.5 h-3.5 rounded-full ring-2 ring-white shadow-[0_0_3px_rgba(0,0,0,0.6)] pointer-events-none group-hover:opacity-0 transition-opacity", FLAG_BG[localFlag])} />
-        )}
-
-        {/* Persistent star rating (stars mode) */}
-        {stars && localRating > 0 && (
-          <div className="absolute top-2 right-2 pointer-events-none group-hover:opacity-0 transition-opacity">
-            <StarRating
-              value={localRating}
-              size={13}
-              starClassName="text-amber-400 drop-shadow-[0_0_2px_rgba(0,0,0,0.7)]"
-              emptyClassName="text-white/40 drop-shadow-[0_0_2px_rgba(0,0,0,0.7)]"
-            />
+        {/* Persistent rating badge: flag dot and/or star row in one line ("both" mode puts the dot
+            left of the stars) — white ring + soft dark shadow so it reads on both bright and dark photos */}
+        {((flagUI && localFlag !== "none") || (starsUI && localRating > 0)) && (
+          <div className="absolute top-2 right-2 flex items-center gap-1.5 pointer-events-none group-hover:opacity-0 transition-opacity">
+            {flagUI && localFlag !== "none" && (
+              <div className={cn("w-3.5 h-3.5 rounded-full ring-2 ring-white shadow-[0_0_3px_rgba(0,0,0,0.6)]", FLAG_BG[localFlag])} />
+            )}
+            {starsUI && localRating > 0 && (
+              <StarRating
+                value={localRating}
+                size={13}
+                starClassName="text-amber-400 drop-shadow-[0_0_2px_rgba(0,0,0,0.7)]"
+                emptyClassName="text-white/40 drop-shadow-[0_0_2px_rgba(0,0,0,0.7)]"
+              />
+            )}
           </div>
         )}
 
@@ -262,48 +265,47 @@ export function AdminTile({
               </div>
             )}
 
-            {/* Top-right: star picker (stars mode) */}
-            {stars && (
-              <div
-                className="absolute top-2 right-2 pointer-events-auto"
-                onClick={(e) => e.stopPropagation()}
-              >
-                <StarRating
-                  value={localRating}
-                  onChange={(v) => ratingMutation.mutate(v)}
-                  size={18}
-                  starClassName="text-amber-400 drop-shadow-[0_0_2px_rgba(0,0,0,0.7)]"
-                  emptyClassName="text-white/50 drop-shadow-[0_0_2px_rgba(0,0,0,0.7)]"
-                />
-              </div>
-            )}
-
-            {/* Top-right: flag picker. The clear button leads the row so the color dots stay
-                anchored at the right edge — clicking a flag won't shift the dot you just set. */}
-            {!stars && (
-              <div className="absolute top-2 right-2 flex items-center gap-1 pointer-events-auto">
-                {localFlag !== "none" && (
-                  <button
-                    onClick={(e) => { e.stopPropagation(); flagMutation.mutate("none"); }}
-                    title={t("clearFlag")}
-                    className="w-5 h-5 rounded-full bg-black/55 text-white flex items-center justify-center hover:bg-black/75"
-                  >
-                    <Ban size={11} />
-                  </button>
-                )}
-                {FLAG_COLORS.map((f) => (
-                  <button
-                    key={f.value}
-                    onClick={(e) => { e.stopPropagation(); setFlag(f.value); }}
-                    disabled={flagMutation.isPending}
-                    title={tflag(f.value)}
-                    className={`w-5 h-5 rounded-full transition-all ${f.bg} ${
-                      localFlag === f.value ? "opacity-100 ring-2 ring-white/70 scale-110" : "opacity-60 hover:opacity-100"
-                    }`}
+            {/* Top-right: rating pickers — star picker above the flag row ("both" mode stacks them). */}
+            <div className="absolute top-2 right-2 flex flex-col items-end gap-1.5">
+              {starsUI && (
+                <div className="pointer-events-auto" onClick={(e) => e.stopPropagation()}>
+                  <StarRating
+                    value={localRating}
+                    onChange={(v) => ratingMutation.mutate(v)}
+                    size={18}
+                    starClassName="text-amber-400 drop-shadow-[0_0_2px_rgba(0,0,0,0.7)]"
+                    emptyClassName="text-white/50 drop-shadow-[0_0_2px_rgba(0,0,0,0.7)]"
                   />
-                ))}
-              </div>
-            )}
+                </div>
+              )}
+
+              {/* Flag picker. The clear button leads the row so the color dots stay anchored at
+                  the right edge — clicking a flag won't shift the dot you just set. */}
+              {flagUI && (
+                <div className="flex items-center gap-1 pointer-events-auto">
+                  {localFlag !== "none" && (
+                    <button
+                      onClick={(e) => { e.stopPropagation(); flagMutation.mutate("none"); }}
+                      title={t("clearFlag")}
+                      className="w-5 h-5 rounded-full bg-black/55 text-white flex items-center justify-center hover:bg-black/75"
+                    >
+                      <Ban size={11} />
+                    </button>
+                  )}
+                  {FLAG_COLORS.map((f) => (
+                    <button
+                      key={f.value}
+                      onClick={(e) => { e.stopPropagation(); setFlag(f.value); }}
+                      disabled={flagMutation.isPending}
+                      title={tflag(f.value)}
+                      className={`w-5 h-5 rounded-full transition-all ${f.bg} ${
+                        localFlag === f.value ? "opacity-100 ring-2 ring-white/70 scale-110" : "opacity-60 hover:opacity-100"
+                      }`}
+                    />
+                  ))}
+                </div>
+              )}
+            </div>
 
             {/* Bottom-left: download */}
             {img.original_url && (

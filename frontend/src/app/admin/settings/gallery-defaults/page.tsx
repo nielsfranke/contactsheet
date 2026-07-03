@@ -26,6 +26,7 @@ const MODES: { value: ModeType; descKey: string; icon: React.ReactNode }[] = [
 const RATING_MODES: { value: RatingMode; labelKey: string }[] = [
   { value: "flags", labelKey: "ratingModeFlags" },
   { value: "stars", labelKey: "ratingModeStars" },
+  { value: "both", labelKey: "ratingModeBoth" },
 ];
 
 const ZOOM_MAX_OPTIONS: { value: LightboxZoomMax; labelKey: string }[] = [
@@ -172,15 +173,22 @@ export default function GalleryDefaultsPage() {
         )}
       </section>
 
-      {/* Rating style — instance-wide: color flags vs. 1–5 stars (never both) */}
+      {/* Rating style — instance-wide: color flags, 1–5 stars, or both side by side */}
       <section className="rounded-lg border border-border bg-card/50 p-5 space-y-4">
         <div>
           <h2 className="text-sm font-medium text-foreground">{t("ratingStyle")}</h2>
           <p className="text-xs text-muted-foreground mt-1">{t("ratingStyleHint")}</p>
         </div>
-        <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+        <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
           {RATING_MODES.map((opt) => {
             const active = effRatingMode === opt.value;
+            const flagGlyph = (
+              <span className="flex shrink-0 gap-0.5">
+                <span className="h-3 w-3 rounded-full bg-green-500" />
+                <span className="h-3 w-3 rounded-full bg-red-500" />
+              </span>
+            );
+            const starGlyph = <Icons.rating size={16} className="shrink-0 text-amber-400" fill="currentColor" />;
             return (
               <button
                 key={opt.value}
@@ -190,14 +198,8 @@ export default function GalleryDefaultsPage() {
                   active ? "border-primary ring-1 ring-primary" : "border-border hover:border-muted-foreground"
                 }`}
               >
-                {opt.value === "stars" ? (
-                  <Icons.rating size={16} className="shrink-0 text-amber-400" fill="currentColor" />
-                ) : (
-                  <span className="flex shrink-0 gap-0.5">
-                    <span className="h-3 w-3 rounded-full bg-green-500" />
-                    <span className="h-3 w-3 rounded-full bg-red-500" />
-                  </span>
-                )}
+                {opt.value !== "stars" && flagGlyph}
+                {opt.value !== "flags" && starGlyph}
                 <span className="min-w-0 text-center text-sm text-foreground">{t(opt.labelKey)}</span>
               </button>
             );

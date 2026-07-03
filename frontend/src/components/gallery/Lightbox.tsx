@@ -24,6 +24,7 @@ import { useZoomSlider } from "@/hooks/useZoomSlider";
 import { LightboxZoomControl } from "./LightboxZoomControl";
 import { photoSrc as resolvePhotoSrc, variantSrc as resolveVariantSrc } from "./lightbox-image-src";
 import type { Anchor, ColorFlag, CollabFeatures, LightboxBackdrop, LightboxZoomMax, Rating } from "@/lib/types";
+import { showsFlags, showsStars } from "@/lib/types";
 import {
   X,
   ChevronLeft,
@@ -337,7 +338,9 @@ export function Lightbox({
     }
   }
 
-  const stars = features.ratingMode === "stars";
+  const starsUI = showsStars(features.ratingMode);
+  const flagUI = showsFlags(features.ratingMode);
+  const bothUI = starsUI && flagUI;
   const effectiveRating = teamVoting ? (reviewerRatings[image?.id ?? ""] ?? 0) : localRating;
   const ratingMutation = useMutation({
     mutationFn: (rating: number) => {
@@ -831,14 +834,17 @@ export function Lightbox({
           />
         )}
         </div>
-        {/* Flag color badge — ring flips to black on a light/white backdrop so it stays visible. */}
-        {isCurrent && (collabMode || adminGalleryId) && flagsEnabled && !stars && effectiveFlag !== "none" && activeFlagColor && (
-          <div key="flag" className={`absolute top-3 right-16 w-4 h-4 rounded-full ring-2 ${light ? "ring-black/70" : "ring-white"} shadow-[0_0_3px_rgba(0,0,0,0.4)] ${activeFlagColor.bg}`} />
-        )}
-        {/* Star rating badge (stars mode). */}
-        {isCurrent && (collabMode || adminGalleryId) && flagsEnabled && stars && effectiveRating > 0 && (
-          <div key="rating" className="absolute top-3 right-16">
-            <StarRating value={effectiveRating} size={15} emptyClassName={light ? "text-black/20" : "text-white/30"} />
+        {/* Rating badge: flag dot and/or star row ("both" mode: dot left of stars) — the flag ring
+            flips to black on a light/white backdrop so it stays visible. */}
+        {isCurrent && (collabMode || adminGalleryId) && flagsEnabled &&
+          ((flagUI && effectiveFlag !== "none" && !!activeFlagColor) || (starsUI && effectiveRating > 0)) && (
+          <div key="rating-badge" className="absolute top-3 right-16 flex items-center gap-1.5">
+            {flagUI && effectiveFlag !== "none" && activeFlagColor && (
+              <div className={`w-4 h-4 rounded-full ring-2 ${light ? "ring-black/70" : "ring-white"} shadow-[0_0_3px_rgba(0,0,0,0.4)] ${activeFlagColor.bg}`} />
+            )}
+            {starsUI && effectiveRating > 0 && (
+              <StarRating value={effectiveRating} size={15} emptyClassName={light ? "text-black/20" : "text-white/30"} />
+            )}
           </div>
         )}
       </>
@@ -1113,23 +1119,12 @@ export function Lightbox({
           (right-aligned, same row as the flag/rating actions), so it renders in review contexts
           even when flags & likes are off. */}
       {(showToolbar || sliderZoomEnabled) && !immersive && (
-        <div className={`flex items-center gap-3 px-4 py-2 border-t ${borderTone} flex-shrink-0`}>
-          {flagsEnabled && stars && (
+        <div className={`flex flex-wrap items-center gap-3 px-4 py-2 border-t ${borderTone} flex-shrink-0`}>
+          {/* "both" mode: flags left of stars; the text labels yield on phones so both control
+              groups fit one row (worst case the row wraps — hence flex-wrap above). */}
+          {flagsEnabled && flagUI && (
             <>
-              <span className="text-xs text-zinc-500 flex items-center gap-1">
-                <Icons.rating size={12} /> {t("rating")}
-              </span>
-              <StarRating
-                value={effectiveRating}
-                onChange={handleRating}
-                size={24}
-                emptyClassName={light ? "text-black/25" : "text-white/35"}
-              />
-            </>
-          )}
-          {flagsEnabled && !stars && (
-            <>
-              <span className="text-xs text-zinc-500 flex items-center gap-1">
+              <span className={`text-xs text-zinc-500 items-center gap-1 ${bothUI ? "hidden sm:flex" : "flex"}`}>
                 <Flag size={12} /> {t("flag")}
               </span>
               <div className="flex items-center gap-2.5 sm:gap-1.5">
@@ -1149,6 +1144,19 @@ export function Lightbox({
                   />
                 ))}
               </div>
+            </>
+          )}
+          {flagsEnabled && starsUI && (
+            <>
+              <span className={`text-xs text-zinc-500 items-center gap-1 ${bothUI ? "hidden sm:flex" : "flex"}`}>
+                <Icons.rating size={12} /> {t("rating")}
+              </span>
+              <StarRating
+                value={effectiveRating}
+                onChange={handleRating}
+                size={24}
+                emptyClassName={light ? "text-black/25" : "text-white/35"}
+              />
             </>
           )}
           <div className="flex-1" />

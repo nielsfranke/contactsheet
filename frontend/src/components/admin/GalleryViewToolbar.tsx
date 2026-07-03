@@ -13,7 +13,7 @@ interface Props {
   captureSortAvailable: boolean;
   shownCount: number;
   totalCount: number;
-  /** Instance rating style — flags vs. stars. */
+  /** Instance rating style — flags, stars, or both. */
   ratingMode: RatingMode;
   /** Semantic content search — present only when the instance has the feature enabled. */
   search?: ToolbarContentSearch;
