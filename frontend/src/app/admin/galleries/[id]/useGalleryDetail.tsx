@@ -558,7 +558,8 @@ export function useGalleryDetail(id: string) {
   }
 
   const filterActive =
-    arrange.filterName.trim() !== "" || arrange.flagFilters.size > 0 || arrange.commentsOnly;
+    arrange.filterName.trim() !== "" || arrange.flagFilters.size > 0 ||
+    arrange.ratingFilters.size > 0 || arrange.commentsOnly;
   function handleDownload() {
     // Active filter → download exactly the visible photos. Otherwise open the sub-gallery picker.
     if (filterActive) adminZip.startImages(lightboxList.map((i) => i.id));
