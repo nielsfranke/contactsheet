@@ -150,13 +150,14 @@ export default function GalleryDefaultsPage() {
         {settings.lightbox_zoom_enabled && (
           <div className="space-y-1.5">
             <Label>{t("zoomMax")}</Label>
-            <div className="grid grid-cols-4 gap-2">
+            {/* 2×2 on phones — "Originalgröße" overflows a forced 4-up on narrow viewports. */}
+            <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
               {ZOOM_MAX_OPTIONS.map((opt) => (
                 <button
                   key={opt.value}
                   type="button"
                   onClick={() => save({ lightbox_zoom_max: opt.value })}
-                  className={`rounded-md border p-2 text-xs text-foreground transition-colors ${
+                  className={`min-w-0 truncate rounded-md border p-2 text-xs text-foreground transition-colors ${
                     settings.lightbox_zoom_max === opt.value
                       ? "border-primary ring-1 ring-primary"
                       : "border-border hover:border-muted-foreground"
