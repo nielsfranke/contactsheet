@@ -12,6 +12,33 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.6.0] - 2026-07-03
+
+### Added
+
+- **Zoom in the Review lightbox (desktop).** A picdrop-style zoom control in the lightbox
+  bottom toolbar — magnifier (reset), slider and live percentage — for Review galleries
+  (including the client review-switch) and the admin gallery view; never in Showcase.
+  Mouse-wheel / trackpad zoom anchors at the cursor, dragging pans the zoomed photo, and
+  the arrow keys always change the photo (never the zoom), even with the slider focused.
+  Annotating works while zoomed: the pen owns the drag, wheel and slider keep zooming, and
+  strokes land exactly where drawn. Zooming uses the preview renditions — originals are
+  never fetched, so download gating and watermarks are never bypassed.
+- **Zoom is configurable** under Settings → Gallery defaults → Viewing: switch the control
+  off entirely, or cap it at 200 % / 300 % / 400 % (relative to the fitted photo) or the
+  photo's real 1:1 original size. Phone/tablet pinch-zoom is unaffected. (Migration 0044.)
+- **The comment icon also reveals pen marks.** Opening the comment panel now shows any
+  existing annotations on the photo along with their numbered comment rows; closing hides
+  them again. The eye toggle keeps working standalone.
+
+### Fixed
+
+- **Even photo frame in the Showcase lightbox.** The filename strip at the bottom now
+  matches the top toolbar's height when it is the only bottom chrome, so the photo sits
+  vertically centered instead of hugging the bottom edge.
+- Deactivating the annotation pen closes the comment panel it opened, mirroring the
+  comment icon's toggle.
+
 ## [1.5.0] - 2026-07-02
 
 ### Added
