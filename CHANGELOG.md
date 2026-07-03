@@ -12,6 +12,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.6.1] - 2026-07-03
+
+### Fixed
+
+- **Settings: "Maximum zoom" options overflowed on phones.** The picker forced four
+  columns, pushing "Original size" past the screen edge on narrow viewports; it now wraps
+  to 2×2 on phones.
+
 ## [1.6.0] - 2026-07-03
 
 ### Added
