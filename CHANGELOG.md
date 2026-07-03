@@ -12,6 +12,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.6.5] - 2026-07-03
+
+### Added
+
+- **Rating style "Both" — color flags and stars together.** Settings → Gallery defaults →
+  Rating style gains a third option that shows both systems side by side, Lightroom-style:
+  flags for select/reject, stars for grading. Grid tiles stack the star picker above the
+  flag dots on hover and combine the resting badge into one line; the lightbox toolbar
+  shows both control groups; filters offer flag *and* star chips (combinable — they narrow
+  together), grouping can bucket by flag or by rating, and sort-by-rating is available
+  whenever stars are visible. Values stay independent and switching styles remains
+  non-destructive — nothing is converted or cleared. Works with team voting: each reviewer
+  keeps their own flag and star. No migration needed.
+
+### Fixed
+
+- **Star-filtered downloads exported the whole gallery.** With only a star filter active,
+  "Download" in client galleries and the admin gallery view ignored the filter and fell
+  through to the full export; both now download exactly the filtered photos.
+
 ## [1.6.1] - 2026-07-03
 
 ### Fixed
@@ -681,7 +701,10 @@ contract are considered stable as of this release.
   caps (stricter for public uploads).
 - Docker Compose deployment (backend + frontend + nginx); SQLite + local filesystem.
 
-[Unreleased]: https://github.com/nielsfranke/contactsheet/compare/v1.5.0...HEAD
+[Unreleased]: https://github.com/nielsfranke/contactsheet/compare/v1.6.5...HEAD
+[1.6.5]: https://github.com/nielsfranke/contactsheet/compare/v1.6.1...v1.6.5
+[1.6.1]: https://github.com/nielsfranke/contactsheet/compare/v1.6.0...v1.6.1
+[1.6.0]: https://github.com/nielsfranke/contactsheet/compare/v1.5.0...v1.6.0
 [1.5.0]: https://github.com/nielsfranke/contactsheet/compare/v1.4.3...v1.5.0
 [1.4.3]: https://github.com/nielsfranke/contactsheet/compare/v1.4.2...v1.4.3
 [1.4.2]: https://github.com/nielsfranke/contactsheet/compare/v1.4.1...v1.4.2
