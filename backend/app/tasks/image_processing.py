@@ -20,6 +20,64 @@ logger = logging.getLogger(__name__)
 # Pillow raises DecompressionBombError past this ceiling instead of allocating unbounded memory.
 PilImage.MAX_IMAGE_PIXELS = settings.max_image_pixels
 
+# Colour management: renditions are written in sRGB and tagged as such. Browsers assume sRGB for an
+# untagged JPEG, so a wide-gamut source (Adobe RGB, ProPhoto, Display-P3) whose pixels were copied
+# through verbatim looked desaturated. We now transform such sources to sRGB and embed a (tiny, ~0.6 KB)
+# sRGB profile so the colours are correct. Built once; None if this Pillow build lacks LittleCMS —
+# then we degrade to the previous verbatim behaviour.
+try:
+    from PIL import ImageCms
+
+    _SRGB_PROFILE = ImageCms.createProfile("sRGB")
+    _SRGB_ICC_BYTES = ImageCms.ImageCmsProfile(_SRGB_PROFILE).tobytes()
+except Exception:  # pragma: no cover - only if Pillow is built without littlecms
+    ImageCms = None
+    _SRGB_PROFILE = None
+    _SRGB_ICC_BYTES = None
+
+
+def _profile_is_srgb(icc_bytes: bytes) -> bool:
+    """True if an ICC profile's description names it sRGB (so we can skip a needless round-trip)."""
+    if ImageCms is None:
+        return True
+    try:
+        src = ImageCms.ImageCmsProfile(io.BytesIO(icc_bytes))
+        return "srgb" in (ImageCms.getProfileDescription(src) or "").lower()
+    except Exception:
+        return False
+
+
+def original_needs_srgb(path: str) -> bool:
+    """Whether the file at `path` carries a non-sRGB ICC profile (→ its renditions must be colour-
+    converted). Reads only the header. False on any error / untagged / already-sRGB source."""
+    if ImageCms is None:
+        return False
+    try:
+        with PilImage.open(path) as im:
+            icc = im.info.get("icc_profile")
+        return bool(icc) and not _profile_is_srgb(icc)
+    except Exception:
+        return False
+
+
+def _to_srgb(img: PilImage.Image, icc_bytes: bytes | None) -> PilImage.Image:
+    """Convert an image tagged with a non-sRGB ICC profile into sRGB so its colours are correct when
+    the (sRGB-tagged) rendition is displayed. Untagged or already-sRGB images pass through unchanged;
+    any CMS failure falls back to the original pixels. Handles RGB/RGBA/CMYK sources."""
+    if not icc_bytes or ImageCms is None:
+        return img
+    if _profile_is_srgb(icc_bytes):
+        return img
+    if img.mode not in ("RGB", "RGBA", "CMYK"):
+        return img
+    try:
+        src = ImageCms.ImageCmsProfile(io.BytesIO(icc_bytes))
+        out_mode = "RGBA" if img.mode == "RGBA" else "RGB"
+        return ImageCms.profileToProfile(img, src, _SRGB_PROFILE, outputMode=out_mode)
+    except Exception:
+        logger.warning("ICC→sRGB conversion failed; using the untagged pixels")
+        return img
+
 _EXIF_FIELDS = {
     "Make", "Model", "LensModel", "FocalLength", "FNumber",
     "ExposureTime", "ISOSpeedRatings", "DateTimeOriginal",
@@ -165,25 +223,32 @@ def _flatten_to_rgb(img: PilImage.Image) -> PilImage.Image:
 
 
 def _encode_jpeg(img: PilImage.Image, max_px: int, quality: int) -> bytes:
-    """Shrink (never upscale) to a long edge of max_px and encode a progressive JPEG."""
+    """Shrink (never upscale) to a long edge of max_px and encode a progressive JPEG.
+
+    The pixels are expected to be sRGB already (callers run `_to_srgb` first); we embed a small sRGB
+    profile so the rendition is explicitly tagged and displays correctly everywhere."""
     if max(img.size) > max_px:
         img.thumbnail((max_px, max_px), PilImage.LANCZOS)
     buf = io.BytesIO()
     # progressive=True so the browser paints the whole frame coarse→sharp instead of scanning
     # top-to-bottom (baseline), which looked like the photo "loading from the top" in the lightbox.
-    img.save(buf, "JPEG", quality=quality, optimize=True, progressive=True)
+    save_kwargs = {"quality": quality, "optimize": True, "progressive": True}
+    if _SRGB_ICC_BYTES:
+        save_kwargs["icc_profile"] = _SRGB_ICC_BYTES
+    img.save(buf, "JPEG", **save_kwargs)
     return buf.getvalue()
 
 
 def resize_bytes(data: bytes, max_px: int, quality: int) -> bytes:
-    """Re-encode raw image bytes to a bounded, EXIF-stripped progressive JPEG.
+    """Re-encode raw image bytes to a bounded, EXIF-stripped, sRGB progressive JPEG.
 
     Used to bound header/cover uploads on store and to derive the link-preview og:image, so neither
     serves a multi-MB original. EXIF is dropped (Pillow doesn't carry it without `exif=`). The
     module-level MAX_IMAGE_PIXELS ceiling guards against a decompression bomb on open."""
     with PilImage.open(io.BytesIO(data)) as img:
-        rgb = _flatten_to_rgb(img)
-    return _encode_jpeg(rgb, max_px, quality)
+        # Colour-convert before flattening: a CMYK source must go through ICC, not a naive convert.
+        rgb = _flatten_to_rgb(_to_srgb(img, img.info.get("icc_profile")))
+        return _encode_jpeg(rgb, max_px, quality)
 
 
 def _save_resized(
@@ -253,6 +318,8 @@ def process_image(image_id: str, gallery_id: str, stored_filename: str) -> None:
             img = PilImage.open(io.BytesIO(data))
         else:
             img = _open_source(original_path, stored_filename)
+        # Capture the source ICC profile before any transform so we can colour-manage to sRGB below.
+        icc_profile = img.info.get("icc_profile")
         # Decompression-bomb / giant-dimension guard: reject on the header-declared dimensions
         # before any pixel buffer is allocated (img.copy()/thumbnail in _save_resized). A crafted
         # highly-compressible file can be tiny on disk yet huge in memory; bail early → status error.
@@ -275,6 +342,10 @@ def process_image(image_id: str, gallery_id: str, stored_filename: str) -> None:
         iptc_dict = _extract_iptc(img)
         iptc_json = json.dumps(iptc_dict, ensure_ascii=False) if iptc_dict else None
         img = _auto_rotate(img)
+        # Colour-manage a wide-gamut source (Adobe RGB, ProPhoto, Display-P3) to sRGB once, so every
+        # rendition below is written in sRGB (and tagged as such in _encode_jpeg). Untagged / already-
+        # sRGB sources pass through unchanged.
+        img = _to_srgb(img, icc_profile)
         width, height = img.size
 
         # Re-read the gallery id just before writing: decode/resize above can take seconds on a

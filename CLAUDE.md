@@ -236,6 +236,10 @@ Key non-obvious constraints — full details in `docs/architecture/`.
 ### Watermarks
 - `watermark_service.is_active(ws)` is the single gate — used by the public serializer and the serving proxy. Composited on the fly for thumb/medium, cached to `{variant}-wm/` keyed on a settings hash. Originals and video are never watermarked.
 
+### Colour management (renditions)
+- Renditions are always written in **sRGB and tagged** with a small embedded sRGB profile (`image_processing._to_srgb` + `_encode_jpeg`). A wide-gamut source (Adobe RGB, ProPhoto, Display-P3) is colour-converted to sRGB via `ImageCms` before encoding — otherwise its pixels, copied through verbatim into an untagged JPEG, render **desaturated** (browsers assume sRGB). Untagged / already-sRGB sources pass through unchanged; any CMS failure falls back to the raw pixels (never crashes). Originals are untouched.
+- **Existing images self-heal on upgrade:** `preview_upgrade` regenerates a rendition when its long edge is wrong **or** it lacks an ICC tag *and* the original is non-sRGB (`original_needs_srgb`) — so pre-fix wide-gamut previews are recoloured on the next restart, idempotently (a re-rendered preview carries the sRGB tag → skipped thereafter).
+
 ### Video uploads
 - Accepted: `video/mp4`, `video/quicktime`, `video/webm`. Magic-byte validated (ISO-BMFF / EBML). No transcoding.
 - Videos skip the Pillow pipeline entirely — `thumb_url`/`medium_url` stay null; `video_url` is always present.

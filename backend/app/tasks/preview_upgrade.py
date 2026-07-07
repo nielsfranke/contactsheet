@@ -9,7 +9,13 @@ import threading
 from PIL import Image as PilImage
 
 from app.config import settings
-from app.tasks.image_processing import _auto_rotate, _save_resized, preview_targets
+from app.tasks.image_processing import (
+    _auto_rotate,
+    _save_resized,
+    _to_srgb,
+    original_needs_srgb,
+    preview_targets,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -62,6 +68,9 @@ def _sync_previews() -> None:
         original_path = os.path.join(settings.upload_dir, gallery_id, "original", stored_filename)
         if not os.path.exists(original_path):
             continue
+        # Lazily answered once per image (only when an untagged rendition forces the question):
+        # is the original wide-gamut, so its pre-fix (untagged) renditions must be recoloured to sRGB?
+        orig_wide = None
         for variant, (max_px, quality) in targets.items():
             path = os.path.join(settings.upload_dir, gallery_id, variant, stored_filename)
             # The rendition's long edge should be max_px, capped at the original's size.
@@ -70,17 +79,31 @@ def _sync_previews() -> None:
                 expected = min(expected, max(width, height))
             try:
                 if os.path.exists(path):
+                    keep = False
                     try:
                         with PilImage.open(path) as current:
-                            if max(current.size) == expected:
-                                continue
+                            size_ok = max(current.size) == expected
+                            tagged = current.info.get("icc_profile") is not None
+                        if size_ok and tagged:
+                            keep = True  # right size + already colour-managed (sRGB-tagged)
+                        elif size_ok and not tagged:
+                            # A pre-colour-fix rendition. Only recolour it if the original is
+                            # wide-gamut; an untagged sRGB rendition already displays correctly.
+                            if orig_wide is None:
+                                orig_wide = original_needs_srgb(original_path)
+                            keep = not orig_wide
                     except Exception:
-                        # An existing rendition that won't open is corrupt/truncated → fall
-                        # through and regenerate it (don't let it skip the rebuild below).
-                        pass
-                # Missing entirely (e.g. a newly-added tier), wrong size, or corrupt → (re)generate.
+                        # An existing rendition that won't open is corrupt/truncated → regenerate.
+                        keep = False
+                    if keep:
+                        continue
+                # Missing (e.g. a newly-added tier), wrong size, corrupt, or a wide-gamut source whose
+                # rendition predates colour management → (re)generate, converting to sRGB.
                 with PilImage.open(original_path) as orig:
-                    _save_resized(_auto_rotate(orig), max_px, path, quality=quality)
+                    _save_resized(
+                        _to_srgb(_auto_rotate(orig), orig.info.get("icc_profile")),
+                        max_px, path, quality=quality,
+                    )
                 resized[variant] += 1
                 stale_wm_dirs.add(os.path.join(settings.upload_dir, gallery_id, f"{variant}-wm"))
             except Exception:
