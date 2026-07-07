@@ -12,6 +12,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.6.7] - 2026-07-07
+
+### Fixed
+
+- **Adobe RGB (wide-gamut) photos looked desaturated.** Previews were written straight from the
+  source pixels with no colour profile, so an image exported in Adobe RGB (or ProPhoto / Display-P3)
+  rendered washed-out — browsers assume sRGB for an untagged image. Renditions are now colour-managed
+  to sRGB and tagged accordingly, so wide-gamut photos display with correct, saturated colour.
+  Header, cover and link-preview images are converted too. Photos already uploaded are re-rendered
+  automatically on the next restart; originals are never altered.
+
 ## [1.6.6] - 2026-07-07
 
 ### Added
@@ -722,7 +733,8 @@ contract are considered stable as of this release.
   caps (stricter for public uploads).
 - Docker Compose deployment (backend + frontend + nginx); SQLite + local filesystem.
 
-[Unreleased]: https://github.com/nielsfranke/contactsheet/compare/v1.6.6...HEAD
+[Unreleased]: https://github.com/nielsfranke/contactsheet/compare/v1.6.7...HEAD
+[1.6.7]: https://github.com/nielsfranke/contactsheet/compare/v1.6.6...v1.6.7
 [1.6.6]: https://github.com/nielsfranke/contactsheet/compare/v1.6.5...v1.6.6
 [1.6.5]: https://github.com/nielsfranke/contactsheet/compare/v1.6.1...v1.6.5
 [1.6.1]: https://github.com/nielsfranke/contactsheet/compare/v1.6.0...v1.6.1
