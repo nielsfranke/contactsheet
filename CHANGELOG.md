@@ -12,6 +12,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.6.6] - 2026-07-07
+
+### Added
+
+- **Duplicate-filename upload resolution.** Uploading a photo whose filename already exists in
+  the gallery now prompts how to proceed instead of silently adding a second copy: **Replace**
+  (overwrite the existing photo in place — its comments, ratings, votes, collection membership
+  and any pinned gallery cover are kept, so a re-uploaded cover follows automatically),
+  **Keep both** (the new file is renamed `_v2` / `_v3`), or **Skip**. Choose once for the whole
+  batch or per file. Third-party clients (Lightroom/Capture One personal-access-token uploads)
+  are unaffected — without the new option they keep appending as before.
+
+### Fixed
+
+- **Moving photos between galleries dropped a preview size.** Moving (or copying) an image to
+  another gallery relocated only some of its renditions, leaving the intermediate `small`
+  preview behind in the old gallery — so thumbnails/previews could fail to load in the
+  destination (notably on phones and with high-res previews on). All rendition sizes now follow
+  the move, and the rendition worker is hardened so moving a photo mid-processing no longer
+  strands its previews. Already-affected photos repair themselves automatically on upgrade.
+
 ## [1.6.5] - 2026-07-03
 
 ### Added
@@ -701,7 +722,8 @@ contract are considered stable as of this release.
   caps (stricter for public uploads).
 - Docker Compose deployment (backend + frontend + nginx); SQLite + local filesystem.
 
-[Unreleased]: https://github.com/nielsfranke/contactsheet/compare/v1.6.5...HEAD
+[Unreleased]: https://github.com/nielsfranke/contactsheet/compare/v1.6.6...HEAD
+[1.6.6]: https://github.com/nielsfranke/contactsheet/compare/v1.6.5...v1.6.6
 [1.6.5]: https://github.com/nielsfranke/contactsheet/compare/v1.6.1...v1.6.5
 [1.6.1]: https://github.com/nielsfranke/contactsheet/compare/v1.6.0...v1.6.1
 [1.6.0]: https://github.com/nielsfranke/contactsheet/compare/v1.5.0...v1.6.0
