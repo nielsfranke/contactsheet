@@ -5,10 +5,13 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 # Lightroom plugin — duplicate handling on re-export
 
-Status: **approved** (2026-07-07). Decisions locked: **Option B** (plugin pre-flights via
-`check-duplicates`, **no ContactSheet server change**); default action **Keep both**; **Export-only**
-(Publish keeps its id-based dedup); "Ask each time" deferred. Implementation is entirely in the
-`contactsheet-lightroom` repo. Follow-up to
+Status: **implemented** (2026-07-07) — shipped as `contactsheet-lightroom` **v0.10.0**. Decisions:
+**Option B** (plugin pre-flights via `check-duplicates`, **no ContactSheet server change**); default
+action **Keep both**; **Export-only** (Publish keeps its id-based dedup); "Ask each time" deferred.
+**Verified:** JSON unit tests + HTTP contract against a live backend via PAT + the real `CSApi` paths
+executed **inside Lightroom Classic** (a temporary `LrInitPlugin` self-test: createGallery →
+checkDuplicates → keep_both/replace uploads) producing the expected server state (`_v2` rename +
+in-place replace keeping the image id). Follow-up to
 [duplicate-filename upload resolution](./duplicate-filename-upload-resolution.md) (shipped in
 v1.6.6). That feature lets the **web UI** resolve same-filename uploads (Replace / Keep both / Skip).
 The server contract is client-agnostic, so the Lightroom plugin can adopt it — this note specs how.
