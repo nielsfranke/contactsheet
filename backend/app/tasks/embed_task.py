@@ -54,23 +54,26 @@ def _use_original(stored_filename: str, index_originals: bool) -> bool:
     return index_originals and format_detect.ml_can_read_original(stored_filename)
 
 
-def embed_one(image_id: str) -> None:
-    """Encode and store the vector for a single image. Safe to call when the feature is off
-    (no-ops). Never raises — failures are recorded as `embedding_status='error'`."""
+def _plan(image_id: str) -> tuple[str, str] | None:
+    """Session-scoped read: return (model, source_path) to embed, or None to skip.
+
+    Holds a DB connection *only* for this read (and any terminal 'skipped' write) — never across the
+    sidecar HTTP call. Records 'skipped' for video/PSB. Returns None when the feature is off, the
+    image is gone, or the row is skipped."""
     db = SessionLocal()
     try:
         config = _active_config(db)
         if config is None:
-            return
+            return None
         model, index_originals = config
 
         image = image_repo.get_by_id(db, image_id)
         if image is None:
-            return
+            return None
         if image.is_video or format_detect.is_psb_filename(image.stored_filename):
             # PSB is excluded from search — its only readable pixels are a tiny embedded thumbnail.
             image_repo.set_embedding_status(db, image_id, "skipped")
-            return
+            return None
 
         use_original = _use_original(image.stored_filename, index_originals)
         path = _source_path(image.gallery_id, image.stored_filename, use_original)
@@ -79,21 +82,62 @@ def embed_one(image_id: str) -> None:
             # Medium not generated yet (e.g. very fresh upload) — fall back to the original, but only
             # when the sidecar can read it (never for RAW/PSD, whose original is unreadable).
             path = _source_path(image.gallery_id, image.stored_filename, True)
-
-        try:
-            vector = embedder.embed_image(path, model)
-        except embedder.EmbedderError as exc:
-            logger.warning("Embedding failed for image %s: %s", image_id, exc)
-            image_repo.set_embedding_status(db, image_id, "error")
-            return
-
-        image_embedding_repo.upsert(db, image_id, model, vector)
-        image_repo.set_embedding_status(db, image_id, "indexed")
-        logger.debug("Indexed image %s (model=%s)", image_id, model)
-    except Exception:
-        logger.exception("Unexpected error indexing image %s", image_id)
+        return model, path
     finally:
         db.close()
+
+
+def _record_status(image_id: str, status: str) -> None:
+    """Best-effort `embedding_status` write on its own short-lived session."""
+    try:
+        db = SessionLocal()
+        try:
+            image_repo.set_embedding_status(db, image_id, status)
+        finally:
+            db.close()
+    except Exception:
+        logger.exception("Failed to set embedding_status=%s for image %s", status, image_id)
+
+
+def embed_one(image_id: str) -> None:
+    """Encode and store the vector for a single image. Safe to call when the feature is off
+    (no-ops). Never raises — failures are recorded as `embedding_status='error'`.
+
+    Structured read → embed → write so **no DB connection is held across the sidecar HTTP call**:
+    each embed worker would otherwise pin a pool slot for the full network round-trip and help
+    exhaust the pool during a bulk upload. See docs/architecture/db-connection-pool-under-bulk-upload.md.
+    """
+    try:
+        plan = _plan(image_id)
+    except Exception:
+        logger.exception("Unexpected error preparing embedding for image %s", image_id)
+        return
+    if plan is None:
+        return
+    model, path = plan
+
+    # No DB session held here — the slow part (model inference in the sidecar) runs pool-free.
+    try:
+        vector = embedder.embed_image(path, model)
+    except embedder.EmbedderError as exc:
+        logger.warning("Embedding failed for image %s: %s", image_id, exc)
+        _record_status(image_id, "error")
+        return
+    except Exception:
+        logger.exception("Unexpected error indexing image %s", image_id)
+        _record_status(image_id, "error")
+        return
+
+    try:
+        db = SessionLocal()
+        try:
+            image_embedding_repo.upsert(db, image_id, model, vector)
+            image_repo.set_embedding_status(db, image_id, "indexed")
+        finally:
+            db.close()
+        logger.debug("Indexed image %s (model=%s)", image_id, model)
+    except Exception:
+        logger.exception("Unexpected error storing embedding for image %s", image_id)
 
 
 def submit(image_id: str) -> None:

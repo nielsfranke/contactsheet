@@ -30,24 +30,43 @@ export function useGalleryRealtime(args: Args): void {
         ? publicGalleryWsUrl(args.shareToken, args.galleryToken)
         : adminGalleryWsUrl(args.adminGalleryId);
 
+    // Coalesce invalidations. A bulk upload emits one WS signal per image (~100 in a few seconds);
+    // invalidating — and thus refetching — /images per signal hammers the backend and its DB pool
+    // (see docs/architecture/db-connection-pool-under-bulk-upload.md). Collect the distinct query
+    // keys touched within a short window and flush them once, capping refetches to a few per second
+    // instead of one per event. 400 ms is imperceptible for other-users'-activity updates.
+    const FLUSH_MS = 400;
+    const pending = new Map<string, readonly unknown[]>();
+    let flushTimer: ReturnType<typeof setTimeout> | undefined;
+    const invalidate = (queryKey: readonly unknown[]) => {
+      pending.set(JSON.stringify(queryKey), queryKey);
+      if (flushTimer) return;
+      flushTimer = setTimeout(() => {
+        flushTimer = undefined;
+        const keys = [...pending.values()];
+        pending.clear();
+        for (const qk of keys) qc.invalidateQueries({ queryKey: qk as unknown[] });
+      }, FLUSH_MS);
+    };
+
     const handle = (event: RealtimeEvent) => {
       if (args.kind === "public") {
         const { shareToken, galleryToken } = args;
         switch (event.type) {
           case "comment":
           case "annotation":
-            qc.invalidateQueries({ queryKey: ["comments", shareToken] });
-            qc.invalidateQueries({ queryKey: ["public-images", shareToken, galleryToken] });
+            invalidate(["comments", shareToken]);
+            invalidate(["public-images", shareToken, galleryToken]);
             break;
           case "flag":
           case "image":
-            qc.invalidateQueries({ queryKey: ["public-images", shareToken, galleryToken] });
+            invalidate(["public-images", shareToken, galleryToken]);
             break;
           case "vote":
-            qc.invalidateQueries({ queryKey: ["public-votes", shareToken] });
+            invalidate(["public-votes", shareToken]);
             break;
           case "collection":
-            qc.invalidateQueries({ queryKey: ["public-collections", shareToken, galleryToken] });
+            invalidate(["public-collections", shareToken, galleryToken]);
             break;
         }
       } else {
@@ -55,25 +74,29 @@ export function useGalleryRealtime(args: Args): void {
         switch (event.type) {
           case "comment":
           case "annotation":
-            qc.invalidateQueries({ queryKey: ["admin-comments", id] });
-            qc.invalidateQueries({ queryKey: ["gallery-images", id] });
+            invalidate(["admin-comments", id]);
+            invalidate(["gallery-images", id]);
             break;
           case "flag":
           case "image":
-            qc.invalidateQueries({ queryKey: ["gallery-images", id] });
+            invalidate(["gallery-images", id]);
             break;
           case "vote":
-            qc.invalidateQueries({ queryKey: ["votes-summary", id] });
-            qc.invalidateQueries({ queryKey: ["gallery-images", id] });
+            invalidate(["votes-summary", id]);
+            invalidate(["gallery-images", id]);
             break;
           case "collection":
-            qc.invalidateQueries({ queryKey: ["collections", id] });
+            invalidate(["collections", id]);
             break;
         }
       }
     };
 
-    return connectRealtime(url, handle);
+    const unsubscribe = connectRealtime(url, handle);
+    return () => {
+      if (flushTimer) clearTimeout(flushTimer);
+      unsubscribe();
+    };
     // `key` captures the identity of the connection target; args fields are read fresh on each event.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [qc, key]);

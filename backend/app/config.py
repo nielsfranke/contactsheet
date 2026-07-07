@@ -22,6 +22,16 @@ class Settings(BaseSettings):
         return v
 
     db_url: str = "sqlite:////data/contactsheet.db"
+    # SQLAlchemy connection-pool sizing. The library default (pool_size=5, max_overflow=10 → 15) is
+    # too small for a bulk API upload: ~100 uploads fan out into a WebSocket-driven admin refetch
+    # storm (/galleries + /images), rendition writes serialize on SQLite's single writer, and each
+    # gets a pool slot — the 16th request then waits db_pool_timeout and throws QueuePool TimeoutError,
+    # degrading admin *and* public views until the burst drains. WAL allows unlimited concurrent
+    # readers, so a larger pool directly relieves the read storm. Env-overridable so a small box can
+    # tune down. See docs/architecture/db-connection-pool-under-bulk-upload.md.
+    db_pool_size: int = 20
+    db_max_overflow: int = 40
+    db_pool_timeout: int = 30
     upload_dir: str = "/data/uploads"
     exports_dir: str = "/data/exports"
     branding_dir: str = "/data/branding"

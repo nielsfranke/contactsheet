@@ -43,6 +43,13 @@ class UTCDateTime(TypeDecorator):
 engine = create_engine(
     settings.db_url,
     connect_args={"check_same_thread": False},  # required for SQLite + FastAPI
+    # The default QueuePool (5 + 10 overflow) exhausts during a bulk API upload — see
+    # docs/architecture/db-connection-pool-under-bulk-upload.md. WAL permits unlimited concurrent
+    # readers, so a larger pool absorbs the refetch storm; writes still serialize on SQLite.
+    pool_size=settings.db_pool_size,
+    max_overflow=settings.db_max_overflow,
+    pool_timeout=settings.db_pool_timeout,
+    pool_pre_ping=True,
 )
 
 
