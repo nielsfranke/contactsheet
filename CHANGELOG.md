@@ -12,6 +12,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.6.9] - 2026-07-07
+
+### Fixed
+
+- **Public gallery images failed to load during a large upload.** Bulk-uploading many photos at once
+  (e.g. via the Lightroom / Capture One plugins or another API client) could saturate the database
+  connection pool: the admin UI's live-refetch storm, serialized rendition writes, and background
+  semantic-search indexing all competed for a pool that defaulted to just 15 connections. Requests
+  then timed out (`QueuePool limit ... reached`), so **both** the admin and the client (public) view
+  degraded — broken thumbnails and full-size images — until the upload backlog drained. Three fixes:
+  the connection pool is now sized for bursts (`DB_POOL_SIZE`/`DB_MAX_OVERFLOW`, env-tunable), the
+  embedding worker no longer holds a pooled connection across its call to the ML sidecar, and the
+  admin live-update refetches are coalesced so a burst of uploads no longer fans out into one refetch
+  per photo. No configuration change is required to benefit.
+  See `docs/architecture/db-connection-pool-under-bulk-upload.md`.
+
 ## [1.6.8] - 2026-07-07
 
 ### Changed
