@@ -58,7 +58,12 @@ class Settings(BaseSettings):
     # GIL during resize/encode, so threads give real parallelism for batch uploads. Kept small so a
     # big drop can't saturate every core or pile up SQLite writers.
     image_workers: int = 3
-    max_upload_bytes: int = 314_572_800  # 300 MB — headroom for large TIFF/PSD and RAW originals
+    max_upload_bytes: int = 314_572_800  # 300 MB — regular images (JPEG/PNG/WebP/RAW)
+    # Large working documents (Photoshop .psd/.psb, layered/high-res TIFF) routinely run to several
+    # GB. They get their own, much larger ceiling; the ~0.6 KB header/thumbnail is all that's decoded
+    # for a preview, and the original is streamed to disk, so the size cost is just storage. The
+    # bundled nginx (and any proxy in front) must allow at least this in client_max_body_size.
+    max_document_bytes: int = 8_589_934_592  # 8 GB (.psd/.psb/.tiff)
     # Reject images whose pixel area exceeds this before decoding (decompression-bomb / giant-
     # dimension guard). Checked against the header dimensions, so a malicious file is refused
     # without ever allocating its full bitmap. 100 MP comfortably covers real cameras.

@@ -38,6 +38,10 @@ _ACCEPTED_LABEL = "JPEG, PNG, WebP, TIFF, PSD, camera RAW, MP4, MOV, WebM"
 # Max files a public visitor may send in one client-upload request.
 CLIENT_UPLOAD_MAX_FILES = 50
 
+# Large working-document formats that get the multi-GB `max_document_bytes` ceiling (admin uploads
+# only) rather than the regular image cap. Keyed on the detected format's `key`.
+_LARGE_DOCUMENT_KEYS = {"psd", "psb", "tiff"}
+
 
 def _image_to_response(
     image: Image,
@@ -333,8 +337,15 @@ def upload_images(
             )
 
         mime = fmt.mime
-        # Videos are stored as-is (no transcoding) and carry a larger size cap.
-        size_cap = settings.max_video_bytes if is_video else image_cap
+        # Per-format size ceiling: videos are stored as-is (large cap); large working documents
+        # (PSD/PSB/TIFF) get the multi-GB document cap on the admin path only — client uploads keep
+        # their own small per-file cap (max_image_bytes is set → not None). Everything else = 300 MB.
+        if is_video:
+            size_cap = settings.max_video_bytes
+        elif max_image_bytes is None and fmt.key in _LARGE_DOCUMENT_KEYS:
+            size_cap = settings.max_document_bytes
+        else:
+            size_cap = image_cap
         stored_filename = f"{uuid.uuid4()}{fmt.ext}"
 
         # Folder uploads send a relative path as the filename (e.g. "shoot/IMG_1.jpg").

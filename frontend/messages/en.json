@@ -663,7 +663,7 @@
       "title": "Add photos & videos",
       "subtitle": "Drop files or folders anywhere on the page to upload",
       "orClick": "or browse",
-      "formats": "JPEG, PNG, WebP, TIFF, PSD, PSB & RAW up to 300 MB · MP4, MOV, WebM up to 2 GB",
+      "formats": "JPEG, PNG, WebP & RAW up to 300 MB · PSD, PSB & TIFF up to 8 GB · MP4, MOV, WebM up to 2 GB",
       "button": "Upload files",
       "cancel": "Cancel",
       "uploading": "Uploading… {progress}%"

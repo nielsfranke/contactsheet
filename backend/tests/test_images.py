@@ -248,6 +248,31 @@ def test_upload_replace_with_multiple_matches_keeps_one(admin_client):
     assert len(imgs) == 1 and imgs[0]["original_filename"] == "IMG_1.png"
 
 
+def test_psd_psb_tiff_get_document_size_cap(admin_client, monkeypatch):
+    """PSD/PSB/TIFF are capped by max_document_bytes (multi-GB), regular images by max_upload_bytes.
+    Caps are shrunk here so a tiny file exceeds the image cap yet fits the document cap."""
+    import io as _io
+    from PIL import Image as _PILImage
+    from app.config import settings
+    from .helpers import psb_bytes
+
+    monkeypatch.setattr(settings, "max_upload_bytes", 10)            # 10 bytes — regular images
+    monkeypatch.setattr(settings, "max_document_bytes", 10_000_000)  # 10 MB — large documents
+    g = make_gallery(admin_client, "G")
+
+    def up(name, data, ct):
+        return admin_client.post(f"/api/galleries/{g['id']}/images", files=[("files", (name, data, ct))])
+
+    # A regular image blows the tiny 10-byte image cap → rejected.
+    r = up("p.png", png_bytes(), "image/png")
+    assert r.status_code == 413 and r.json()["code"] == "upload_too_large"
+
+    # PSB and TIFF ride the document cap → accepted (well under 10 MB).
+    assert up("doc.psb", psb_bytes(), "application/octet-stream").status_code == 201
+    tif = _io.BytesIO(); _PILImage.new("RGB", (8, 8), (1, 2, 3)).save(tif, "TIFF")
+    assert up("doc.tif", tif.getvalue(), "image/tiff").status_code == 201
+
+
 def test_moderation_approve_makes_public(admin_client):
     g = make_gallery(admin_client, "G", mode="collaboration")
     img = add_image(g["id"], moderation_status="pending")

@@ -43,6 +43,14 @@ export const ACCEPTED_EXT = [...ACCEPTED_IMAGE_EXT, ...ACCEPTED_VIDEO_EXT].join(
 
 const MAX_IMAGE_BYTES = 300 * 1024 * 1024; // 300 MB — matches backend max_upload_bytes
 const MAX_VIDEO_BYTES = 2 * 1024 * 1024 * 1024; // 2 GB
+// Large working documents (Photoshop .psd/.psb, layered/high-res TIFF) run to several GB — matches
+// backend max_document_bytes. (Admin upload path; client uploads keep their own small cap.)
+const MAX_DOCUMENT_BYTES = 8 * 1024 * 1024 * 1024; // 8 GB
+const DOCUMENT_EXT = [".psd", ".psb", ".tif", ".tiff"];
+
+function isDocumentFile(f: File): boolean {
+  return DOCUMENT_EXT.includes(extOf(f.name));
+}
 
 function extOf(name: string): string {
   const i = name.lastIndexOf(".");
@@ -76,9 +84,10 @@ function validateFiles(incoming: File[]): File[] {
       return false;
     }
     const isVideo = isVideoFile(f);
-    const cap = isVideo ? MAX_VIDEO_BYTES : MAX_IMAGE_BYTES;
+    const isDoc = !isVideo && isDocumentFile(f);
+    const cap = isVideo ? MAX_VIDEO_BYTES : isDoc ? MAX_DOCUMENT_BYTES : MAX_IMAGE_BYTES;
     if (f.size > cap) {
-      toast.error(`${f.name}: exceeds ${isVideo ? "2 GB" : "300 MB"} limit`);
+      toast.error(`${f.name}: exceeds ${isVideo ? "2 GB" : isDoc ? "8 GB" : "300 MB"} limit`);
       return false;
     }
     return true;

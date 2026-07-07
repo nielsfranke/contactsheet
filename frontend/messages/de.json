@@ -663,7 +663,7 @@
       "title": "Fotos & Videos hinzufügen",
       "subtitle": "Dateien oder Ordner irgendwo auf der Seite ablegen zum Hochladen",
       "orClick": "oder durchsuchen",
-      "formats": "JPEG, PNG, WebP, TIFF, PSD, PSB & RAW bis 300 MB · MP4, MOV, WebM bis 2 GB",
+      "formats": "JPEG, PNG, WebP & RAW bis 300 MB · PSD, PSB & TIFF bis 8 GB · MP4, MOV, WebM bis 2 GB",
       "button": "Dateien hochladen",
       "cancel": "Abbrechen",
       "uploading": "Wird hochgeladen… {progress} %"
