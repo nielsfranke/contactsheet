@@ -25,6 +25,13 @@ from app.tasks.image_processing import resize_bytes, submit_image_processing
 # Number of leading bytes sniffed to detect the file format (covers every magic in format_detect).
 _HEADER_BYTES = 32
 
+# On-disk rendition tiers keyed under `{gallery_id}/{subdir}/{stored_filename}`: the source original
+# plus the three previews the worker generates (see tasks/image_processing.preview_targets). Any code
+# that relocates a photo's files (move/copy between galleries) must walk this full set — dropping one
+# (historically `small`) orphans it in the source gallery while its URL is rebuilt from the new
+# gallery id, giving a 404 preview. Single source of truth so the two call sites can't drift.
+_IMAGE_SUBDIRS = ("original", "thumb", "small", "medium")
+
 # Human-readable list of accepted formats, for the "unsupported type" error.
 _ACCEPTED_LABEL = "JPEG, PNG, WebP, TIFF, PSD, camera RAW, MP4, MOV, WebM"
 
@@ -208,6 +215,73 @@ def list_all_photos(
     )
 
 
+def _basename(name: str | None) -> str:
+    """Strip any folder path a folder-upload sends as the filename (POSIX or Windows separators)."""
+    return (name or "").replace("\\", "/").rsplit("/", 1)[-1]
+
+
+def check_duplicates(db: Session, gallery_id: str, filenames: list[str]) -> dict[str, int]:
+    """Pre-flight for the upload dialog: which of these filenames already exist (live) in the gallery,
+    and how many copies each. Compares on basenames (matching how uploads store `original_filename`)."""
+    gallery = gallery_repo.get_by_id(db, gallery_id)
+    if not gallery:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Gallery not found")
+    names = [_basename(f) for f in filenames]
+    return image_repo.filename_counts(db, gallery_id, names)
+
+
+def _next_versioned_name(existing: set[str], filename: str) -> str:
+    """Lowest free `stem_vN.ext` (N ≥ 2) not already among the gallery's live filenames — the
+    'keep both' rename the photographer asked for (`_v2`, `_v3`, …)."""
+    stem, ext = os.path.splitext(filename)
+    n = 2
+    while f"{stem}_v{n}{ext}" in existing:
+        n += 1
+    return f"{stem}_v{n}{ext}"
+
+
+def _replace_in_place(
+    db: Session,
+    matches: list[Image],
+    gallery_id: str,
+    new_stored: str,
+    *,
+    file_size: int,
+    mime: str,
+    is_video: bool,
+    storage: StorageProvider,
+) -> Image:
+    """Overwrite the newest same-name photo with freshly-uploaded bytes, keeping its id (so comments,
+    votes, ratings, likes, collection membership, sort order and any gallery cover pointing at it all
+    survive) and soft-deleting older same-name siblings so exactly one live row keeps the name. The
+    new original bytes are already saved under `new_stored`; the target's stale renditions are dropped
+    and reprocessing is enqueued."""
+    target = matches[0]  # newest (live_by_filename is created_at DESC)
+    old_stored = target.stored_filename
+    for subdir in _IMAGE_SUBDIRS:
+        storage.delete(f"{gallery_id}/{subdir}/{old_stored}")
+    for sibling in matches[1:]:
+        image_repo.soft_delete(db, sibling)
+    updated = image_repo.update_fields(
+        db,
+        target,
+        stored_filename=new_stored,
+        file_size=file_size,
+        mime_type=mime,
+        is_video=is_video,
+        width=None,
+        height=None,
+        exif_data=None,
+        iptc_data=None,
+        processing_status="done" if is_video else "pending",
+        embedding_status="skipped" if is_video else "pending",
+    )
+    if not is_video:
+        submit_image_processing(updated.id, gallery_id, new_stored)
+    realtime_publish(gallery_id, "image", image_id=updated.id)
+    return updated
+
+
 def upload_images(
     db: Session,
     gallery_id: str,
@@ -218,10 +292,20 @@ def upload_images(
     max_image_bytes: int | None = None,
     max_total_bytes: int | None = None,
     allow_video: bool = True,
+    duplicate_actions: dict[str, str] | None = None,
 ) -> list[UploadResponse]:
+    """`duplicate_actions` maps an incoming `original_filename` → "replace" | "keep_both" | "skip".
+    A name absent from the map keeps the legacy behaviour (silent append) — the backward-compat
+    contract for PAT clients (Lightroom/Capture One) that never send it. See
+    docs/architecture/duplicate-filename-upload-resolution.md."""
     gallery = gallery_repo.get_by_id(db, gallery_id)
     if not gallery:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Gallery not found")
+
+    actions = duplicate_actions or {}
+    # Live filenames, loaded once, so "keep both" can pick the next free `_vN` — and a second same-name
+    # file *within this batch* bumps to `_v3` (we add each assigned name back into the set).
+    live_names = image_repo.live_filenames(db, gallery_id) if actions else set()
 
     results = []
     existing_count = image_repo.count_by_gallery(db, gallery_id)
@@ -256,7 +340,21 @@ def upload_images(
         # Folder uploads send a relative path as the filename (e.g. "shoot/IMG_1.jpg").
         # Keep only the base name so exports, ZIPs and copy-filenames never leak the path.
         # Handle both POSIX and Windows separators regardless of host OS.
-        original_filename = (file.filename or stored_filename).replace("\\", "/").rsplit("/", 1)[-1]
+        original_filename = _basename(file.filename or stored_filename)
+
+        # Duplicate resolution (keyed by the true basename, before any rename):
+        #   skip      → don't upload this file at all
+        #   keep_both → rename the incoming file to the next free `_vN` (stored name is already unique)
+        #   replace   → overwrite the newest same-name photo in place after the bytes are saved
+        # A name not in the map keeps the legacy silent-append behaviour.
+        action = actions.get(original_filename)
+        if action == "skip":
+            continue
+        replace_target_name = original_filename
+        if action == "keep_both":
+            original_filename = _next_versioned_name(live_names, original_filename)
+            live_names.add(original_filename)
+
         relative_path = f"{gallery_id}/original/{stored_filename}"
 
         _CHUNK = 1024 * 1024
@@ -286,6 +384,24 @@ def upload_images(
                 os.unlink(tmp_path)
             except OSError:
                 pass
+
+        if action == "replace":
+            matches = image_repo.live_by_filename(db, gallery_id, replace_target_name)
+            if matches:
+                image = _replace_in_place(
+                    db, matches, gallery_id, stored_filename,
+                    file_size=file_size, mime=mime, is_video=is_video, storage=storage,
+                )
+                results.append(UploadResponse(
+                    id=image.id,
+                    original_filename=image.original_filename,
+                    file_size=image.file_size,
+                    mime_type=image.mime_type,
+                    processing_status=image.processing_status,
+                    is_video=is_video,
+                ))
+                continue
+            # No live match (raced with a delete since the pre-flight) → fall through to a normal add.
 
         # Videos need no Pillow pipeline — the browser renders its own poster, so the
         # row is "done" on arrival. Images stay "pending" until thumb/medium exist.
@@ -405,7 +521,7 @@ def move_image(db: Session, image_id: str, target_gallery_id: str, storage: Stor
 
     src_gallery = image.gallery_id
     sf = image.stored_filename
-    for subdir in ("original", "thumb", "medium"):
+    for subdir in _IMAGE_SUBDIRS:
         src = f"{src_gallery}/{subdir}/{sf}"
         dst = f"{target_gallery_id}/{subdir}/{sf}"
         if storage.exists(src):
@@ -431,7 +547,7 @@ def copy_image_to_gallery(
     src_gallery = image.gallery_id
     ext = os.path.splitext(image.stored_filename)[1]
     new_filename = f"{uuid.uuid4()}{ext}"
-    for subdir in ("original", "thumb", "medium"):
+    for subdir in _IMAGE_SUBDIRS:
         src = f"{src_gallery}/{subdir}/{image.stored_filename}"
         if storage.exists(src):
             storage.copy(src, f"{target_gallery_id}/{subdir}/{new_filename}")

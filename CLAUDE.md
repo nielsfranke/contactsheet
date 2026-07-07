@@ -209,6 +209,11 @@ Key non-obvious constraints — full details in `docs/architecture/`.
 ### Client review-mode switch (Showcase → Review)
 - `galleries.client_mode_switch_enabled` (Showcase-only opt-in) lets clients flip the gallery into the Review experience themselves. **Enabling it opens the review write endpoints server-side** — the single gate is `gallery_service.review_active(gallery)` (Review mode *or* switch on); the client toggle is pure view state (`store/review-switch.ts`, sessionStorage, keyed per visible subtree so it survives sub-gallery navigation). With the switch on, the settings modal shows the Review tab for Showcase galleries too. See `docs/architecture/client-review-mode-switch.md`.
 
+### Duplicate-filename upload resolution
+- Uploading a filename that already exists (live) in the target gallery can prompt Replace / Keep both / Skip. The admin UI pre-flights via `POST /api/galleries/{id}/images/check-duplicates`, then sends an optional `duplicate_actions` (`filename → replace|keep_both|skip`) form field on upload.
+- **A filename absent from the map keeps the legacy silent-append** — the backward-compat contract for PAT clients (Lightroom/Capture One), which never send the field.
+- **`replace` overwrites in place**: the existing `Image` row and its **id** are kept (comments/votes/ratings/likes/collection membership/`sort_order` and any `cover_image_id` survive) — this is what makes a gallery **cover follow a re-upload** automatically. Multiple same-name matches → newest is overwritten, older siblings soft-deleted. The **header** is a frozen pixel copy and stays manual. Shared rendition set is `_IMAGE_SUBDIRS` (also used by move/copy). See `docs/architecture/duplicate-filename-upload-resolution.md`.
+
 ### Client uploads & moderation
 - `image_service.client_upload_images` enforces `client_upload_enabled` (403) and a per-request cap of 50 files.
 - When `client_upload_moderation` is on, uploads land with `moderation_status="pending"` and are invisible to the public until approved. `image_repo.get_by_gallery` takes an `only_approved` flag — the public path passes it; the admin path does not.

@@ -556,6 +556,9 @@ export interface UploadResponse {
   medium_url: string | null;
 }
 
+// How to resolve an upload whose filename already exists in the target gallery.
+export type DuplicateAction = "replace" | "keep_both" | "skip";
+
 export interface ImageUpdate {
   sort_order?: number;
   color_flag?: ColorFlag;

@@ -559,6 +559,25 @@
       "removed": "Header-Bild entfernt",
       "notImage": "Bitte laden Sie eine Bilddatei hoch"
     },
+    "duplicateUpload": {
+      "title": "Einige Dateien sind bereits vorhanden",
+      "description": "{count, plural, one {# Dateiname ist bereits in dieser Galerie vorhanden.} other {# Dateinamen sind bereits in dieser Galerie vorhanden.}} Wähle, wie damit verfahren werden soll.",
+      "action": {
+        "replace": "Ersetzen",
+        "keep_both": "Beide behalten",
+        "skip": "Überspringen"
+      },
+      "hint": {
+        "replace": "Vorhandenes Foto direkt ersetzen — Kommentare, Bewertungen und das Cover-Bild bleiben erhalten.",
+        "keep_both": "Zusätzlich zum vorhandenen Foto hochladen, umbenannt (z. B. _v2).",
+        "skip": "Diese Dateien nicht hochladen."
+      },
+      "showFiles": "Pro Datei wählen ({count})",
+      "hideFiles": "Dateiliste ausblenden ({count})",
+      "copies": "({count} Kopien)",
+      "cancel": "Upload abbrechen",
+      "confirm": "Hochladen"
+    },
     "coverImage": {
       "title": "Cover-Bild",
       "removeImage": "Cover-Bild entfernen",

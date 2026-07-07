@@ -16,6 +16,7 @@ import type {
   Comment,
   CommentCreate,
   CommentUpdate,
+  DuplicateAction,
   GalleryCreate,
   GalleryResponse,
   GalleryUpdate,
@@ -430,7 +431,20 @@ export const api = {
   },
 
   images: {
-    upload: (galleryId: string, files: File[], onProgress?: (pct: number) => void, signal?: AbortSignal): Promise<UploadResponse[]> => {
+    // Pre-flight before uploading bytes: which candidate filenames already exist (live) in the
+    // gallery, mapped to how many copies. Only colliding names come back.
+    checkDuplicates: (galleryId: string, filenames: string[]) =>
+      request<{ duplicates: Record<string, number> }>(
+        `/api/galleries/${galleryId}/images/check-duplicates`,
+        { method: "POST", body: JSON.stringify({ filenames }) },
+      ),
+    upload: (
+      galleryId: string,
+      files: File[],
+      onProgress?: (pct: number) => void,
+      signal?: AbortSignal,
+      duplicateActions?: Record<string, DuplicateAction>,
+    ): Promise<UploadResponse[]> => {
       return new Promise((resolve, reject) => {
         if (signal?.aborted) {
           reject(Object.assign(new Error("Upload cancelled"), { aborted: true }));
@@ -438,6 +452,9 @@ export const api = {
         }
         const form = new FormData();
         files.forEach((f) => form.append("files", f));
+        if (duplicateActions && Object.keys(duplicateActions).length) {
+          form.append("duplicate_actions", JSON.stringify(duplicateActions));
+        }
         const xhr = new XMLHttpRequest();
         xhr.open("POST", `${API_BASE}/api/galleries/${galleryId}/images`);
         xhr.withCredentials = true;

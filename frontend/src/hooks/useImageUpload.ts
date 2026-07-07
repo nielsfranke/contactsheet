@@ -5,7 +5,24 @@
 
 import { useCallback, useRef, useState } from "react";
 import { api } from "@/lib/api";
+import type { DuplicateAction } from "@/lib/types";
 import { toast } from "sonner";
+
+/** A filename colliding with a live image in the target gallery, plus how many copies exist. */
+export interface DuplicateCollision {
+  name: string;
+  count: number;
+}
+
+/** Open prompt awaiting the photographer's per-collision decision; `resolve(null)` cancels the batch. */
+export interface DuplicatePrompt {
+  collisions: DuplicateCollision[];
+  resolve: (actions: Record<string, DuplicateAction> | null) => void;
+}
+
+function baseName(name: string): string {
+  return name.replace(/\\/g, "/").split("/").pop() ?? name;
+}
 
 const ACCEPTED_IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp"];
 // Browser-playable video containers only — no transcoding happens server-side.
@@ -78,21 +95,50 @@ export function useImageUpload(galleryId: string, onUploaded: () => void) {
   const abortRef = useRef<AbortController | null>(null);
   const [uploading, setUploading] = useState(false);
   const [progress, setProgress] = useState(0);
+  const [duplicatePrompt, setDuplicatePrompt] = useState<DuplicatePrompt | null>(null);
 
   const uploadFiles = useCallback(
     async (incoming: File[]) => {
       const valid = validateFiles(incoming);
       if (!valid.length) return;
 
+      // Pre-flight: catch filename collisions *before* streaming any bytes so the photographer can
+      // choose replace / keep-both / skip. A failed check (offline) just falls through to a plain
+      // upload — the server keeps its legacy silent-append behaviour without the field.
+      let files = valid;
+      let duplicateActions: Record<string, DuplicateAction> | undefined;
+      try {
+        const { duplicates } = await api.images.checkDuplicates(
+          galleryId,
+          valid.map((f) => baseName(f.name)),
+        );
+        const collisions = Object.entries(duplicates).map(([name, count]) => ({ name, count }));
+        if (collisions.length) {
+          const decided = await new Promise<Record<string, DuplicateAction> | null>((resolve) =>
+            setDuplicatePrompt({ collisions, resolve }),
+          );
+          setDuplicatePrompt(null);
+          if (decided === null) return; // whole batch cancelled
+          duplicateActions = decided;
+          const skipped = new Set(
+            Object.entries(decided).filter(([, a]) => a === "skip").map(([n]) => n),
+          );
+          files = valid.filter((f) => !skipped.has(baseName(f.name)));
+          if (!files.length) return; // everything was skipped
+        }
+      } catch {
+        /* pre-flight failed — proceed with a plain upload */
+      }
+
       const controller = new AbortController();
       abortRef.current = controller;
       setUploading(true);
       setProgress(0);
       try {
-        await api.images.upload(galleryId, valid, (pct) => setProgress(pct), controller.signal);
+        await api.images.upload(galleryId, files, (pct) => setProgress(pct), controller.signal, duplicateActions);
         setProgress(100);
         onUploaded();
-        toast.success(`${valid.length} file${valid.length > 1 ? "s" : ""} uploaded`);
+        toast.success(`${files.length} file${files.length > 1 ? "s" : ""} uploaded`);
       } catch (err: unknown) {
         // User-initiated cancel (xhr.abort) — a quiet info toast, not an error.
         if (err && typeof err === "object" && "aborted" in err) {
@@ -128,5 +174,5 @@ export function useImageUpload(galleryId: string, onUploaded: () => void) {
     onChange: onInputChange,
   };
 
-  return { uploadFiles, uploading, progress, openPicker, cancelUpload, inputProps };
+  return { uploadFiles, uploading, progress, openPicker, cancelUpload, inputProps, duplicatePrompt };
 }

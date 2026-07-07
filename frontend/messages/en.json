@@ -559,6 +559,25 @@
       "removed": "Header image removed",
       "notImage": "Please upload an image file"
     },
+    "duplicateUpload": {
+      "title": "Some files already exist",
+      "description": "{count, plural, one {# filename already exists in this gallery.} other {# filenames already exist in this gallery.}} Choose how to handle them.",
+      "action": {
+        "replace": "Replace",
+        "keep_both": "Keep both",
+        "skip": "Skip"
+      },
+      "hint": {
+        "replace": "Overwrite the existing photo in place — comments, ratings and the gallery cover are kept.",
+        "keep_both": "Upload alongside the existing photo, renamed (e.g. _v2).",
+        "skip": "Don't upload these files."
+      },
+      "showFiles": "Choose per file ({count})",
+      "hideFiles": "Hide file list ({count})",
+      "copies": "({count} copies)",
+      "cancel": "Cancel upload",
+      "confirm": "Upload"
+    },
     "coverImage": {
       "title": "Cover Image",
       "removeImage": "Remove cover image",

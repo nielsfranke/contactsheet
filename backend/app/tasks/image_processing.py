@@ -210,11 +210,16 @@ def submit_image_processing(image_id: str, gallery_id: str, stored_filename: str
 
 
 def process_image(image_id: str, gallery_id: str, stored_filename: str) -> None:
-    """Worker task: generate thumb + small + medium renditions, then update the DB record."""
+    """Worker task: generate thumb + small + medium renditions, then update the DB record.
+
+    ``gallery_id`` is the enqueue-time gallery, but the photo may be moved to another gallery
+    between upload and this task running (or while it runs). On-disk paths embed the gallery id, so
+    we resolve it from the *live* DB record instead of trusting the argument — otherwise a move
+    would leave the renditions in the old gallery dir while the row points at the new one (404
+    previews). The argument is kept only as a fallback if the row vanished (deleted mid-flight).
+    """
     from app.database import SessionLocal
     from app.repositories import image_repo, settings_repo
-
-    original_path = os.path.join(settings.upload_dir, gallery_id, "original", stored_filename)
 
     db = SessionLocal()
     try:
@@ -223,6 +228,9 @@ def process_image(image_id: str, gallery_id: str, stored_filename: str) -> None:
         image = image_repo.get_by_id(db, image_id)
         if image is not None and image.is_video:
             return
+        if image is not None:
+            gallery_id = image.gallery_id
+        original_path = os.path.join(settings.upload_dir, gallery_id, "original", stored_filename)
 
         targets = preview_targets(settings_repo.get(db).high_res_previews)
 
@@ -268,6 +276,14 @@ def process_image(image_id: str, gallery_id: str, stored_filename: str) -> None:
         iptc_json = json.dumps(iptc_dict, ensure_ascii=False) if iptc_dict else None
         img = _auto_rotate(img)
         width, height = img.size
+
+        # Re-read the gallery id just before writing: decode/resize above can take seconds on a
+        # large RAW, and a move committed in that window would otherwise steer the renditions into
+        # the old gallery dir. (move_image relocates whatever renditions already exist; anything not
+        # yet written lands here in the current gallery.)
+        if image is not None:
+            db.refresh(image)
+            gallery_id = image.gallery_id
 
         for variant, (max_px, quality) in targets.items():
             variant_path = os.path.join(settings.upload_dir, gallery_id, variant, stored_filename)

@@ -107,6 +107,20 @@ class UploadResponse(BaseModel):
     medium_url: str | None = None
 
 
+DuplicateAction = Literal["replace", "keep_both", "skip"]
+
+
+class CheckDuplicatesRequest(BaseModel):
+    """Pre-flight for the upload dialog: candidate filenames to test against a gallery."""
+
+    filenames: list[str] = Field(..., min_length=1, max_length=5000)
+
+
+class CheckDuplicatesResponse(BaseModel):
+    # filename → number of live images already carrying it (only colliding names appear).
+    duplicates: dict[str, int]
+
+
 class ReorderRequest(BaseModel):
     image_ids: list[str]
 

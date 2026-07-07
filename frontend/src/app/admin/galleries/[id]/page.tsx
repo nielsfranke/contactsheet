@@ -13,6 +13,7 @@ import type { GalleryResponse } from "@/lib/types";
 import { GRID_COLS, GAP } from "@/lib/gridLayout";
 import { cn } from "@/lib/utils";
 import { UploadZone } from "@/components/admin/UploadZone";
+import { DuplicateUploadDialog } from "@/components/admin/DuplicateUploadDialog";
 import { AdminImageGrid } from "@/components/admin/AdminImageGrid";
 import { GalleryAdminSidebar } from "@/components/admin/GalleryAdminSidebar";
 import { PendingReviewBanner } from "@/components/admin/PendingReviewBanner";
@@ -170,6 +171,7 @@ export default function GalleryDetailPage() {
     <div className="min-h-full">
       {/* Shared hidden file input for both upload triggers */}
       <input {...upload.inputProps} />
+      <DuplicateUploadDialog prompt={upload.duplicatePrompt} />
 
       <SidebarPortal>
         <GalleryAdminSidebar

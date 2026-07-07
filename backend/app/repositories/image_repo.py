@@ -51,6 +51,50 @@ def count_by_gallery(db: Session, gallery_id: str, only_approved: bool = False) 
     return db.execute(stmt).scalar_one()
 
 
+def filename_counts(db: Session, gallery_id: str, names: list[str]) -> dict[str, int]:
+    """For the upload duplicate check: how many live (non-deleted) images in this gallery already
+    carry each of the given `original_filename`s. Only names with a match appear in the result.
+    Moderation-agnostic — the admin who's uploading sees pending client uploads too."""
+    if not names:
+        return {}
+    rows = db.execute(
+        select(Image.original_filename, func.count())
+        .where(
+            Image.gallery_id == gallery_id,
+            Image.deleted_at.is_(None),
+            Image.original_filename.in_(names),
+        )
+        .group_by(Image.original_filename)
+    ).all()
+    return {name: int(count) for name, count in rows}
+
+
+def live_by_filename(db: Session, gallery_id: str, filename: str) -> list[Image]:
+    """Live images in a gallery matching an exact `original_filename`, newest first. Drives the
+    `replace` upload action: overwrite the newest match, soft-delete any older same-name siblings."""
+    return list(
+        db.execute(
+            select(Image)
+            .where(
+                Image.gallery_id == gallery_id,
+                Image.deleted_at.is_(None),
+                Image.original_filename == filename,
+            )
+            .order_by(Image.created_at.desc(), Image.id)
+        ).scalars().all()
+    )
+
+
+def live_filenames(db: Session, gallery_id: str) -> set[str]:
+    """The set of live `original_filename`s in a gallery — used to pick the next free `_vN` name."""
+    rows = db.execute(
+        select(Image.original_filename).where(
+            Image.gallery_id == gallery_id, Image.deleted_at.is_(None)
+        )
+    ).scalars().all()
+    return {r for r in rows if r}
+
+
 def get_by_id(db: Session, image_id: str) -> Image | None:
     return db.execute(
         select(Image).where(Image.id == image_id, Image.deleted_at.is_(None))
