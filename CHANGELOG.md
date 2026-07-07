@@ -12,6 +12,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.6.8] - 2026-07-07
+
+### Changed
+
+- **Photoshop (.psd/.psb) and TIFF uploads now allow up to 8 GB** (was 300 MB), configurable via
+  `MAX_DOCUMENT_BYTES` — large layered working files upload without being rejected. Regular photos
+  stay at 300 MB; client uploads keep their small cap.
+
+  **Operator action required:** the bundled `nginx.conf` is host-mounted, so pulling the new images
+  alone does **not** raise the limit. Update `nginx.conf` on the host (its `client_max_body_size` is
+  now `8g`) and recreate the nginx container. If a reverse proxy fronts the stack (e.g. Nginx Proxy
+  Manager), raise its upload/body-size limit to at least 8 GB there too, or it will reject first.
+
 ## [1.6.7] - 2026-07-07
 
 ### Fixed
@@ -733,7 +746,8 @@ contract are considered stable as of this release.
   caps (stricter for public uploads).
 - Docker Compose deployment (backend + frontend + nginx); SQLite + local filesystem.
 
-[Unreleased]: https://github.com/nielsfranke/contactsheet/compare/v1.6.7...HEAD
+[Unreleased]: https://github.com/nielsfranke/contactsheet/compare/v1.6.8...HEAD
+[1.6.8]: https://github.com/nielsfranke/contactsheet/compare/v1.6.7...v1.6.8
 [1.6.7]: https://github.com/nielsfranke/contactsheet/compare/v1.6.6...v1.6.7
 [1.6.6]: https://github.com/nielsfranke/contactsheet/compare/v1.6.5...v1.6.6
 [1.6.5]: https://github.com/nielsfranke/contactsheet/compare/v1.6.1...v1.6.5
