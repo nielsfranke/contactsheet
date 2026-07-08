@@ -76,8 +76,12 @@ class Settings(BaseSettings):
     max_document_bytes: int = 8_589_934_592  # 8 GB (.psd/.psb/.tiff)
     # Reject images whose pixel area exceeds this before decoding (decompression-bomb / giant-
     # dimension guard). Checked against the header dimensions, so a malicious file is refused
-    # without ever allocating its full bitmap. 100 MP comfortably covers real cameras.
-    max_image_pixels: int = 100_000_000
+    # without ever allocating its full bitmap. 250 MP covers current high-end medium format
+    # (Phase One 150 MP, Fujifilm GFX 100) and large panorama stitches — 100 MP was too tight and
+    # rejected legitimate ≥100 MP originals. The attacker-reachable client-upload path keeps the far
+    # stricter `client_upload_max_pixels`. Env-overridable (MAX_IMAGE_PIXELS) so a small box can tune
+    # the per-decode memory ceiling (≈ w*h*3 bytes per worker) back down.
+    max_image_pixels: int = 250_000_000
 
     # Gallery header/cover images are re-encoded to a bounded JPEG on store (not written raw): 3840 px
     # keeps a full-width banner sharp on 4K + Retina at a fraction of an unbounded original. They are

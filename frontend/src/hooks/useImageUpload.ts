@@ -6,6 +6,7 @@
 import { useCallback, useRef, useState } from "react";
 import { api } from "@/lib/api";
 import type { DuplicateAction } from "@/lib/types";
+import { chunkByBytes, UPLOAD_CHUNK_TARGET_BYTES } from "@/lib/upload-chunks";
 import { toast } from "sonner";
 
 /** A filename colliding with a live image in the target gallery, plus how many copies exist. */
@@ -143,15 +144,43 @@ export function useImageUpload(galleryId: string, onUploaded: () => void) {
       abortRef.current = controller;
       setUploading(true);
       setProgress(0);
+
+      // Split the batch into byte-bounded sub-requests so a large folder never trips a reverse
+      // proxy's request-body ceiling (which surfaces as a bare "Network error" on the whole batch —
+      // see lib/upload-chunks). Chunks upload *sequentially*: parallel requests would resurrect the
+      // bulk-upload connection-pool / refetch storm the backend was hardened against. `duplicate_actions`
+      // is keyed by basename, so passing the full map to every chunk is safe (the server only applies
+      // entries whose file is in that request), and sequential commits keep `keep_both` versioning
+      // correct across chunks (each request re-reads the now-committed names).
+      const chunks = chunkByBytes(files, UPLOAD_CHUNK_TARGET_BYTES);
+      const totalBytes = files.reduce((sum, f) => sum + f.size, 0) || 1;
+      let doneBytes = 0;
+      let uploaded = 0;
       try {
-        await api.images.upload(galleryId, files, (pct) => setProgress(pct), controller.signal, duplicateActions);
+        for (const chunk of chunks) {
+          const chunkBytes = chunk.reduce((sum, f) => sum + f.size, 0);
+          await api.images.upload(
+            galleryId,
+            chunk,
+            (pct) => setProgress(Math.round(((doneBytes + (chunkBytes * pct) / 100) / totalBytes) * 100)),
+            controller.signal,
+            duplicateActions,
+          );
+          doneBytes += chunkBytes;
+          uploaded += chunk.length;
+          onUploaded(); // reveal each committed wave instead of making the user wait for the whole batch
+        }
         setProgress(100);
-        onUploaded();
-        toast.success(`${files.length} file${files.length > 1 ? "s" : ""} uploaded`);
+        toast.success(`${uploaded} file${uploaded > 1 ? "s" : ""} uploaded`);
       } catch (err: unknown) {
         // User-initiated cancel (xhr.abort) — a quiet info toast, not an error.
         if (err && typeof err === "object" && "aborted" in err) {
-          toast.info("Upload cancelled");
+          toast.info(uploaded > 0 ? `Upload cancelled — ${uploaded} already uploaded` : "Upload cancelled");
+        } else if (uploaded > 0) {
+          // A later chunk failed after earlier ones committed — report the partial result so the
+          // photographer knows how many landed and can retry only the remainder.
+          toast.error(`Uploaded ${uploaded} of ${files.length} — the rest failed, please retry them`);
+          onUploaded();
         } else {
           toast.error(err instanceof Error ? err.message : "Upload failed");
         }
