@@ -63,8 +63,12 @@ export function CoverImageDialog({ open, onOpenChange, gallery, images, onPickPh
   function handleDrop(e: React.DragEvent) {
     e.preventDefault();
     setDragging(false);
+    // See HeaderImageDialog: only an OS file drop carries a real File. Dragging an on-page photo (or
+    // other non-file item) yields an empty `files` list; forwarding it would POST without a file part
+    // (server: "field required"). Point the user at the file picker / the pick-from-gallery grid.
     const file = e.dataTransfer.files[0];
     if (file) handleFile(file);
+    else toast.error(t("dropNeedsFile"));
   }
 
   const busy = uploadMutation.isPending || deleteMutation.isPending;

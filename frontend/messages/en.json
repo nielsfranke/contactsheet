@@ -557,7 +557,8 @@
       "done": "Done",
       "updated": "Header image updated",
       "removed": "Header image removed",
-      "notImage": "Please upload an image file"
+      "notImage": "Please upload an image file",
+      "dropNeedsFile": "Drag an image file from your computer here, or use the file picker."
     },
     "duplicateUpload": {
       "title": "Some files already exist",
@@ -591,7 +592,8 @@
       "done": "Done",
       "updated": "Cover image updated",
       "removed": "Cover image removed",
-      "notImage": "Please upload an image file"
+      "notImage": "Please upload an image file",
+      "dropNeedsFile": "Drag an image file from your computer here, or use the file picker."
     },
     "activity": {
       "title": "Activity Log",

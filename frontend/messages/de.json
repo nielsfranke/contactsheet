@@ -557,7 +557,8 @@
       "done": "Fertig",
       "updated": "Header-Bild aktualisiert",
       "removed": "Header-Bild entfernt",
-      "notImage": "Bitte laden Sie eine Bilddatei hoch"
+      "notImage": "Bitte laden Sie eine Bilddatei hoch",
+      "dropNeedsFile": "Ziehe eine Bilddatei von deinem Computer hierher, oder nutze die Dateiauswahl."
     },
     "duplicateUpload": {
       "title": "Einige Dateien sind bereits vorhanden",
@@ -591,7 +592,8 @@
       "done": "Fertig",
       "updated": "Cover-Bild aktualisiert",
       "removed": "Cover-Bild entfernt",
-      "notImage": "Bitte laden Sie eine Bilddatei hoch"
+      "notImage": "Bitte laden Sie eine Bilddatei hoch",
+      "dropNeedsFile": "Ziehe eine Bilddatei von deinem Computer hierher, oder nutze die Dateiauswahl."
     },
     "activity": {
       "title": "Aktivitätsprotokoll",

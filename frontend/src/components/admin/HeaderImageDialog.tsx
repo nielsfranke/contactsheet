@@ -60,8 +60,12 @@ export function HeaderImageDialog({ open, onOpenChange, gallery }: Props) {
   function handleDrop(e: React.DragEvent) {
     e.preventDefault();
     setDragging(false);
+    // Only an OS file drop carries a real File. Dragging a photo rendered on the page (or any other
+    // non-file item) yields an empty `files` list — forwarding that would POST without a file part
+    // and the server would answer with a raw "field required". Guide the user instead.
     const file = e.dataTransfer.files[0];
     if (file) handleFile(file);
+    else toast.error(t("dropNeedsFile"));
   }
 
   function handleFocusClick(e: React.MouseEvent<HTMLDivElement>) {
