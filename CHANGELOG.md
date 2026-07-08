@@ -12,6 +12,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.7.1] - 2026-07-08
+
+### Fixed
+
+- **Uploading a large folder no longer fails with a bare “Network error.”** The admin gallery upload
+  used to send the entire drag-and-drop batch as a single request; a big folder (e.g. 105 × 50 MB ≈
+  5 GB) then exceeded the request-body ceiling of a reverse proxy in front of the app and the whole
+  batch was rejected before a single photo was saved. The batch is now split into byte-bounded
+  (~256 MB) sub-requests that upload **sequentially**, so a folder of any size stays comfortably
+  under any realistic proxy limit — no proxy reconfiguration needed. Photos appear in waves as each
+  part completes, and if a later part fails the earlier ones are kept: the toast reports how many
+  landed so you can retry only the remainder.
+- **Photos above 100 MP now generate previews.** The per-image pixel ceiling was raised from 100 MP
+  to **250 MP**, so high-end medium-format originals (e.g. 12000 × 9000 = 108 MP) and large panorama
+  stitches are processed instead of failing rendition with an “exceeds pixel area limit” error and
+  showing a broken thumbnail. Attacker-reachable client (public) uploads keep their stricter 50 MP
+  cap. Env-overridable via `MAX_IMAGE_PIXELS` for memory-constrained hosts.
+
 ## [1.7.0] - 2026-07-08
 
 ### Added
@@ -795,7 +813,10 @@ contract are considered stable as of this release.
   caps (stricter for public uploads).
 - Docker Compose deployment (backend + frontend + nginx); SQLite + local filesystem.
 
-[Unreleased]: https://github.com/nielsfranke/contactsheet/compare/v1.6.8...HEAD
+[Unreleased]: https://github.com/nielsfranke/contactsheet/compare/v1.7.1...HEAD
+[1.7.1]: https://github.com/nielsfranke/contactsheet/compare/v1.7.0...v1.7.1
+[1.7.0]: https://github.com/nielsfranke/contactsheet/compare/v1.6.9...v1.7.0
+[1.6.9]: https://github.com/nielsfranke/contactsheet/compare/v1.6.8...v1.6.9
 [1.6.8]: https://github.com/nielsfranke/contactsheet/compare/v1.6.7...v1.6.8
 [1.6.7]: https://github.com/nielsfranke/contactsheet/compare/v1.6.6...v1.6.7
 [1.6.6]: https://github.com/nielsfranke/contactsheet/compare/v1.6.5...v1.6.6
