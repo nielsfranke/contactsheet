@@ -12,6 +12,39 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.7.0] - 2026-07-08
+
+### Added
+
+- **Per-mode sub-gallery presets.** A container gallery can now hold a separate look & behaviour
+  template for each mode — a Showcase template and a Review template — under **Gallery settings →
+  General → “Sub-gallery defaults”**. New sub-galleries you create inside it start from the template
+  that matches their mode, so a customer folder can mix Review sub-galleries (e.g. “Work in
+  Progress”) and Showcase sub-galleries (e.g. “Final Deliveries”) without styling each one by hand.
+  Templates are inherited down the whole folder tree and can be pushed to existing sub-galleries with
+  “Apply to all sub-galleries”. See
+  `docs/proposals/gallery-per-container-mode-presets.md`.
+
+### Changed
+
+- **“Apply to all sub-galleries” now reaches every nested level**, not just the direct children —
+  in deeply nested folders, grandchildren and deeper previously never received the settings.
+- **“Apply to all sub-galleries” no longer changes a sub-gallery’s mode.** Only look & behaviour are
+  propagated now, so a folder can hold mixed Review and Showcase sub-galleries and applying settings
+  won’t flip them all to the parent’s mode.
+- **A sub-gallery created in a different mode than its parent now starts from the standard preset for
+  that mode** (or the folder’s own template for it, if set) instead of inheriting the parent’s
+  wrong-mode look.
+- **Manually uploaded gallery header & cover images now allow up to 100 MB** (was ~10 MB), so
+  full-resolution developed JPEGs can be used directly without shrinking them first. The server still
+  bounds the stored image to 3840 px, so this only lifts the upload cap.
+
+  **Operator action required:** the bundled `nginx.conf` is host-mounted, so pulling the new images
+  alone does **not** raise the limit for header/cover uploads. Update `nginx.conf` on the host (its
+  header/cover/watermark/logo location now uses `client_max_body_size 110m`) and recreate the nginx
+  container; if a reverse proxy (e.g. Nginx Proxy Manager) sits in front, raise its body-size limit
+  to ≥100 MB on those paths too.
+
 ## [1.6.9] - 2026-07-07
 
 ### Fixed
