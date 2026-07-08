@@ -104,6 +104,41 @@ def test_name_does_not_cascade(admin_client):
     assert admin_client.get(f"/api/galleries/{child['id']}").json()["name"] == "C"
 
 
+def test_mode_does_not_cascade(admin_client):
+    """apply_to_subgalleries carries look & behaviour but never a child's mode — a container holds
+    mixed Review + Showcase sub-galleries. See docs/proposals/gallery-per-container-mode-presets.md."""
+    parent = make_gallery(admin_client, "P", mode="presentation")
+    child = make_gallery(admin_client, "C", parent_id=parent["id"], mode="presentation")
+    admin_client.patch(
+        f"/api/galleries/{parent['id']}",
+        json={"mode": "collaboration", "preview_size": "large", "apply_to_subgalleries": True},
+    )
+    child_after = admin_client.get(f"/api/galleries/{child['id']}").json()
+    assert child_after["mode"] == "presentation"   # mode left alone
+    assert child_after["preview_size"] == "large"  # look & behaviour still cascaded
+
+
+def test_subgallery_same_mode_inherits_parent(admin_client):
+    """A sub-gallery created in the SAME mode as its parent still copies the parent's live look."""
+    parent = make_gallery(admin_client, "P", mode="presentation")
+    admin_client.patch(f"/api/galleries/{parent['id']}", json={"preview_size": "small"})
+    child = make_gallery(admin_client, "C", parent_id=parent["id"], mode="presentation")
+    assert admin_client.get(f"/api/galleries/{child['id']}").json()["preview_size"] == "small"
+
+
+def test_subgallery_divergent_mode_uses_instance_preset(admin_client):
+    """A sub-gallery created with a DIFFERENT mode than its parent ignores the parent's (wrong-mode)
+    look and pulls the instance standard preset for the chosen mode — like a top-level gallery."""
+    # Instance Review preset says preview_size=large.
+    admin_client.patch("/api/admin/settings", json={"preset_collaboration": {"preview_size": "large"}})
+    # A Showcase parent customized to small.
+    parent = make_gallery(admin_client, "P", mode="presentation")
+    admin_client.patch(f"/api/galleries/{parent['id']}", json={"preview_size": "small"})
+    # A Review sub-gallery under it → diverges → takes the Review preset (large), not parent (small).
+    child = make_gallery(admin_client, "C", parent_id=parent["id"], mode="collaboration")
+    assert admin_client.get(f"/api/galleries/{child['id']}").json()["preview_size"] == "large"
+
+
 # --- moves / reparenting ---------------------------------------------------------------------
 
 def test_move_to_top_level_and_under_parent(admin_client):

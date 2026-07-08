@@ -69,11 +69,17 @@ _PASSTHROUGH_UPDATE_FIELDS = (
 
 # Subset cascaded to sub-galleries via apply_to_subgalleries (look & behaviour, not identity).
 # hide_parent_nav cascades so a container can scope all its sub-galleries in one action.
-_CASCADE_FIELDS = frozenset(_PASSTHROUGH_UPDATE_FIELDS) | {"bg_dimmed_color", "expires_at"}
+# `mode` is deliberately EXCLUDED: applying settings to a subtree must never flip a child's mode —
+# a container holds mixed Review + Showcase sub-galleries (e.g. "Work in Progress" review folders
+# next to a "Final Deliveries" showcase), and "apply to all" should only propagate look & behaviour.
+# See docs/proposals/gallery-per-container-mode-presets.md.
+_CASCADE_FIELDS = (frozenset(_PASSTHROUGH_UPDATE_FIELDS) | {"bg_dimmed_color", "expires_at"}) - {"mode"}
 
 # Copied from the parent when a sub-gallery is created (sort_order ranks siblings, so not that).
 # hide_parent_nav is excluded — a new sub-gallery shouldn't silently inherit standalone scoping.
-_INHERIT_CREATE_FIELDS = _CASCADE_FIELDS - {"sort_order", "hide_parent_nav"}
+# `mode` IS inherited here (a new sub-gallery defaults to its parent's mode) even though it is not
+# cascaded — creation and cascade are intentionally different for mode.
+_INHERIT_CREATE_FIELDS = (_CASCADE_FIELDS | {"mode"}) - {"sort_order", "hide_parent_nav"}
 
 # Fields a mode preset (app_settings.preset_*) may default at gallery creation.
 # Mirrors schemas.settings.GalleryPreset.
@@ -91,12 +97,18 @@ _PRESET_FIELDS = frozenset({
 def _resolve_create_defaults(db: Session, data: GalleryCreate, parent: Gallery | None) -> dict:
     """Look & behaviour for a new gallery, for fields the request didn't set explicitly.
 
-    Sub-galleries copy their parent (incl. mode); top-level galleries start from the
-    instance preset for their mode. Explicit merge only — never **-splat stored JSON.
+    Sub-galleries copy their parent's look & behaviour — UNLESS created with an explicit mode that
+    differs from the parent's, in which case the parent's (other-mode) settings don't fit and we
+    fall back to the instance standard preset for the chosen mode, exactly like a top-level gallery.
+    Top-level galleries always start from the instance preset for their mode. Explicit merge only —
+    never **-splat stored JSON. See docs/proposals/gallery-per-container-mode-presets.md.
     """
     explicit = data.model_fields_set
     defaults: dict = {}
-    if parent is not None:
+    inherit_from_parent = parent is not None and (
+        "mode" not in explicit or data.mode == parent.mode
+    )
+    if inherit_from_parent:
         for field in _INHERIT_CREATE_FIELDS:
             if field not in explicit:
                 defaults[field] = getattr(parent, field)

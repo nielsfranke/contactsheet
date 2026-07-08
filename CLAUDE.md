@@ -201,7 +201,8 @@ Key non-obvious constraints — full details in `docs/architecture/`.
 - Two things are **not** autosaved — they stay as explicit actions: the `apply_to_subgalleries` cascade footer button, and the gallery password ("Set" button).
 
 ### Gallery mode presets & sub-gallery creation
-- Top-level galleries merge the mode preset (`_PRESET_FIELDS`) on creation; sub-galleries copy their parent's look & behaviour fields (`_INHERIT_CREATE_FIELDS`). Explicit request fields always win.
+- Top-level galleries merge the mode preset (`_PRESET_FIELDS`) on creation; sub-galleries copy their parent's look & behaviour fields (`_INHERIT_CREATE_FIELDS`) — **unless created with an explicit mode that differs from the parent's**, in which case they fall back to the instance preset for the chosen mode (a Showcase sub-gallery under a Review parent gets the Showcase preset, not the parent's Review look). Explicit request fields always win.
+- **`mode` is inherited on create but never cascaded**: `apply_to_subgalleries` propagates look & behaviour to the whole descendant subtree but leaves each sub-gallery's mode untouched — a container can hold mixed Review + Showcase sub-galleries. See `docs/proposals/gallery-per-container-mode-presets.md`.
 
 ### Sub-gallery navigation (public)
 - A gallery is a **container** when `image_count === 0 && subgalleries.length > 0` — the photo grid is suppressed and children render as cover cards. This gate uses the `image_count` from the public response (which is `only_approved` for moderated galleries).
