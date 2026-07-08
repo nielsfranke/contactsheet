@@ -12,6 +12,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.8.1] - 2026-07-08
+
+### Fixed
+
+- **The “auto-fill header” switch (Settings → Gallery defaults → Viewing) now stays on.** It saved
+  correctly but the settings API never echoed the value back, so the toggle flipped on and then
+  immediately snapped off again. The feature itself was unaffected — only the switch was stuck.
+- **Dropping something that isn’t an image file onto the header/cover drop zone now shows a clear
+  hint** instead of a raw “field required” error. To reuse a photo already in the gallery, use its
+  “Set as header/cover” action (or the cover dialog’s “choose a photo” grid) rather than dragging it
+  onto the drop zone, which is for files from your computer.
+
 ## [1.8.0] - 2026-07-08
 
 ### Added
@@ -832,7 +844,8 @@ contract are considered stable as of this release.
   caps (stricter for public uploads).
 - Docker Compose deployment (backend + frontend + nginx); SQLite + local filesystem.
 
-[Unreleased]: https://github.com/nielsfranke/contactsheet/compare/v1.8.0...HEAD
+[Unreleased]: https://github.com/nielsfranke/contactsheet/compare/v1.8.1...HEAD
+[1.8.1]: https://github.com/nielsfranke/contactsheet/compare/v1.8.0...v1.8.1
 [1.8.0]: https://github.com/nielsfranke/contactsheet/compare/v1.7.1...v1.8.0
 [1.7.1]: https://github.com/nielsfranke/contactsheet/compare/v1.7.0...v1.7.1
 [1.7.0]: https://github.com/nielsfranke/contactsheet/compare/v1.6.9...v1.7.0
