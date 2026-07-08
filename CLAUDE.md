@@ -181,6 +181,7 @@ Migrations live in `backend/alembic/versions/`. Always create a new file — nev
 0042 — showcase hero legibility: galleries.opener_scrim + opener_title_shadow
 0043 — client review-mode switch: galleries.client_mode_switch_enabled
 0044 — lightbox zoom settings: app_settings.lightbox_zoom_enabled + lightbox_zoom_max
+0045 — per-container sub-gallery presets: galleries.subgallery_presets JSON (per-mode look & behaviour templates for new sub-galleries)
 ```
 
 ## Feature invariants

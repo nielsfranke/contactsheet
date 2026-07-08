@@ -139,6 +139,76 @@ def test_subgallery_divergent_mode_uses_instance_preset(admin_client):
     assert admin_client.get(f"/api/galleries/{child['id']}").json()["preview_size"] == "large"
 
 
+# --- per-container sub-gallery presets (Part 2) ----------------------------------------------
+
+def test_subgallery_presets_roundtrip_and_validation(admin_client):
+    g = make_gallery(admin_client, "P")
+    r = admin_client.patch(
+        f"/api/galleries/{g['id']}",
+        json={"subgallery_presets": {"collaboration": {"preview_size": "small"}}},
+    )
+    assert r.status_code == 200
+    assert r.json()["subgallery_presets"] == {"collaboration": {"preview_size": "small"}}
+    # Unknown mode key → 422.
+    assert admin_client.patch(
+        f"/api/galleries/{g['id']}", json={"subgallery_presets": {"bogus": {"preview_size": "small"}}}
+    ).status_code == 422
+    # Unknown preset field → 422 (GalleryPreset forbids extras).
+    assert admin_client.patch(
+        f"/api/galleries/{g['id']}", json={"subgallery_presets": {"presentation": {"nope": 1}}}
+    ).status_code == 422
+    # Explicit null clears.
+    r = admin_client.patch(f"/api/galleries/{g['id']}", json={"subgallery_presets": None})
+    assert r.json()["subgallery_presets"] is None
+
+
+def test_container_preset_beats_instance_preset_for_divergent_child(admin_client):
+    """A container's own per-mode sub-gallery preset layers over the instance preset for a
+    divergent-mode child."""
+    admin_client.patch("/api/admin/settings", json={"preset_collaboration": {"preview_size": "large"}})
+    parent = make_gallery(admin_client, "P", mode="presentation")
+    admin_client.patch(
+        f"/api/galleries/{parent['id']}",
+        json={"subgallery_presets": {"collaboration": {"preview_size": "small"}}},
+    )
+    # Review child diverges → folder preset (small) wins over the instance preset (large).
+    child = make_gallery(admin_client, "C", parent_id=parent["id"], mode="collaboration")
+    assert admin_client.get(f"/api/galleries/{child['id']}").json()["preview_size"] == "small"
+
+
+def test_subgallery_presets_inherited_to_depth(admin_client):
+    """The container's presets are carried down the tree, so a divergent-mode gallery created
+    several levels deep still finds its folder preset via an immediate-parent lookup."""
+    top = make_gallery(admin_client, "Top", mode="presentation")
+    admin_client.patch(
+        f"/api/galleries/{top['id']}",
+        json={"subgallery_presets": {"collaboration": {"preview_size": "small"}}},
+    )
+    # Same-mode sub-folder inherits (and carries the presets down).
+    mid = make_gallery(admin_client, "Mid", parent_id=top["id"], mode="presentation")
+    assert admin_client.get(f"/api/galleries/{mid['id']}").json()["subgallery_presets"] == {
+        "collaboration": {"preview_size": "small"}
+    }
+    # A Review gallery two levels deep still picks up the inherited folder preset.
+    deep = make_gallery(admin_client, "Deep", parent_id=mid["id"], mode="collaboration")
+    assert admin_client.get(f"/api/galleries/{deep['id']}").json()["preview_size"] == "small"
+
+
+def test_subgallery_presets_cascade(admin_client):
+    parent = make_gallery(admin_client, "P")
+    child = make_gallery(admin_client, "C", parent_id=parent["id"])
+    admin_client.patch(
+        f"/api/galleries/{parent['id']}",
+        json={
+            "subgallery_presets": {"presentation": {"preview_size": "large"}},
+            "apply_to_subgalleries": True,
+        },
+    )
+    assert admin_client.get(f"/api/galleries/{child['id']}").json()["subgallery_presets"] == {
+        "presentation": {"preview_size": "large"}
+    }
+
+
 # --- moves / reparenting ---------------------------------------------------------------------
 
 def test_move_to_top_level_and_under_parent(admin_client):

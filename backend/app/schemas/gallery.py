@@ -191,6 +191,27 @@ class GalleryUpdate(BaseModel):
     header_focus_x: float | None = Field(default=None, ge=0, le=100)
     header_focus_y: float | None = Field(default=None, ge=0, le=100)
 
+    # Per-mode look & behaviour templates NEW sub-galleries inherit by mode, in the GalleryPreset
+    # shape: {"presentation": {...}, "collaboration": {...}}. Explicit object replaces the whole
+    # thing; explicit null clears; omitted leaves unchanged. Normalized by the validator below.
+    subgallery_presets: dict[str, dict] | None = None
+
+    @field_validator("subgallery_presets")
+    @classmethod
+    def _normalize_subgallery_presets(cls, v):
+        if v is None:
+            return None
+        from app.schemas.settings import GalleryPreset  # local import avoids a schema import cycle
+
+        allowed = {"presentation", "collaboration"}
+        bad = set(v) - allowed
+        if bad:
+            raise ValueError(f"unknown mode key(s): {', '.join(sorted(bad))}")
+        return {
+            mode: GalleryPreset.model_validate(preset).model_dump(exclude_none=True)
+            for mode, preset in v.items()
+        }
+
     # Cascade these settings to all descendant galleries
     apply_to_subgalleries: bool = False
 
@@ -257,6 +278,7 @@ class GalleryResponse(BaseModel):
     header_focus_y: float = 50.0
     cover_image_id: str | None = None
     cover_image_filename: str | None = None
+    subgallery_presets: dict[str, dict] | None = None
     image_count: int = 0
     comment_count: int = 0
     cover_image_url: str | None = None

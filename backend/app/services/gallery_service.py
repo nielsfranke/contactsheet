@@ -113,12 +113,21 @@ def _resolve_create_defaults(db: Session, data: GalleryCreate, parent: Gallery |
             if field not in explicit:
                 defaults[field] = getattr(parent, field)
     else:
+        # Top-level, or a sub-gallery whose mode diverges from its parent. Start from the instance
+        # preset for the chosen mode, then layer the parent container's own per-mode sub-gallery
+        # preset on top — a folder can define its own "Showcase look" and "Review look".
         app = settings_repo.get(db)
         mode = data.mode
-        preset = (app.preset_collaboration if mode == "collaboration" else app.preset_presentation) or {}
+        preset = dict((app.preset_collaboration if mode == "collaboration" else app.preset_presentation) or {})
+        if parent is not None and parent.subgallery_presets:
+            preset.update(parent.subgallery_presets.get(mode) or {})
         for field in _PRESET_FIELDS:
             if field in preset and field not in explicit:
                 defaults[field] = preset[field]
+    # Carry the container's per-mode sub-gallery presets down the tree so an immediate-parent lookup
+    # keeps working at any nesting depth (they're not in _INHERIT_CREATE_FIELDS / _PRESET_FIELDS).
+    if parent is not None and parent.subgallery_presets:
+        defaults["subgallery_presets"] = parent.subgallery_presets
     return defaults
 
 
@@ -332,6 +341,11 @@ def update_gallery(
     if "bg_dimmed_color" in data.model_fields_set:
         updates["bg_dimmed_color"] = data.bg_dimmed_color
 
+    # subgallery_presets: explicit field set = apply (already normalized by the schema validator);
+    # explicit null clears. Only affects NEW sub-galleries; cascaded so descendants share templates.
+    if "subgallery_presets" in data.model_fields_set:
+        updates["subgallery_presets"] = data.subgallery_presets
+
     # cover_image_id: explicit field set = apply (None clears, UUID pins). Pinning a photo as cover
     # also drops any uploaded cover so the chosen photo wins (uploaded cover otherwise takes precedence).
     if "cover_image_id" in data.model_fields_set:
@@ -357,6 +371,11 @@ def update_gallery(
         # Identity fields (name/password/headline/watermark) are never cascaded.
         if data.apply_to_subgalleries:
             cascade = {k: v for k, v in updates.items() if k in _CASCADE_FIELDS}
+            # subgallery_presets isn't a look & behaviour field of the child itself (it's a template
+            # for the child's own sub-galleries), so it's not in _CASCADE_FIELDS — cascade it too so
+            # editing a container's templates pushes them across the whole subtree.
+            if "subgallery_presets" in updates:
+                cascade["subgallery_presets"] = updates["subgallery_presets"]
             if cascade:
                 for child in gallery_repo.get_descendants(db, gallery.id):
                     gallery_repo.update(db, child, **cascade)
