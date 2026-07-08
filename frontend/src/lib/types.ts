@@ -151,6 +151,8 @@ export interface GalleryPublicResponse extends GallerySettings {
   default_sort_dir: SortDir;
   headline: string | null;
   header_image_url: string | null;
+  // Auto-header fallback photo URL (instance opt-in) used when no manual header is set; else null.
+  header_image_fallback_url: string | null;
   header_focus_x: number;
   header_focus_y: number;
   expires_at: string | null;
@@ -374,6 +376,7 @@ export interface AppSettings {
   public_base_url: string | null;
   source_url: string | null;
   high_res_previews: boolean;
+  auto_header_enabled: boolean;
   rating_mode: RatingMode;
   preset_presentation: GalleryPreset | null;
   preset_collaboration: GalleryPreset | null;
@@ -448,6 +451,7 @@ export interface AppSettingsUpdate {
   public_base_url?: string;
   source_url?: string;
   high_res_previews?: boolean;
+  auto_header_enabled?: boolean;
   rating_mode?: RatingMode;
   preset_presentation?: GalleryPreset | null;
   preset_collaboration?: GalleryPreset | null;

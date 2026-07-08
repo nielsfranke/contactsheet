@@ -47,6 +47,11 @@ class AppSettings(Base):
     # 300px / 1920px set; toggling regenerates existing files in the background.
     high_res_previews: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
 
+    # Auto-fill a gallery's opener/header from its own photos when none is set manually. Opt-in,
+    # off by default. Pure display-time fallback (no baked file) computed in the public serializer;
+    # a manual header always wins. See docs/proposals/auto-header-image.md.
+    auto_header_enabled: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+
     # Instance-wide rating style: "flags" (color flags) | "stars" (1–5). Switches the whole
     # instance between the two; never both. Stars and flags are stored in separate columns so
     # switching is non-destructive.

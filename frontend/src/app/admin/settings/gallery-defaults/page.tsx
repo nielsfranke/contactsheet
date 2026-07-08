@@ -118,6 +118,12 @@ export default function GalleryDefaultsPage() {
           checked={effHighRes}
           onChange={(on) => save({ high_res_previews: on })}
         />
+        <Toggle
+          label={t("autoHeader")}
+          hint={t("autoHeaderHint")}
+          checked={settings.auto_header_enabled}
+          onChange={(on) => save({ auto_header_enabled: on })}
+        />
         <div className="space-y-1.5">
           <Label>{t("backdrop")}</Label>
           <div className="grid grid-cols-4 gap-2">

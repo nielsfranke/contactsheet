@@ -63,15 +63,18 @@ export function GalleryCollabLayout({
     renameCollectionMutation,
   } = vm;
 
+  // Manual header wins; else the opt-in auto-header fallback (a photo picked server-side).
+  const headerImage = gallery.header_image_url ?? gallery.header_image_fallback_url;
+
   return (
     /* Two-column layout for collaboration galleries (and their sub-galleries) */
     <div className="flex flex-col min-h-screen">
       {/* Full-width header image above the two-column split */}
-      {gallery.header_image_url && (
+      {headerImage && (
         <div className="w-full shrink-0" style={{ height: "clamp(180px, 30vw, 340px)", overflow: "hidden" }}>
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
-            src={gallery.header_image_url}
+            src={headerImage}
             alt=""
             draggable={false}
             onContextMenu={(e) => e.preventDefault()}

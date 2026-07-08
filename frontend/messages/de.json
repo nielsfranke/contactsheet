@@ -974,6 +974,8 @@
       "viewingHint": "Gilt für jede Galerie, für Kunden und Ihr Admin-Raster gleichermaßen.",
       "highRes": "Hochauflösende Vorschauen",
       "highResHint": "Scharfe Vorschaubilder und Lightbox-Bilder auf Retina-Displays (800px / 2560px statt 300px / 1920px). Benötigt mehr Speicherplatz und Bandbreite; eine Änderung skaliert bestehende Vorschauen im Hintergrund neu.",
+      "autoHeader": "Galerie-Header automatisch füllen",
+      "autoHeaderHint": "Wenn eine Galerie kein Header-Bild gesetzt hat, wird für den Opener automatisch eines ihrer eigenen Fotos verwendet. Ein manuell gesetzter Header hat immer Vorrang.",
       "backdrop": "Lightbox-Hintergrund",
       "backdropDimmed": "Gedimmt",
       "backdropBlack": "Schwarz",

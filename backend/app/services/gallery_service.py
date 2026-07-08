@@ -162,6 +162,38 @@ def _effective_cover_url(gallery: Gallery, photo_cover, storage: StorageProvider
     return None
 
 
+def _hero_medium_url(gallery: Gallery, image_id: str, stored_filename: str,
+                     watermark_enabled: bool, storage: StorageProvider) -> str:
+    """Full-screen opener URL for a photo's `medium` rendition. Watermarked galleries route through
+    the access-checked public proxy (which composites the watermark) so an auto-header never leaks an
+    un-watermarked view — mirrors image_service._image_to_response's proxy_variants logic."""
+    if watermark_enabled and gallery.share_token:
+        return f"/api/public/g/{gallery.share_token}/images/{image_id}/medium"
+    return storage.get_url(f"{gallery.id}/medium/{stored_filename}")
+
+
+def _auto_header_fallback_url(db: Session, gallery: Gallery, cover, image_count: int,
+                              watermark_enabled: bool, storage: StorageProvider) -> str | None:
+    """Opt-in auto-header: a *stable* non-cover photo for the opener when none is set manually.
+
+    Returns None unless `auto_header_enabled` is on, the gallery has no manual header, and it has its
+    own photos (containers → None). The pick is seeded on the gallery id so it stays constant across
+    requests (an unstable header would churn the OG link preview and read as a bug) yet varies across
+    galleries, and it avoids the cover so the banner and the card differ. Callers gate on the
+    instance `auto_header_enabled` flag. See docs/proposals/auto-header-image.md."""
+    if _header_image_url(gallery) or image_count <= 0:
+        return None
+    candidates = gallery_repo.get_auto_header_candidates(db, gallery.id)
+    if not candidates:
+        return None
+    pool = candidates
+    if cover is not None and len(candidates) >= 2:
+        pool = [c for c in candidates if c[0] != cover.id] or candidates
+    seed = int(hashlib.sha1(gallery.id.encode()).hexdigest(), 16)
+    image_id, stored_filename = pool[seed % len(pool)]
+    return _hero_medium_url(gallery, image_id, stored_filename, watermark_enabled, storage)
+
+
 def _build_response(
     gallery: Gallery,
     db: Session,
@@ -567,6 +599,10 @@ def get_public_gallery(
         "default_sort": app_settings.gallery_sort,
         "default_sort_dir": app_settings.gallery_sort_dir,
         "header_image_url": _header_image_url(gallery),
+        "header_image_fallback_url": (
+            _auto_header_fallback_url(db, gallery, cover, image_count, watermark_enabled, storage)
+            if app_settings.auto_header_enabled else None
+        ),
         "subgalleries": subgalleries,
         "parent_name": parent_name,
         "parent_share_token": parent_share_token,

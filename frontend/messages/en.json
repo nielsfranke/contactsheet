@@ -974,6 +974,8 @@
       "viewingHint": "Applies to every gallery, for clients and your admin grid alike.",
       "highRes": "High-resolution previews",
       "highResHint": "Sharp thumbnails and lightbox images on retina displays (800px / 2560px instead of 300px / 1920px). Uses more disk space and bandwidth; changing this resizes existing previews in the background.",
+      "autoHeader": "Auto-fill gallery header",
+      "autoHeaderHint": "When a gallery has no header image set, use one of its own photos for the opener automatically. A header you set by hand always takes precedence.",
       "backdrop": "Lightbox backdrop",
       "backdropDimmed": "Dimmed",
       "backdropBlack": "Black",

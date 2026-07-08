@@ -133,7 +133,7 @@ def update_settings(
     if "semantic_search" in body.model_fields_set:
         updates["semantic_search"] = body.semantic_search.model_dump() if body.semantic_search else None
     # Admin-only view + footer scalars.
-    for field in ("admin_grid_mode", "overview_size", "overview_shape", "overview_spacing", "overview_corners", "overview_sort", "overview_sort_dir", "gallery_sort", "gallery_sort_dir", "footer_enabled", "brand_display", "brand_font", "activity_ip_logging", "activity_ip_retention_days", "rating_mode"):
+    for field in ("admin_grid_mode", "overview_size", "overview_shape", "overview_spacing", "overview_corners", "overview_sort", "overview_sort_dir", "gallery_sort", "gallery_sort_dir", "footer_enabled", "brand_display", "brand_font", "activity_ip_logging", "activity_ip_retention_days", "rating_mode", "auto_header_enabled"):
         if getattr(body, field) is not None:
             updates[field] = getattr(body, field)
     resize_previews = (

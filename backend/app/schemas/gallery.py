@@ -336,6 +336,10 @@ class GalleryPublicResponse(BaseModel):
     default_sort_dir: str = "asc"
     headline: str | None = None
     header_image_url: str | None = None
+    # Auto-header fallback: a stable, watermark-aware photo URL used by the public opener when no
+    # manual header is set and the instance `auto_header_enabled` is on. None otherwise. The layouts
+    # render `header_image_url ?? header_image_fallback_url`. See docs/proposals/auto-header-image.md.
+    header_image_fallback_url: str | None = None
     expires_at: datetime | None
 
     # Presentation

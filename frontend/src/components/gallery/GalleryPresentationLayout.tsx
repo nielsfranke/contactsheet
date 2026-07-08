@@ -86,19 +86,22 @@ export function GalleryPresentationLayout({
     ? "drop-shadow-[0_2px_10px_rgba(0,0,0,0.85)]"
     : "drop-shadow-md";
 
+  // Manual header wins; else the opt-in auto-header fallback (a photo picked server-side).
+  const headerImage = gallery.header_image_url ?? gallery.header_image_fallback_url;
+
   return (
     /* Full-width layout for presentation galleries */
     <>
       {/* Mobile-only "go up to parent" bar — owns the sticky top here (no other sticky bar in
           presentation mode); null for top-level galleries */}
       {upNav}
-      {gallery.header_image_url ? (
+      {headerImage ? (
         /* Full-screen hero when header image is set */
         <>
           <div className="relative w-full h-screen overflow-hidden">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
-              src={gallery.header_image_url}
+              src={headerImage}
               alt=""
               draggable={false}
               onContextMenu={(e) => e.preventDefault()}

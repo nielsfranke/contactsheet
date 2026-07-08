@@ -12,6 +12,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **Optional auto-fill for the gallery header.** A new instance setting (**Settings → Gallery
+  defaults → Viewing**, off by default) lets a gallery use one of its own photos for the opener when
+  no header image is set by hand — so galleries look finished without manual work. The pick is
+  stable per gallery (it won't change between visits or churn link previews) and deliberately differs
+  from the cover, and it respects watermarks. A header you set manually always takes precedence. See
+  `docs/proposals/auto-header-image.md`.
+
 ## [1.7.1] - 2026-07-08
 
 ### Fixed

@@ -147,6 +147,23 @@ def get_cover_image(db: Session, gallery: Gallery) -> Image | None:
     ).scalar_one_or_none()
 
 
+def get_auto_header_candidates(db: Session, gallery_id: str) -> list[tuple[str, str]]:
+    """Eligible still photos for an auto-header as (id, stored_filename), ordered by sort_order.
+    Public-safe: approved + fully processed + non-video only (a container yields an empty list)."""
+    rows = db.execute(
+        select(Image.id, Image.stored_filename)
+        .where(
+            Image.gallery_id == gallery_id,
+            Image.deleted_at.is_(None),
+            Image.is_video.is_(False),
+            Image.processing_status == "done",
+            Image.moderation_status == "approved",
+        )
+        .order_by(Image.sort_order)
+    ).all()
+    return [(r[0], r[1]) for r in rows]
+
+
 def batch_image_counts(
     db: Session, gallery_ids: list[str], only_approved: bool = False
 ) -> dict[str, int]:

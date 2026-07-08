@@ -111,6 +111,8 @@ class AppSettingsUpdate(BaseModel):
     # Source-code URL (AGPL §13). "" clears back to the upstream default; an http(s) URL sets it.
     source_url: str | None = Field(default=None, max_length=255)
     high_res_previews: bool | None = None
+    # Opt-in: auto-fill a gallery header from its photos when none is set manually.
+    auto_header_enabled: bool | None = None
     # Instance-wide rating style: color flags, 1–5 stars, or both side by side.
     rating_mode: Literal["flags", "stars", "both"] | None = None
     # An object replaces the preset; explicit null clears it back to built-in defaults;
@@ -187,6 +189,7 @@ class AppSettingsResponse(BaseModel):
     public_base_url: str | None = None
     source_url: str | None = None
     high_res_previews: bool = True
+    auto_header_enabled: bool = False
     rating_mode: str = "flags"
     preset_presentation: GalleryPreset | None = None
     preset_collaboration: GalleryPreset | None = None
