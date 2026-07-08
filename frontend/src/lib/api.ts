@@ -274,7 +274,10 @@ export const api = {
     },
     uploadHeaderImage: (id: string, file: File): Promise<GalleryResponse> => {
       const form = new FormData();
-      form.append("file", file);
+      // A file dragged from the browser (e.g. an existing gallery photo) can arrive with an empty
+      // name; without a filename the multipart part is parsed as a plain string field and FastAPI
+      // rejects it with a 422. Always carry a filename so the part is treated as an upload.
+      form.append("file", file, file.name || "header.jpg");
       return fetch(`${API_BASE}/api/galleries/${id}/header-image`, {
         method: "POST",
         credentials: "include",
@@ -282,7 +285,7 @@ export const api = {
       }).then(async (res) => {
         if (!res.ok) {
           const body = await res.json().catch(() => ({}));
-          throw Object.assign(new Error(body.detail ?? res.statusText), { status: res.status });
+          throw Object.assign(new Error(errorDetail(body, res.statusText)), { status: res.status });
         }
         return res.json();
       });
@@ -291,7 +294,8 @@ export const api = {
       request<void>(`/api/galleries/${id}/header-image`, { method: "DELETE" }),
     uploadCoverImage: (id: string, file: File): Promise<GalleryResponse> => {
       const form = new FormData();
-      form.append("file", file);
+      // See uploadHeaderImage: a nameless dropped file must still carry a filename or FastAPI 422s.
+      form.append("file", file, file.name || "cover.jpg");
       return fetch(`${API_BASE}/api/galleries/${id}/cover-image`, {
         method: "POST",
         credentials: "include",
@@ -299,7 +303,7 @@ export const api = {
       }).then(async (res) => {
         if (!res.ok) {
           const body = await res.json().catch(() => ({}));
-          throw Object.assign(new Error(body.detail ?? res.statusText), { status: res.status });
+          throw Object.assign(new Error(errorDetail(body, res.statusText)), { status: res.status });
         }
         return res.json();
       });
