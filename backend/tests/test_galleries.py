@@ -80,6 +80,20 @@ def test_apply_to_subgalleries_cascade(admin_client):
     assert admin_client.get(f"/api/galleries/{child['id']}").json()["preview_size"] == "large"
 
 
+def test_apply_to_subgalleries_cascades_full_subtree(admin_client):
+    """The cascade reaches every descendant, not just direct children — galleries nest
+    to any depth, so a grandchild must pick up the setting too."""
+    parent = make_gallery(admin_client, "P")
+    child = make_gallery(admin_client, "C", parent_id=parent["id"])
+    grandchild = make_gallery(admin_client, "GC", parent_id=child["id"])
+    admin_client.patch(
+        f"/api/galleries/{parent['id']}",
+        json={"preview_size": "large", "apply_to_subgalleries": True},
+    )
+    assert admin_client.get(f"/api/galleries/{child['id']}").json()["preview_size"] == "large"
+    assert admin_client.get(f"/api/galleries/{grandchild['id']}").json()["preview_size"] == "large"
+
+
 def test_name_does_not_cascade(admin_client):
     parent = make_gallery(admin_client, "P")
     child = make_gallery(admin_client, "C", parent_id=parent["id"])

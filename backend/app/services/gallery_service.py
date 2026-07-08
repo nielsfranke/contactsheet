@@ -340,12 +340,13 @@ def update_gallery(
     if updates:
         gallery = gallery_repo.update(db, gallery, **updates)
 
-        # Cascade presentation/collaboration settings to descendants when requested.
+        # Cascade presentation/collaboration settings to the whole subtree when requested —
+        # every descendant, not just direct children (galleries nest to any depth).
         # Identity fields (name/password/headline/watermark) are never cascaded.
         if data.apply_to_subgalleries:
             cascade = {k: v for k, v in updates.items() if k in _CASCADE_FIELDS}
             if cascade:
-                for child in gallery_repo.get_children(db, gallery.id):
+                for child in gallery_repo.get_descendants(db, gallery.id):
                     gallery_repo.update(db, child, **cascade)
 
     return _build_response(gallery, db, storage)

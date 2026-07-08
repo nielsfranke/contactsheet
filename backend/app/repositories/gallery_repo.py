@@ -48,6 +48,22 @@ def get_children(db: Session, parent_id: str) -> list[Gallery]:
     ).scalars().all()
 
 
+def get_descendants(db: Session, gallery_id: str) -> list[Gallery]:
+    """Every live descendant of a gallery (unlimited nesting), excluding the gallery itself.
+
+    Same BFS frontier walk as soft_delete / descendant_ids — used to cascade settings to the
+    whole subtree, not just direct children."""
+    descendants: list[Gallery] = []
+    frontier = [gallery_id]
+    while frontier:
+        children = db.execute(
+            select(Gallery).where(Gallery.parent_id.in_(frontier), Gallery.deleted_at.is_(None))
+        ).scalars().all()
+        descendants.extend(children)
+        frontier = [child.id for child in children]
+    return descendants
+
+
 def create(db: Session, **kwargs) -> Gallery:
     gallery = Gallery(**kwargs)
     db.add(gallery)
