@@ -12,6 +12,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.8.0] - 2026-07-08
+
 ### Added
 
 - **Optional auto-fill for the gallery header.** A new instance setting (**Settings → Gallery
@@ -20,6 +22,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   stable per gallery (it won't change between visits or churn link previews) and deliberately differs
   from the cover, and it respects watermarks. A header you set manually always takes precedence. See
   `docs/proposals/auto-header-image.md`.
+
+### Fixed
+
+- **Dragging a photo onto the header/cover drop zone now works** instead of failing with an
+  “[object Object]” error. A photo dragged from the browser arrives without a filename, which the
+  server rejected as an invalid upload; the drop now always carries a filename, so the dragged photo
+  becomes the header/cover as intended. Upload errors (e.g. a file over the 100 MB header limit) also
+  render as readable messages now rather than “[object Object]”.
 
 ## [1.7.1] - 2026-07-08
 
@@ -822,7 +832,8 @@ contract are considered stable as of this release.
   caps (stricter for public uploads).
 - Docker Compose deployment (backend + frontend + nginx); SQLite + local filesystem.
 
-[Unreleased]: https://github.com/nielsfranke/contactsheet/compare/v1.7.1...HEAD
+[Unreleased]: https://github.com/nielsfranke/contactsheet/compare/v1.8.0...HEAD
+[1.8.0]: https://github.com/nielsfranke/contactsheet/compare/v1.7.1...v1.8.0
 [1.7.1]: https://github.com/nielsfranke/contactsheet/compare/v1.7.0...v1.7.1
 [1.7.0]: https://github.com/nielsfranke/contactsheet/compare/v1.6.9...v1.7.0
 [1.6.9]: https://github.com/nielsfranke/contactsheet/compare/v1.6.8...v1.6.9
