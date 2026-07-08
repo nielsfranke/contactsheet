@@ -28,6 +28,7 @@ import {
   WatermarkFields,
 } from "./gallery-settings-fields";
 import { HeaderImageUpload } from "./HeaderImageUpload";
+import { SubgalleryPresetsSection } from "./SubgalleryPresetsSection";
 import { SaveStatus } from "./SaveStatus";
 import { useGallerySettingsAutosave } from "@/hooks/useGallerySettingsAutosave";
 import {
@@ -109,6 +110,7 @@ export function GallerySettingsModal({
 
   const [clientUpload, setClientUpload] = useState(gallery.client_upload_enabled);
   const [clientUploadModeration, setClientUploadModeration] = useState(gallery.client_upload_moderation);
+  const [subgalleryPresets, setSubgalleryPresets] = useState(gallery.subgallery_presets);
 
   // Security
   const [password, setPassword] = useState("");
@@ -354,6 +356,10 @@ export function GallerySettingsModal({
                 hint={tNotif("galleryToggleHint")}
                 checked={notificationsEnabled}
                 onChange={(v) => { setNotificationsEnabled(v); save({ notifications_enabled: v }); }}
+              />
+              <SubgalleryPresetsSection
+                presets={subgalleryPresets}
+                onSave={(next) => { setSubgalleryPresets(next); save({ subgallery_presets: next }); }}
               />
             </div>
           )}

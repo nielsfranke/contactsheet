@@ -1028,7 +1028,15 @@
       "standaloneHintParent": "This top-level gallery has no parent to hide — enable “Apply to all sub-galleries” below to turn each sub-gallery into a standalone, private link.",
       "expiresLabel": "Expires",
       "expiresHint": "Gallery becomes inaccessible after this date",
-      "applyToSub": "Apply to all sub-galleries"
+      "applyToSub": "Apply to all sub-galleries",
+      "subgalleryDefaultsTitle": "Sub-gallery defaults",
+      "subgalleryDefaultsHint": "New sub-galleries you create here start from these looks, chosen by their mode — set up a Showcase and a Review template once.",
+      "subgalleryPresetCustomized": "Custom",
+      "subgalleryPresetDefault": "Instance default",
+      "subgalleryPresetEdit": "Edit",
+      "subgalleryPresetClear": "Reset to default",
+      "subgalleryPresetTitle": "{mode} sub-gallery template",
+      "subgalleryPresetSubtitle": "New {mode} sub-galleries in this folder start from these settings."
     },
     "fields": {
       "comingSoon": "Coming soon",

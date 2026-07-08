@@ -3,49 +3,13 @@
 
 "use client";
 
-import { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
 import { api } from "@/lib/api";
 import { MODE_LABELS, type GalleryPreset, type ModeType } from "@/lib/types";
-import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import {
-  LookFields,
-  type LookValues,
-  OpenerFields,
-  type OpenerValues,
-  ReviewFields,
-  type ReviewValues,
-  Toggle,
-} from "./gallery-settings-fields";
+import { PresetForm } from "./PresetForm";
 import { toast } from "sonner";
-
-// Mirrors the backend Gallery model defaults (what a NULL preset means).
-const BUILTIN: Required<Omit<GalleryPreset, "bg_dimmed_color">> = {
-  layout: "grid",
-  opener_font: "sans",
-  opener_font_size: "medium",
-  opener_title_position: "center",
-  opener_scrim: true,
-  opener_title_shadow: false,
-  preview_size: "medium",
-  preview_spacing: "medium",
-  preview_corners: "round",
-  bg_brightness: "dark",
-  downloads_enabled: true,
-  client_mode_switch_enabled: false,
-  enable_team_voting: false,
-  color_flags_enabled: true,
-  likes_enabled: false,
-  comments_enabled: true,
-  annotations_enabled: false,
-  sets_enabled: false,
-  show_filename: false,
-  show_filename_lightbox: false,
-  show_exif: false,
-  show_iptc: false,
-};
 
 interface Props {
   open: boolean;
@@ -54,66 +18,12 @@ interface Props {
   preset: GalleryPreset | null;
 }
 
+/** Edit the instance-level default preset for a mode (app_settings.preset_presentation /
+ *  preset_collaboration) — the starting point for new top-level galleries of that mode. */
 export function PresetEditorModal({ open, onOpenChange, mode, preset }: Props) {
   const t = useTranslations("settings.preset");
-  const tg = useTranslations("settings.gallery");
-  const tc = useTranslations("common");
   const qc = useQueryClient();
   const settingsKey = mode === "collaboration" ? "preset_collaboration" : "preset_presentation";
-
-  function initial() {
-    const merged = { ...BUILTIN, ...(preset ?? {}) };
-    return {
-      look: {
-        layout: merged.layout,
-        preview_size: merged.preview_size,
-        preview_spacing: merged.preview_spacing,
-        preview_corners: merged.preview_corners,
-        bg_brightness: merged.bg_brightness,
-        show_filename: merged.show_filename,
-        show_filename_lightbox: merged.show_filename_lightbox,
-        show_exif: merged.show_exif,
-        show_iptc: merged.show_iptc,
-      } satisfies LookValues,
-      opener: {
-        opener_font: merged.opener_font,
-        opener_font_size: merged.opener_font_size,
-        opener_title_position: merged.opener_title_position,
-        opener_scrim: merged.opener_scrim,
-        opener_title_shadow: merged.opener_title_shadow,
-      } satisfies OpenerValues,
-      review: {
-        color_flags_enabled: merged.color_flags_enabled,
-        likes_enabled: merged.likes_enabled,
-        enable_team_voting: merged.enable_team_voting,
-        comments_enabled: merged.comments_enabled,
-        annotations_enabled: merged.annotations_enabled,
-        sets_enabled: merged.sets_enabled,
-      } satisfies ReviewValues,
-      downloads: merged.downloads_enabled,
-      clientModeSwitch: merged.client_mode_switch_enabled,
-    };
-  }
-
-  const [look, setLook] = useState<LookValues>(() => initial().look);
-  const [opener, setOpener] = useState<OpenerValues>(() => initial().opener);
-  const [review, setReview] = useState<ReviewValues>(() => initial().review);
-  const [downloads, setDownloads] = useState(() => initial().downloads);
-  const [clientModeSwitch, setClientModeSwitch] = useState(() => initial().clientModeSwitch);
-
-  // Re-seed from the stored preset each time the modal opens (no effect needed).
-  const [prevOpen, setPrevOpen] = useState(open);
-  if (open !== prevOpen) {
-    setPrevOpen(open);
-    if (open) {
-      const init = initial();
-      setLook(init.look);
-      setOpener(init.opener);
-      setReview(init.review);
-      setDownloads(init.downloads);
-      setClientModeSwitch(init.clientModeSwitch);
-    }
-  }
 
   const save = useMutation({
     mutationFn: (value: GalleryPreset | null) => api.adminSettings.update({ [settingsKey]: value }),
@@ -125,76 +35,25 @@ export function PresetEditorModal({ open, onOpenChange, mode, preset }: Props) {
     onError: (err: Error) => toast.error(err.message),
   });
 
-  function handleSave() {
-    // Each mode's preset only carries the fields that apply to it: Showcase = look + opener +
-    // client mode switch, Review = look + feedback. Downloads applies to both.
-    const modeFields =
-      mode === "presentation"
-        ? { ...opener, client_mode_switch_enabled: clientModeSwitch }
-        : review;
-    save.mutate({ ...look, ...modeFields, downloads_enabled: downloads });
-  }
-
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-2xl">
         <DialogHeader>
           <DialogTitle>{t("title", { mode: MODE_LABELS[mode] })}</DialogTitle>
         </DialogHeader>
-        <p className="text-sm text-muted-foreground">
-          {t("subtitle", { mode: MODE_LABELS[mode] })}
-        </p>
-        <div className="max-h-[55vh] overflow-y-auto pr-1 divide-y divide-border/60">
-          <div className="py-1">
-            <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground pt-1">{t("lookLayout")}</p>
-            <LookFields value={look} onChange={(patch) => setLook({ ...look, ...patch })} />
-          </div>
-          {mode === "presentation" ? (
-            <div className="py-1">
-              <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground pt-2">{t("opener")}</p>
-              <OpenerFields value={opener} onChange={(patch) => setOpener({ ...opener, ...patch })} />
-              <Toggle
-                label={tg("clientModeSwitchLabel")}
-                hint={tg("clientModeSwitchHint")}
-                checked={clientModeSwitch}
-                onChange={setClientModeSwitch}
-              />
-            </div>
-          ) : (
-            <div className="py-1">
-              <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground pt-2">{t("feedback")}</p>
-              <ReviewFields value={review} onChange={(patch) => setReview({ ...review, ...patch })} />
-            </div>
-          )}
-          <div className="py-1">
-            <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground pt-2">{t("downloads")}</p>
-            <Toggle
-              label={t("allowDownloads")}
-              hint={t("allowDownloadsHint")}
-              checked={downloads}
-              onChange={setDownloads}
-            />
-          </div>
-        </div>
-        <div className="flex flex-col gap-3 pt-2 border-t border-border sm:flex-row sm:items-center sm:justify-between sm:gap-4">
-          <Button
-            variant="ghost"
-            size="sm"
-            className="text-muted-foreground max-sm:w-full"
-            disabled={save.isPending || preset === null}
-            onClick={() => save.mutate(null)}
-          >
-            {t("resetDefaults")}
-          </Button>
-          <div className="flex gap-2 max-sm:w-full">
-            <Button variant="outline" size="sm" className="max-sm:flex-1" onClick={() => onOpenChange(false)}>
-              {tc("cancel")}
-            </Button>
-            <Button size="sm" className="max-sm:flex-1" onClick={handleSave} disabled={save.isPending}>
-              {save.isPending ? tc("saving") : tc("save")}
-            </Button>
-          </div>
-        </div>
+        <p className="text-sm text-muted-foreground">{t("subtitle", { mode: MODE_LABELS[mode] })}</p>
+        {open && (
+          <PresetForm
+            mode={mode}
+            preset={preset}
+            pending={save.isPending}
+            resetLabel={t("resetDefaults")}
+            canReset={preset !== null}
+            onSave={(value) => save.mutate(value)}
+            onReset={() => save.mutate(null)}
+            onCancel={() => onOpenChange(false)}
+          />
+        )}
       </DialogContent>
     </Dialog>
   );

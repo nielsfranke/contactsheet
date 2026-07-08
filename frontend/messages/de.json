@@ -1028,7 +1028,15 @@
       "standaloneHintParent": "Diese Galerie der obersten Ebene hat keine übergeordnete Galerie zum Ausblenden — aktivieren Sie unten „Auf alle Untergalerien anwenden“, um jede Untergalerie in einen eigenständigen, privaten Link zu verwandeln.",
       "expiresLabel": "Läuft ab",
       "expiresHint": "Galerie wird nach diesem Datum unzugänglich",
-      "applyToSub": "Auf alle Untergalerien anwenden"
+      "applyToSub": "Auf alle Untergalerien anwenden",
+      "subgalleryDefaultsTitle": "Standard für Untergalerien",
+      "subgalleryDefaultsHint": "Neue Untergalerien, die du hier anlegst, starten je nach Modus mit diesen Vorlagen — lege einmal eine Showcase- und eine Review-Vorlage fest.",
+      "subgalleryPresetCustomized": "Angepasst",
+      "subgalleryPresetDefault": "Instanz-Standard",
+      "subgalleryPresetEdit": "Bearbeiten",
+      "subgalleryPresetClear": "Auf Standard zurücksetzen",
+      "subgalleryPresetTitle": "Vorlage für {mode}-Untergalerien",
+      "subgalleryPresetSubtitle": "Neue {mode}-Untergalerien in diesem Ordner starten mit diesen Einstellungen."
     },
     "fields": {
       "comingSoon": "Demnächst",

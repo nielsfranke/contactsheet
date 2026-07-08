@@ -116,6 +116,8 @@ export interface GalleryResponse extends GallerySettings {
   header_focus_y: number;
   cover_image_id: string | null;
   cover_image_filename: string | null;
+  /** Per-mode look & behaviour templates new sub-galleries inherit by mode. */
+  subgallery_presets: Partial<Record<ModeType, GalleryPreset>> | null;
   image_count: number;
   comment_count: number;
   cover_image_url: string | null;
@@ -234,6 +236,8 @@ export interface GalleryUpdate extends Partial<GallerySettings> {
   header_focus_x?: number;
   header_focus_y?: number;
   watermark_settings?: string | null;  // JSON string of WatermarkSettings
+  /** Per-mode templates new sub-galleries inherit; object replaces, null clears, omitted no-op. */
+  subgallery_presets?: Partial<Record<ModeType, GalleryPreset>> | null;
   /** Cascade presentation/collaboration settings to all sub-galleries. */
   apply_to_subgalleries?: boolean;
 }
