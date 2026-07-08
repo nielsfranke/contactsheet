@@ -32,6 +32,19 @@ def jpeg_bytes(color=(10, 20, 30), size=(8, 8)) -> bytes:
     return buf.getvalue()
 
 
+def big_jpeg_bytes(side=3000) -> bytes:
+    """A real, decodable JPEG whose encoded size exceeds the generic 10 MB read_limited default.
+
+    High-frequency noise barely compresses, so a 3000² JPEG at top quality lands well past 10 MB —
+    enough to prove header/cover uploads use their own, larger byte cap. Stays under max_image_pixels."""
+    import os
+
+    img = PilImage.frombytes("RGB", (side, side), os.urandom(side * side * 3))
+    buf = io.BytesIO()
+    img.save(buf, format="JPEG", quality=100, subsampling=0)
+    return buf.getvalue()
+
+
 def psb_bytes(with_thumbnail: bool = True) -> bytes:
     """A minimal valid PSB (8BPS v2) — header + color-mode + image-resources, no image data.
 

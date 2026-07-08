@@ -14,7 +14,7 @@ from fastapi.testclient import TestClient
 
 from app.main import app
 
-from .helpers import make_gallery, png_bytes
+from .helpers import big_jpeg_bytes, make_gallery, png_bytes
 
 
 # --- #2: cookie Secure follows X-Forwarded-Proto ---------------------------------------------
@@ -91,6 +91,19 @@ def test_cover_image_real_png_accepted(admin_client):
         files=[("file", ("c.png", png_bytes(), "image/png"))],
     )
     assert r.status_code == 200
+
+
+def test_header_image_over_10mb_accepted(admin_client):
+    """Header/cover uploads use their own 100 MB cap, not the generic 10 MB read_limited default —
+    photographers drop full-res developed JPEGs and the server bounds them to 3840 px on store."""
+    g = make_gallery(admin_client, "G")
+    big = big_jpeg_bytes()  # ~35 MB, comfortably past the old 10 MB ceiling
+    assert len(big) > 10 * 1024 * 1024
+    r = admin_client.post(
+        f"/api/galleries/{g['id']}/header-image",
+        files=[("file", ("big.jpg", big, "image/jpeg"))],
+    )
+    assert r.status_code == 200, r.text
 
 
 def test_watermark_content_type_spoof_rejected(admin_client):

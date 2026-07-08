@@ -84,6 +84,13 @@ class Settings(BaseSettings):
     # a single non-srcset <img>, so one size serves every screen.
     header_max_px: int = 3840
     header_quality: int = 82
+    # Byte ceiling for manually uploaded header/cover images. These are always re-encoded to a
+    # bounded JPEG (header_max_px @ header_quality) on store, so a large input costs nothing on
+    # disk — the cap only bounds the decode. Set well above a full-res developed JPEG (60 MP at
+    # top quality ≈ 40 MB) so photographers can drop their originals without pre-shrinking; the
+    # generic 10 MB read_limited default was too tight for that. Pixel bombs are still caught by
+    # max_image_pixels during the resize.
+    header_max_upload_bytes: int = 104_857_600  # 100 MB
     # Link-preview (Open Graph) image: small + universally accepted so WhatsApp (the only unfurler
     # with a strict ~600 KB–1 MB cap) renders the card. Derived on the fly from the header/cover/
     # first photo. See docs/architecture/header-cover-uploads-and-og-image-sizing.md.

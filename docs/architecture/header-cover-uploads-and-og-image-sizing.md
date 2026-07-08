@@ -83,8 +83,18 @@ its own small image. Hence two mechanisms.
 
 Extend the existing `2g` location regex (or add a sibling location) to cover the header, cover,
 branding-logo and watermark upload endpoints, so they no longer inherit the 1 MB server default. The
-backend keeps the real ceiling (`read_limited`, 10 MB) and per-endpoint validation; nginx is just a
+backend keeps the real ceiling (`read_limited`) and per-endpoint validation; nginx is just a
 gate. (No 2g here — these aren't photo originals; a few-MB ceiling is plenty.)
+
+> **Update (2026-07-08): header/cover cap raised to 100 MB.** Photographers with only container
+> galleries (no photos to pick a header/cover from) must upload manually from Finder, and a full-res
+> developed JPEG (60 MP at top quality ≈ 40 MB) blew past the generic 10 MB `read_limited` default.
+> Since the server re-encodes to a bounded 3840 px JPEG on store anyway, a large input is free on
+> disk — the cap only bounds the decode (pixel bombs still caught by `max_image_pixels`). The
+> header/cover routes now pass `settings.header_max_upload_bytes` (**100 MB**) to `read_limited`, and
+> `nginx.conf`'s header/cover/watermark/logo location was lifted `12m → 110m` to match. **Deploy
+> impact:** the bundled nginx.conf change ships in the image but only takes effect on a container
+> **recreate** (not a plain pull); any proxy in front (NPM) must also allow ≥100 MB on these paths.
 
 ### 2. Resize header & cover on store
 

@@ -330,7 +330,7 @@ def upload_header_image(
     if not gallery:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Gallery not found")
 
-    data = read_limited(file)
+    data = read_limited(file, app_settings.header_max_upload_bytes)
     assert_image_magic(data, mime)
     # Bound the stored header so 4 MB+ originals don't bloat page loads or the og:image. A single
     # non-srcset banner, so one 3840 px copy serves every screen. See docs/architecture/.
@@ -409,7 +409,7 @@ def upload_cover_image(
     if not gallery:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Gallery not found")
 
-    data = read_limited(file)
+    data = read_limited(file, app_settings.header_max_upload_bytes)
     assert_image_magic(data, mime)
     try:
         data = image_processing.resize_bytes(data, app_settings.header_max_px, app_settings.header_quality)
