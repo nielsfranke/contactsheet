@@ -54,6 +54,7 @@ def _to_response(s) -> AppSettingsResponse:
         public_base_url=s.public_base_url,
         source_url=s.source_url,
         high_res_previews=s.high_res_previews,
+        auto_header_enabled=s.auto_header_enabled,
         rating_mode=s.rating_mode,
         preset_presentation=s.preset_presentation,
         preset_collaboration=s.preset_collaboration,

@@ -33,6 +33,16 @@ def _tail(url):
     return url.rsplit("/", 1)[-1]
 
 
+def test_admin_settings_roundtrips_auto_header_flag(admin_client):
+    # Regression: the admin settings response must echo the persisted flag, or the settings toggle
+    # optimistically flips on then snaps back to the (stale) False the API keeps returning.
+    assert admin_client.get("/api/admin/settings").json()["auto_header_enabled"] is False
+    r = admin_client.patch("/api/admin/settings", json={"auto_header_enabled": True})
+    assert r.status_code == 200, r.text
+    assert r.json()["auto_header_enabled"] is True
+    assert admin_client.get("/api/admin/settings").json()["auto_header_enabled"] is True
+
+
 def test_fallback_is_none_when_setting_off(admin_client):
     g = make_gallery(admin_client, "Off")
     add_image(g["id"], sort_order=0)
