@@ -183,6 +183,7 @@ Migrations live in `backend/alembic/versions/`. Always create a new file — nev
 0044 — lightbox zoom settings: app_settings.lightbox_zoom_enabled + lightbox_zoom_max
 0045 — per-container sub-gallery presets: galleries.subgallery_presets JSON (per-mode look & behaviour templates for new sub-galleries)
 0046 — optional auto-fill header: app_settings.auto_header_enabled (display-time fallback, off by default)
+0047 — legal pages + support link: app_settings.impressum / privacy / support_link_enabled
 ```
 
 ## Feature invariants
@@ -306,6 +307,21 @@ Key non-obvious constraints — full details in `docs/architecture/`.
 - **DB captured via `VACUUM INTO`** (never tar the live WAL `.db`); media copied **before** the DB snapshot so the snapshot never references a missing file. `exports_dir` is never backed up (regenerable). Scopes: `full` (DB + uploads + branding + watermarks) vs `metadata` (no uploads); full can drop renditions.
 - **Forward-only restore gate:** `manifest.json` records `alembic_revision`; restore refuses a backup from a *newer* binary (unknown revision) and runs `alembic upgrade head` on older ones. Manifest also carries `db_sha256` (integrity). Restore swaps files, keeps a `.db.bak` for rollback, and reloads the runtime key from restored settings → forces re-login.
 - **No encryption / no scheduling yet** — archives are plaintext (they hold the password hash + secret key; the UI warns). Both are documented follow-ups. See `docs/architecture/backup-restore.md`.
+
+### Legal strip (Impressum / privacy / source / support)
+- A `GalleryLegalStrip` renders at the bottom of **every** public gallery and is **not** gated by
+  `footer_enabled` (which governs only the photographer's optional branding footer above it): an
+  Impressum must be one click from every page, and the **AGPL §13 source offer is made to *network
+  users*** — the clients — so the `Source` link is never suppressed. Only `Support ♥` is toggleable.
+- **`support_link_enabled` is on for new installs, off for existing ones.** The model default
+  (`True`) and migration 0047's `server_default` (`"0"`) deliberately disagree: `settings_repo.get`
+  INSERTs the singleton in Python (fresh → `True`), while `add_column` backfills an existing row
+  (upgrade → `False`). That asymmetry *is* the feature — don't "fix" it.
+- Bodies live in `app_settings.impressum` / `.privacy`, served by the side-effect-free
+  `GET /api/public/legal/{doc}` (404 when unset → the footer link hides and the route 404s). Rendered
+  as **text** (`whitespace-pre-line`), never `dangerouslySetInnerHTML`. The public gallery response
+  carries `impressum_available` / `privacy_available` booleans, not the bodies.
+  See `docs/architecture/impressum-and-powered-by-strip.md`.
 
 ### Link previews (Open Graph)
 - A pasted share link unfurls with the gallery's **name + cover** via a server `app/g/[share_token]/layout.tsx` (`generateMetadata`) — the gallery `page.tsx` itself stays `"use client"`.

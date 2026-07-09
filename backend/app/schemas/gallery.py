@@ -388,6 +388,15 @@ class GalleryPublicResponse(BaseModel):
     # Instance branding for the public footer (global; present only when enabled).
     accent_color: str | None = None
     footer: FooterSettings | None = None
+
+    # Always-on legal strip, independent of `footer` / footer_enabled.
+    # `source_url` satisfies AGPL §13 (the source offer is made to *network users*, i.e. clients),
+    # so it is never suppressed. `impressum_available` / `privacy_available` are booleans, not the
+    # bodies — the dedicated pages fetch those, keeping a long imprint out of every gallery payload.
+    source_url: str | None = None
+    support_link_enabled: bool = False
+    impressum_available: bool = False
+    privacy_available: bool = False
     # Studio identity shown in the client gallery header (always present).
     instance_name: str | None = None
     logo_url: str | None = None

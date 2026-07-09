@@ -170,6 +170,11 @@ export interface GalleryPublicResponse extends GallerySettings {
   footer: FooterSettings | null;
   instance_name: string | null;
   logo_url: string | null;
+  /** Always-on legal strip — independent of `footer` / footer_enabled. */
+  source_url: string | null;
+  support_link_enabled: boolean;
+  impressum_available: boolean;
+  privacy_available: boolean;
 }
 
 /** Which collaboration interactions are exposed to clients (subset of GallerySettings). */
@@ -377,6 +382,9 @@ export interface AppSettings {
   tagline: string | null;
   public_base_url: string | null;
   source_url: string | null;
+  impressum: string | null;
+  privacy: string | null;
+  support_link_enabled: boolean;
   high_res_previews: boolean;
   auto_header_enabled: boolean;
   rating_mode: RatingMode;
@@ -452,6 +460,10 @@ export interface AppSettingsUpdate {
   tagline?: string;
   public_base_url?: string;
   source_url?: string;
+  /** "" clears the page (link hidden, route 404s). */
+  impressum?: string;
+  privacy?: string;
+  support_link_enabled?: boolean;
   high_res_previews?: boolean;
   auto_header_enabled?: boolean;
   rating_mode?: RatingMode;

@@ -209,6 +209,14 @@
       "noFilesWarning": "Your current selection does not hold any files. Include galleries with files to enable the download.",
       "preparing": "Preparing…",
       "start": "Start Download"
+    },
+    "legal": {
+      "aria": "Legal and project links",
+      "impressum": "Imprint",
+      "privacy": "Privacy",
+      "poweredBy": "Powered by ContactSheet",
+      "source": "Source",
+      "support": "Support"
     }
   },
   "auth": {
@@ -856,6 +864,16 @@
       "sourceHint": "ContactSheet is free software under the GNU AGPL-3.0-or-later. The complete source — including any modifications running on this instance — is available to everyone.",
       "sourceUrl": "Source code URL",
       "sourceUrlHint": "Where the source link points. If you've modified ContactSheet, set this to your own repository so users get the version actually running here (AGPL requirement). Leave blank to use the upstream repository.",
+      "legalTitle": "Legal pages",
+      "legalHint": "Shown at the bottom of every client gallery. Leave a field empty to hide its link and disable the page.",
+      "impressum": "Imprint",
+      "impressumHint": "Plain text. Line breaks are preserved; HTML is not rendered.",
+      "impressumPlaceholder": "Studio name\nStreet 1\n12345 City\n\nEmail: hello@example.com",
+      "privacy": "Privacy policy",
+      "privacyHint": "Plain text. Line breaks are preserved; HTML is not rendered.",
+      "privacyPlaceholder": "How you handle client data…",
+      "supportLink": "Show “Support” link",
+      "supportLinkHint": "Adds a link to the ContactSheet project's donation page in the gallery footer. The “Source” link is always shown (AGPL §13).",
       "activityTitle": "Activity log",
       "activityHint": "Record gallery opens and downloads in each gallery's activity log.",
       "ipLogging": "Log visitor IP addresses",

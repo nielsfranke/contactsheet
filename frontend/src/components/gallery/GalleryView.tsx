@@ -8,6 +8,7 @@ import Link from "next/link";
 import type { GalleryPublicResponse, ImageResponse } from "@/lib/types";
 import { PhotoGrid } from "./PhotoGrid";
 import { GalleryFooter } from "./GalleryFooter";
+import { GalleryLegalStrip } from "./GalleryLegalStrip";
 import { GalleryBreadcrumb } from "./GalleryBreadcrumb";
 import { GalleryUpNav } from "./GalleryUpNav";
 import { cn } from "@/lib/utils";
@@ -182,11 +183,24 @@ export function GalleryView({ gallery, shareToken, galleryToken }: Props) {
     </div>
   ) : null;
 
-  // Global branding footer (present only when enabled instance-wide), shown at the bottom of
-  // the gallery content in every layout.
-  const galleryFooter = gallery.footer ? (
-    <GalleryFooter footer={gallery.footer} accent={gallery.accent_color ?? "#000000"} bright={bright} />
-  ) : null;
+  // Bottom-of-gallery slot, rendered by every layout. Two independent pieces:
+  //  1. the photographer's optional branding footer (instance-wide `footer_enabled`), and
+  //  2. the legal strip, which is ALWAYS rendered — an Impressum must be one click from every
+  //     page and the AGPL §13 source offer is not an opt-out. So the slot is never null.
+  const galleryFooter = (
+    <>
+      {gallery.footer && (
+        <GalleryFooter footer={gallery.footer} accent={gallery.accent_color ?? "#000000"} bright={bright} />
+      )}
+      <GalleryLegalStrip
+        sourceUrl={gallery.source_url}
+        supportEnabled={gallery.support_link_enabled}
+        impressumAvailable={gallery.impressum_available}
+        privacyAvailable={gallery.privacy_available}
+        bright={bright}
+      />
+    </>
+  );
 
   return (
     <div className={cn("min-h-screen gallery-scope text-foreground", !bright && "dark", bright ? "bg-zinc-50" : "bg-zinc-950")}>

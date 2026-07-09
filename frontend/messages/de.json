@@ -209,6 +209,14 @@
       "noFilesWarning": "Ihre aktuelle Auswahl enthält keine Dateien. Beziehen Sie Galerien mit Dateien ein, um den Download zu ermöglichen.",
       "preparing": "Wird vorbereitet…",
       "start": "Download starten"
+    },
+    "legal": {
+      "aria": "Rechtliches und Projekt-Links",
+      "impressum": "Impressum",
+      "privacy": "Datenschutz",
+      "poweredBy": "Bereitgestellt mit ContactSheet",
+      "source": "Quellcode",
+      "support": "Unterstützen"
     }
   },
   "auth": {
@@ -856,6 +864,16 @@
       "sourceHint": "ContactSheet ist freie Software unter der GNU AGPL-3.0-or-later. Der vollständige Quellcode – einschließlich aller auf dieser Instanz laufenden Änderungen – steht allen zur Verfügung.",
       "sourceUrl": "Quellcode-URL",
       "sourceUrlHint": "Das Ziel des Quellcode-Links. Wenn Sie ContactSheet verändert haben, tragen Sie hier Ihr eigenes Repository ein, damit Nutzer die tatsächlich laufende Version erhalten (AGPL-Anforderung). Leer lassen, um das Upstream-Repository zu verwenden.",
+      "legalTitle": "Rechtliche Seiten",
+      "legalHint": "Erscheinen unten in jeder Kundengalerie. Ein leeres Feld blendet den Link aus und deaktiviert die Seite.",
+      "impressum": "Impressum",
+      "impressumHint": "Reiner Text. Zeilenumbrüche bleiben erhalten; HTML wird nicht dargestellt.",
+      "impressumPlaceholder": "Studioname\nMusterstraße 1\n12345 Stadt\n\nE-Mail: hallo@example.com",
+      "privacy": "Datenschutzerklärung",
+      "privacyHint": "Reiner Text. Zeilenumbrüche bleiben erhalten; HTML wird nicht dargestellt.",
+      "privacyPlaceholder": "Wie du mit Kundendaten umgehst…",
+      "supportLink": "„Unterstützen“-Link anzeigen",
+      "supportLinkHint": "Fügt der Galerie-Fußzeile einen Link zur Spendenseite des ContactSheet-Projekts hinzu. Der „Quellcode“-Link wird immer angezeigt (AGPL §13).",
       "activityTitle": "Aktivitätsprotokoll",
       "activityHint": "Galerie-Aufrufe und Downloads im Aktivitätsprotokoll der jeweiligen Galerie festhalten.",
       "ipLogging": "IP-Adressen der Besucher protokollieren",

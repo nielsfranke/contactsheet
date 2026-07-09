@@ -53,6 +53,9 @@ def _to_response(s) -> AppSettingsResponse:
         tagline=s.tagline,
         public_base_url=s.public_base_url,
         source_url=s.source_url,
+        impressum=s.impressum,
+        privacy=s.privacy,
+        support_link_enabled=s.support_link_enabled,
         high_res_previews=s.high_res_previews,
         auto_header_enabled=s.auto_header_enabled,
         rating_mode=s.rating_mode,
@@ -116,6 +119,12 @@ def update_settings(
     for clear_field in ("brand_color", "tagline"):
         if clear_field in body.model_fields_set:
             updates[clear_field] = getattr(body, clear_field) or None
+    # Legal pages: a blank (or whitespace-only) body clears the page — its footer link then
+    # disappears and the public route 404s. Stored verbatim; rendered as text, never as HTML.
+    for legal_field in ("impressum", "privacy"):
+        if legal_field in body.model_fields_set:
+            value = getattr(body, legal_field)
+            updates[legal_field] = (value.strip() or None) if value else None
     # An object replaces the whole preset/override/footer; explicit null clears it.
     for preset_field in ("preset_presentation", "preset_collaboration", "admin_grid_view", "footer"):
         if preset_field in body.model_fields_set:
@@ -134,7 +143,7 @@ def update_settings(
     if "semantic_search" in body.model_fields_set:
         updates["semantic_search"] = body.semantic_search.model_dump() if body.semantic_search else None
     # Admin-only view + footer scalars.
-    for field in ("admin_grid_mode", "overview_size", "overview_shape", "overview_spacing", "overview_corners", "overview_sort", "overview_sort_dir", "gallery_sort", "gallery_sort_dir", "footer_enabled", "brand_display", "brand_font", "activity_ip_logging", "activity_ip_retention_days", "rating_mode", "auto_header_enabled"):
+    for field in ("admin_grid_mode", "overview_size", "overview_shape", "overview_spacing", "overview_corners", "overview_sort", "overview_sort_dir", "gallery_sort", "gallery_sort_dir", "footer_enabled", "brand_display", "brand_font", "activity_ip_logging", "activity_ip_retention_days", "rating_mode", "auto_header_enabled", "support_link_enabled"):
         if getattr(body, field) is not None:
             updates[field] = getattr(body, field)
     resize_previews = (

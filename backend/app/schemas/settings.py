@@ -110,6 +110,13 @@ class AppSettingsUpdate(BaseModel):
     public_base_url: str | None = Field(default=None, max_length=255)
     # Source-code URL (AGPL §13). "" clears back to the upstream default; an http(s) URL sets it.
     source_url: str | None = Field(default=None, max_length=255)
+    # Legal pages (plain text, rendered with preserved line breaks — never as HTML).
+    # "" clears the page (link hidden, route 404s); None = no change.
+    impressum: str | None = Field(default=None, max_length=20_000)
+    privacy: str | None = Field(default=None, max_length=20_000)
+    # Upstream "Support ♥" link in the public legal strip. The AGPL §13 "Source" link is separate
+    # and never gated by this.
+    support_link_enabled: bool | None = None
     high_res_previews: bool | None = None
     # Opt-in: auto-fill a gallery header from its photos when none is set manually.
     auto_header_enabled: bool | None = None
@@ -188,6 +195,9 @@ class AppSettingsResponse(BaseModel):
     tagline: str | None = None
     public_base_url: str | None = None
     source_url: str | None = None
+    impressum: str | None = None
+    privacy: str | None = None
+    support_link_enabled: bool = True
     high_res_previews: bool = True
     auto_header_enabled: bool = False
     rating_mode: str = "flags"
@@ -214,3 +224,11 @@ class AppSettingsResponse(BaseModel):
 
 class ResetRequest(BaseModel):
     password: str
+
+
+class LegalPageResponse(BaseModel):
+    """A public legal page (Impressum / privacy policy). `content` is plain text — the client
+    renders it with preserved line breaks, never as HTML."""
+
+    doc: Literal["impressum", "privacy"]
+    content: str

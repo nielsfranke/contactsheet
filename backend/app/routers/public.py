@@ -3,6 +3,7 @@
 
 import json
 import os
+from typing import Literal
 
 from fastapi import APIRouter, BackgroundTasks, Depends, File, Form, HTTPException, Query, Request, Response, UploadFile, status
 from fastapi.responses import FileResponse, StreamingResponse
@@ -17,12 +18,13 @@ from app.errors import CodedHTTPException
 from app.dependencies import get_storage
 from app.rate_limit import limiter
 from app.realtime import publish as realtime_publish
-from app.repositories import activity_repo, comment_repo, gallery_repo, image_repo, like_repo, vote_repo, zip_job_repo
+from app.repositories import activity_repo, comment_repo, gallery_repo, image_repo, like_repo, settings_repo, vote_repo, zip_job_repo
 from app.schemas.auth import GalleryAuthRequest, GalleryAuthResponse
 from app.schemas.collection import CollectionCreate, CollectionResponse, CollectionUpdate
 from app.schemas.comment import CommentCreate, CommentResponse
 from app.schemas.gallery import GalleryMetaResponse
 from app.schemas.image import ImageResponse, PublicFlagRequest, PublicLikeRequest, PublicRateRequest, UploadResponse
+from app.schemas.settings import LegalPageResponse
 from app.schemas.vote import VoteCreate, VoteResponse
 from app.schemas.zip_job import PublicZipCreate, ZipJobResponse
 from app.services import activity_service, collection_service, comment_service, gallery_service, image_service, notification_service, watermark_service
@@ -53,6 +55,24 @@ def _require_gallery_access(gallery, gallery_id_from_token: str | None):
     """Raise 401 if gallery is password-protected and token doesn't match."""
     if gallery.password_hash and gallery_id_from_token != gallery.id:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Gallery access token required")
+
+
+@router.get("/legal/{doc}", response_model=LegalPageResponse)
+def get_legal_page(doc: Literal["impressum", "privacy"], db: Session = Depends(get_db)):
+    """Public legal page body (Impressum / privacy policy). Unauthenticated by design — these must
+    be reachable from every public page, so they are gated by neither a share token nor
+    `footer_enabled`.
+
+    Side-effect-free, like `/g/{share_token}/meta`: no activity row, no notification. An unset (or
+    whitespace-only) page returns 404 so the frontend route and its footer link stay absent rather
+    than rendering an empty page.
+
+    The body is returned as plain text and is rendered as text by the client — never as HTML.
+    """
+    content = (getattr(settings_repo.get(db), doc) or "").strip()
+    if not content:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Page not set")
+    return LegalPageResponse(doc=doc, content=content)
 
 
 @router.get("/g/{share_token}")

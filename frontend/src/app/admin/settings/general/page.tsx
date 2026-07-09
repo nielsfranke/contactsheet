@@ -24,6 +24,11 @@ import { useSettingsAutosave } from "@/hooks/useSettingsAutosave";
  */
 const DEFAULT_SOURCE_URL = "https://github.com/nielsfranke/contactsheet";
 
+/** Mirrors `components/ui/input.tsx` (multi-line, auto-height). No `Textarea` primitive exists and
+ * two fields don't justify adding one — revisit if a third long-text setting appears. */
+const LEGAL_TEXTAREA_CLS =
+  "w-full min-w-0 rounded-lg border border-input bg-transparent px-2.5 py-1.5 text-base transition-colors outline-none placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 md:text-sm dark:bg-input/30";
+
 export default function GeneralSettingsPage() {
   const t = useTranslations("settings.general");
   const { save, status } = useSettingsAutosave();
@@ -42,6 +47,13 @@ export default function GeneralSettingsPage() {
 
   const [retention, setRetention] = useState<number | null>(null);
   const effectiveRetention = retention ?? settings?.activity_ip_retention_days ?? 90;
+
+  // Legal pages: free text, saved on blur (like the URL fields). Blank clears the page — its
+  // footer link then disappears and /impressum (or /privacy) 404s.
+  const [impressum, setImpressum] = useState<string | null>(null);
+  const effectiveImpressum = impressum ?? settings?.impressum ?? "";
+  const [privacy, setPrivacy] = useState<string | null>(null);
+  const effectivePrivacy = privacy ?? settings?.privacy ?? "";
 
   if (isLoading) {
     return <SettingsPageSkeleton />;
@@ -104,6 +116,52 @@ export default function GeneralSettingsPage() {
             <p className="text-xs text-muted-foreground">{t("ipRetentionHint")}</p>
           </div>
         )}
+      </section>
+
+      <section className="rounded-lg border border-border bg-card/50 p-5 space-y-4">
+        <h2 className="text-sm font-medium text-foreground">{t("legalTitle")}</h2>
+        <p className="text-xs text-muted-foreground">{t("legalHint")}</p>
+
+        <div className="space-y-1">
+          <Label htmlFor="impressum">{t("impressum")}</Label>
+          <textarea
+            id="impressum"
+            rows={8}
+            value={effectiveImpressum}
+            onChange={(e) => setImpressum(e.target.value)}
+            onBlur={() => {
+              const next = effectiveImpressum.trim();
+              if (next !== (settings?.impressum ?? "")) save({ impressum: next });
+            }}
+            placeholder={t("impressumPlaceholder")}
+            className={LEGAL_TEXTAREA_CLS}
+          />
+          <p className="text-xs text-muted-foreground">{t("impressumHint")}</p>
+        </div>
+
+        <div className="space-y-1">
+          <Label htmlFor="privacy">{t("privacy")}</Label>
+          <textarea
+            id="privacy"
+            rows={8}
+            value={effectivePrivacy}
+            onChange={(e) => setPrivacy(e.target.value)}
+            onBlur={() => {
+              const next = effectivePrivacy.trim();
+              if (next !== (settings?.privacy ?? "")) save({ privacy: next });
+            }}
+            placeholder={t("privacyPlaceholder")}
+            className={LEGAL_TEXTAREA_CLS}
+          />
+          <p className="text-xs text-muted-foreground">{t("privacyHint")}</p>
+        </div>
+
+        <Toggle
+          label={t("supportLink")}
+          hint={t("supportLinkHint")}
+          checked={settings?.support_link_enabled ?? false}
+          onChange={(v) => save({ support_link_enabled: v })}
+        />
       </section>
 
       <section className="rounded-lg border border-border bg-card/50 p-5 space-y-4">

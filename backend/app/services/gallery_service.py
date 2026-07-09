@@ -620,6 +620,12 @@ def get_public_gallery(
         "accent_color": app_settings.accent_color,
         # Global branding footer — only surfaced when enabled.
         "footer": app_settings.footer if app_settings.footer_enabled else None,
+        # Always-on legal strip. Deliberately NOT gated by footer_enabled: an Impressum must be
+        # reachable from every page, and the AGPL §13 source offer is not an opt-out.
+        "source_url": app_settings.source_url,
+        "support_link_enabled": app_settings.support_link_enabled,
+        "impressum_available": bool((app_settings.impressum or "").strip()),
+        "privacy_available": bool((app_settings.privacy or "").strip()),
         # Studio identity for the client gallery header.
         "instance_name": app_settings.instance_name,
         "logo_url": f"/branding/{app_settings.logo_filename}" if app_settings.logo_filename else None,

@@ -1,7 +1,7 @@
 # SPDX-FileCopyrightText: 2026 Niels Franke
 # SPDX-License-Identifier: AGPL-3.0-or-later
 
-from sqlalchemy import JSON, Boolean, Integer, String
+from sqlalchemy import JSON, Boolean, Integer, String, Text
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.database import Base
@@ -33,6 +33,21 @@ class AppSettings(Base):
 
     # Source-code repository URL offered to users (AGPL §13). None = upstream default (frontend).
     source_url: Mapped[str | None] = mapped_column(String(255), nullable=True)
+
+    # Legal pages shown in the public gallery's always-on legal strip. Plain text (rendered with
+    # preserved line breaks, never as HTML). Empty/None = the page 404s and its footer link is
+    # hidden. See docs/architecture/impressum-and-powered-by-strip.md.
+    impressum: Mapped[str | None] = mapped_column(Text, nullable=True)
+    privacy: Mapped[str | None] = mapped_column(Text, nullable=True)
+
+    # Upstream "Support ♥" link in the legal strip. The model default (True) and the migration's
+    # server_default ("0") deliberately DISAGREE — that asymmetry *is* the feature:
+    #   • fresh install  → migrations build an empty table, then settings_repo.get() INSERTs the
+    #     singleton using this Python-side default   → True  (support link on)
+    #   • existing install → add_column backfills the existing row from the server default
+    #                                                → False (support link stays off)
+    # The AGPL §13 "Source" link beside it is NOT gated by this — §13 is not an opt-out.
+    support_link_enabled: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
 
     # Public lightbox backdrop tone: "dimmed" (black/95, default), "black", "white", "transparent".
     lightbox_backdrop: Mapped[str] = mapped_column(String(20), nullable=False, default="dimmed")

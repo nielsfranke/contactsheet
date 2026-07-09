@@ -12,6 +12,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **Impressum and privacy pages.** Two new free-text fields (**Settings → General → Legal pages**)
+  publish an imprint at `/impressum` and a privacy policy at `/privacy`, linked from the bottom of
+  every client gallery. Leave a field empty and its link disappears and the page 404s. The text is
+  rendered as plain text with your line breaks preserved — never as HTML.
+- **A "Support" link for the ContactSheet project**, in the same footer strip. It is **on for new
+  installations and stays off for instances that already exist**, so an upgrade never adds a
+  donation link to galleries you have already delivered. Toggle it under Settings → General.
+
+### Fixed
+
+- **The AGPL source link is now actually shown to clients.** `Settings → General → Source URL` was
+  stored and editable but rendered on no public page — AGPL §13 requires offering the running
+  source to *network users* (your clients), not just to the admin. Every public gallery now carries
+  a "Source" link in the new footer strip. It is deliberately **not** hidden by the
+  branding-footer toggle, and it points at your custom source URL when a fork sets one.
+
 ## [1.8.1] - 2026-07-08
 
 ### Fixed

@@ -511,6 +511,9 @@ export const api = {
   },
 
   public: {
+    /** Impressum / privacy body. Throws a 404 ApiError when the page isn't set. */
+    legal: (doc: "impressum" | "privacy") =>
+      request<{ doc: "impressum" | "privacy"; content: string }>(`/api/public/legal/${doc}`),
     getGallery: (token: string, galleryToken?: string) =>
       request<PublicGalleryResult>(`/api/public/g/${token}`, {
         headers: authHeaders(galleryToken),
