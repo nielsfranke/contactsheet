@@ -29,69 +29,81 @@ export function GalleryLegalStrip({
   impressumAvailable,
   privacyAvailable,
   bright,
+  themed = false,
 }: {
   sourceUrl: string | null;
   supportEnabled: boolean;
   impressumAvailable: boolean;
   privacyAvailable: boolean;
   bright: boolean;
+  /** Use admin theme tokens instead of the public bright/dark zinc scheme (login / setup screens,
+   * which live on the admin surface). Mirrors `GalleryFooter`'s `themed` prop. */
+  themed?: boolean;
 }) {
   const t = useTranslations("gallery.legal");
 
   // Fork-aware: a modified instance points this at its own repo (AGPL §13).
   const source = (sourceUrl ?? "").trim() || PROJECT_URL;
 
-  const textCls = bright ? "text-zinc-500" : "text-zinc-500";
-  const linkCls = bright
-    ? "hover:text-zinc-800 transition-colors"
-    : "hover:text-zinc-300 transition-colors";
-  const borderCls = bright ? "border-zinc-200" : "border-zinc-800";
+  const textCls = themed ? "text-muted-foreground" : "text-zinc-500";
+  const linkCls = themed
+    ? "hover:text-foreground transition-colors"
+    : bright
+      ? "hover:text-zinc-800 transition-colors"
+      : "hover:text-zinc-300 transition-colors";
+  const borderCls = themed ? "border-border" : bright ? "border-zinc-200" : "border-zinc-800";
+
+  // Items are assembled first so the separator can be a *trailing* `after:` pseudo-element on every
+  // item but the last. Rendering separators as standalone siblings lets a wrapped line begin with a
+  // stray "·" (visible on the narrow login card) — this way a wrap always breaks before a label.
+  const items = [
+    impressumAvailable && (
+      <Link key="impressum" href="/impressum" className={linkCls}>
+        {t("impressum")}
+      </Link>
+    ),
+    privacyAvailable && (
+      <Link key="privacy" href="/privacy" className={linkCls}>
+        {t("privacy")}
+      </Link>
+    ),
+    <span key="powered">{t("poweredBy")}</span>,
+    // AGPL §13 — never hidden.
+    <a key="source" href={source} target="_blank" rel="noopener noreferrer" className={linkCls}>
+      {t("source")}
+    </a>,
+    supportEnabled && (
+      <a
+        key="support"
+        href={SUPPORT_URL}
+        target="_blank"
+        rel="noopener noreferrer"
+        className={`inline-flex items-center gap-1 ${linkCls}`}
+      >
+        {t("support")}
+        <Heart className="size-3" aria-hidden="true" />
+      </a>
+    ),
+  ].filter(Boolean);
 
   return (
     <div className={`mt-8 border-t ${borderCls} px-4 py-4`}>
       <nav
         aria-label={t("aria")}
-        className={`flex flex-wrap items-center justify-center gap-x-2 gap-y-1 text-center text-xs ${textCls}`}
+        className={`flex flex-wrap items-center justify-center gap-y-1 text-center text-xs ${textCls}`}
       >
-        {impressumAvailable && (
-          <>
-            <Link href="/impressum" className={linkCls}>
-              {t("impressum")}
-            </Link>
-            <span aria-hidden="true">·</span>
-          </>
-        )}
-        {privacyAvailable && (
-          <>
-            <Link href="/privacy" className={linkCls}>
-              {t("privacy")}
-            </Link>
-            <span aria-hidden="true">·</span>
-          </>
-        )}
-
-        <span>{t("poweredBy")}</span>
-        <span aria-hidden="true">·</span>
-
-        {/* AGPL §13 — never hidden. */}
-        <a href={source} target="_blank" rel="noopener noreferrer" className={linkCls}>
-          {t("source")}
-        </a>
-
-        {supportEnabled && (
-          <>
-            <span aria-hidden="true">·</span>
-            <a
-              href={SUPPORT_URL}
-              target="_blank"
-              rel="noopener noreferrer"
-              className={`inline-flex items-center gap-1 ${linkCls}`}
-            >
-              {t("support")}
-              <Heart className="size-3" aria-hidden="true" />
-            </a>
-          </>
-        )}
+        {items.map((item, i) => (
+          <span
+            key={i}
+            className={
+              i < items.length - 1
+                ? "after:mx-2 after:content-['·'] after:opacity-70"
+                : undefined
+            }
+          >
+            {item}
+          </span>
+        ))}
       </nav>
     </div>
   );

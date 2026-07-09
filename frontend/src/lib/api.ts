@@ -100,6 +100,10 @@ export const api = {
         accent_color: string;
         accent_gradient: boolean;
         logo_url: string | null;
+        source_url: string | null;
+        support_link_enabled: boolean;
+        impressum_available: boolean;
+        privacy_available: boolean;
       }>("/api/setup/status"),
     complete: (username: string, password: string) =>
       request<{ ok: boolean }>("/api/setup", {

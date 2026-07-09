@@ -21,6 +21,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **A "Support" link for the ContactSheet project**, in the same footer strip. It is **on for new
   installations and stays off for instances that already exist**, so an upgrade never adds a
   donation link to galleries you have already delivered. Toggle it under Settings → General.
+- The same footer strip now also appears on the **login and first-run setup screens**, so the
+  imprint and the source link are reachable from every public page of the app.
 
 ### Fixed
 

@@ -13,6 +13,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "sonner";
+import { AuthLegalStrip } from "@/components/legal/AuthLegalStrip";
 
 export default function SetupPage() {
   const router = useRouter();
@@ -49,7 +50,7 @@ export default function SetupPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background">
+    <div className="min-h-screen flex flex-col items-center justify-center gap-4 bg-background">
       <Card className="w-full max-w-sm">
         <CardHeader>
           <CardTitle className="text-xl text-center">{t("setupTitle")}</CardTitle>
@@ -99,6 +100,7 @@ export default function SetupPage() {
           </form>
         </CardContent>
       </Card>
+      <AuthLegalStrip />
     </div>
   );
 }

@@ -158,6 +158,30 @@ def test_support_link_flag_reaches_the_public_gallery(admin_client, client, db):
     assert client.get(f"/api/public/g/{gallery['share_token']}").json()["support_link_enabled"] is False
 
 
+# --- pre-auth strip (/login, /setup) -----------------------------------------------------------
+
+def test_setup_status_exposes_legal_strip_fields(client, db):
+    """`/login` and `/setup` are public pages, so the strip must reach them before auth. The
+    already-public setup/status payload carries the flags — never the page bodies."""
+    settings_repo.update(db, impressum="Imprint", source_url="https://example.test/src")
+
+    body = client.get("/api/setup/status").json()
+    assert body["source_url"] == "https://example.test/src"
+    assert body["support_link_enabled"] is True
+    assert body["impressum_available"] is True
+    assert body["privacy_available"] is False
+    assert "impressum" not in body and "privacy" not in body
+
+
+def test_setup_status_stays_unauthenticated_and_leaks_nothing(client, db):
+    """It is reachable pre-setup (no admin exists yet) and must not expose secrets."""
+    settings_repo.update(db, impressum="Imprint")
+    r = client.get("/api/setup/status")
+    assert r.status_code == 200
+    for secret in ("admin_password_hash", "secret_key", "admin_username", "notifications"):
+        assert secret not in r.json()
+
+
 # --- admin settings round-trip ----------------------------------------------------------------
 
 def test_admin_can_set_and_clear_legal_pages(admin_client):

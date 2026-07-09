@@ -176,8 +176,13 @@ Migration **0047** — two columns on `app_settings`:
 2. **Support target** → **hardcoded upstream** (`https://ko-fi.com/nielsfranke`, in
    `GalleryLegalStrip.tsx`). A fork wanting its own donation link is editing source anyway, and
    `source_url` already covers fork attribution.
-3. **Strip on admin surfaces** → **gallery only.** `/login` and `/setup` keep generic chrome.
-   Follow-up if §5 DDG is read to reach them.
+3. **Strip on admin surfaces** → initially gallery-only; **`/login` and `/setup` added 2026-07-09.**
+   They are public pages, so the same reasoning applies: an Imprint must be reachable from every one
+   of them, and the §13 source offer is made to anyone who can reach the app. They read the
+   already-public `GET /api/setup/status` (which the login screen fetches anyway for branding),
+   extended with the same four flags — no new endpoint, no auth. Rendered via `AuthLegalStrip`,
+   which passes `themed` so the strip uses admin theme tokens instead of the gallery's zinc scheme.
+   `/admin` itself stays clean (it is behind auth, not a public page).
 
 ## Follow-ups (out of scope)
 
@@ -185,7 +190,6 @@ Migration **0047** — two columns on `app_settings`:
   renderer would introduce stored-XSS surface for an admin-authored field).
 - A `Textarea` primitive — the two fields reuse `Input`'s classes via `LEGAL_TEXTAREA_CLS`; worth
   extracting if a third long-text setting appears.
-- The legal strip on `/login` / `/setup`.
 
 ## Deployment impact
 

@@ -309,6 +309,9 @@ Key non-obvious constraints — full details in `docs/architecture/`.
 - **No encryption / no scheduling yet** — archives are plaintext (they hold the password hash + secret key; the UI warns). Both are documented follow-ups. See `docs/architecture/backup-restore.md`.
 
 ### Legal strip (Impressum / privacy / source / support)
+- Renders on every **public** surface: the gallery (`GalleryLegalStrip`) and `/login` + `/setup`
+  (`AuthLegalStrip`, which reads the pre-auth `GET /api/setup/status` and passes `themed` for admin
+  tokens). `/admin` is behind auth, so it stays clean.
 - A `GalleryLegalStrip` renders at the bottom of **every** public gallery and is **not** gated by
   `footer_enabled` (which governs only the photographer's optional branding footer above it): an
   Impressum must be one click from every page, and the **AGPL §13 source offer is made to *network

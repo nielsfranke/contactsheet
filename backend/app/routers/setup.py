@@ -30,6 +30,13 @@ def setup_status(db: Session = Depends(get_db)):
         # Branding logo (served via the public /branding mount) so the login screen can show the
         # instance's own logo when one is uploaded, falling back to the fixed product mark otherwise.
         "logo_url": f"/branding/{s.logo_filename}" if s.logo_filename else None,
+        # Legal strip, mirroring GalleryPublicResponse. Exposed pre-auth because /login and /setup
+        # are public pages: an Impressum must be reachable from every one of them, and the AGPL §13
+        # source offer is made to anyone who can reach the app. Booleans, never the page bodies.
+        "source_url": s.source_url,
+        "support_link_enabled": s.support_link_enabled,
+        "impressum_available": bool((s.impressum or "").strip()),
+        "privacy_available": bool((s.privacy or "").strip()),
     }
 
 
