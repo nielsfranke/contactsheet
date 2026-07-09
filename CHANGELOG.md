@@ -12,6 +12,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.9.0] - 2026-07-09
+
 ### Added
 
 - **Impressum and privacy pages.** Two new free-text fields (**Settings → General → Legal pages**)
@@ -23,6 +25,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   donation link to galleries you have already delivered. Toggle it under Settings → General.
 - The same footer strip now also appears on the **login and first-run setup screens**, so the
   imprint and the source link are reachable from every public page of the app.
+- **The auto-picked gallery header is now visible in the admin view.** With "auto-fill header"
+  enabled, the fallback was only computed for the client-facing gallery, so you couldn't tell
+  whether the automatic pick had worked without opening the share link. The gallery detail page now
+  shows the same banner the client sees, badged "Auto-picked"; one click still overrides it.
 
 ### Fixed
 
@@ -31,6 +37,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   source to *network users* (your clients), not just to the admin. Every public gallery now carries
   a "Source" link in the new footer strip. It is deliberately **not** hidden by the
   branding-footer toggle, and it points at your custom source URL when a fork sets one.
+
+### Upgrade notes
+
+- **Database migration 0047** (`impressum` / `privacy` / `support_link_enabled` on `app_settings`)
+  applies automatically on container start — `alembic upgrade head` runs in the entrypoint. No
+  manual step, no `nginx.conf` change, no new environment variables.
+- **Existing instances keep the "Support" link off.** It only defaults on for brand-new
+  installations, so upgrading never adds an upstream donation link to galleries you have already
+  delivered. Enable it under Settings → General if you'd like to.
+- The **"Source" link is new on every public gallery** and cannot be switched off — it is the AGPL
+  §13 source offer, which was previously missing from the client-facing pages. If you run a modified
+  build, point Settings → General → Source URL at your own repository.
 
 ## [1.8.1] - 2026-07-08
 
@@ -864,7 +882,8 @@ contract are considered stable as of this release.
   caps (stricter for public uploads).
 - Docker Compose deployment (backend + frontend + nginx); SQLite + local filesystem.
 
-[Unreleased]: https://github.com/nielsfranke/contactsheet/compare/v1.8.1...HEAD
+[Unreleased]: https://github.com/nielsfranke/contactsheet/compare/v1.9.0...HEAD
+[1.9.0]: https://github.com/nielsfranke/contactsheet/compare/v1.8.1...v1.9.0
 [1.8.1]: https://github.com/nielsfranke/contactsheet/compare/v1.8.0...v1.8.1
 [1.8.0]: https://github.com/nielsfranke/contactsheet/compare/v1.7.1...v1.8.0
 [1.7.1]: https://github.com/nielsfranke/contactsheet/compare/v1.7.0...v1.7.1
