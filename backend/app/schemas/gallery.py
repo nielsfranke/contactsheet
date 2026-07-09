@@ -246,6 +246,9 @@ class GalleryResponse(BaseModel):
     watermark_settings: str | None = None
     headline: str | None = None
     header_image_url: str | None = None
+    # Auto-header fallback — populated only by the gallery *detail* endpoint (the tree list can't
+    # afford the per-gallery query), so the admin previews the banner the client will see.
+    header_image_fallback_url: str | None = None
     expires_at: datetime | None
 
     # Presentation

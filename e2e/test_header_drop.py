@@ -146,6 +146,80 @@ def test_header_and_cover_file_drop(page, frontend_url):
     print("[cover] large drop → success toast ✓")
 
 
+def _set_auto_header(page, frontend_url, on: bool):
+    r = page.request.patch(
+        f"{frontend_url}/api/admin/settings", data={"auto_header_enabled": on}
+    )
+    assert r.ok, r.text()
+
+
+def test_auto_header_previews_in_the_admin_view(page, frontend_url):
+    """The photographer must see the auto-picked banner on the admin detail page, badged as
+    automatic, so they can tell at a glance whether the pick works or needs overriding.
+
+    The instance flag is global, so it's turned back off in a finally — the other specs in this
+    session's stack assume the default."""
+    _ensure_logged_in(page, frontend_url)
+    api = page.request
+
+    gid = api.post(
+        f"{frontend_url}/api/galleries", data={"name": "Auto Header", "mode": "presentation"}
+    ).json()["id"]
+    r = api.post(
+        f"{frontend_url}/api/galleries/{gid}/images",
+        multipart={"files": {"name": "photo.jpg", "mimeType": "image/jpeg", "buffer": _jpeg((1200, 800))}},
+    )
+    assert r.ok, r.text()
+
+    # Renditions must exist before a photo becomes an auto-header candidate.
+    for _ in range(60):
+        imgs = api.get(f"{frontend_url}/api/galleries/{gid}/images").json()
+        if imgs and imgs[0].get("thumb_url"):
+            break
+        page.wait_for_timeout(500)
+    else:
+        raise AssertionError("image never finished processing")
+
+    strip = 'img[alt="Header"]'
+    badge = page.get_by_text("Auto-picked", exact=False)
+
+    try:
+        # Off (default): no header set → no banner at all. (The page renders a skeleton until the
+        # gallery query resolves, so the name proves we're past the loading state.)
+        page.goto(f"{frontend_url}/admin/galleries/{gid}")
+        page.get_by_text("Auto Header").first.wait_for(timeout=30_000)
+        assert page.locator(strip).count() == 0, "banner shown while auto-header is off"
+        print("\n[auto-header] off → no banner ✓")
+
+        # On: the banner appears, serving the photo's `medium` rendition, badged as automatic.
+        _set_auto_header(page, frontend_url, True)
+        page.goto(f"{frontend_url}/admin/galleries/{gid}")
+        page.wait_for_selector(strip, timeout=30_000)
+        src = page.locator(strip).get_attribute("src")
+        assert "/medium/" in src, f"auto-header should serve the medium rendition, got {src!r}"
+        badge.wait_for(timeout=10_000)
+        _assert_no_error(page)
+        print("[auto-header] on → banner + 'Auto-picked' badge ✓")
+
+        # The banner really renders (the URL serves bytes through the same path the client uses).
+        assert api.get(f"{frontend_url}{src}").ok, f"auto-header image did not serve: {src}"
+
+        # A manual header wins and drops the badge — it's no longer an automatic pick.
+        r = api.post(
+            f"{frontend_url}/api/galleries/{gid}/header-image",
+            multipart={"file": {"name": "manual.jpg", "mimeType": "image/jpeg", "buffer": _jpeg((1200, 800))}},
+        )
+        assert r.ok, r.text()
+        page.goto(f"{frontend_url}/admin/galleries/{gid}")
+        page.wait_for_selector(strip, timeout=30_000)
+        manual_src = page.locator(strip).get_attribute("src")
+        assert "/branding/gallery-headers/" in manual_src, manual_src
+        assert badge.count() == 0, "manual header still badged as auto-picked"
+        print("[auto-header] manual header → banner without badge ✓")
+    finally:
+        _set_auto_header(page, frontend_url, False)
+
+
 def test_header_over_size_limit_reads_cleanly(page, frontend_url):
     """A file above the 100 MB header cap must answer with a readable detail, not a 422/500 — the
     exact HTTP the browser upload travels (Next rewrite → backend). The frontend renders `detail`

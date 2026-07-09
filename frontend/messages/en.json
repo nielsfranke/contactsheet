@@ -379,6 +379,7 @@
     "detail": {
       "loading": "Loading…",
       "editHeaderImage": "Edit header image",
+      "autoHeader": "Auto-picked",
       "setHeaderImage": "Set Header Image",
       "setCoverImage": "Set Cover Image",
       "emptyNoImages": "No images yet — drag photos onto the zone below.",

@@ -111,6 +111,8 @@ export interface GalleryResponse extends GallerySettings {
   watermark_settings?: string | null;  // JSON string of WatermarkSettings
   headline: string | null;
   header_image_url: string | null;
+  /** Auto-picked header photo (instance opt-in). Only the detail endpoint fills this. */
+  header_image_fallback_url: string | null;
   expires_at: string | null;
   header_focus_x: number;
   header_focus_y: number;

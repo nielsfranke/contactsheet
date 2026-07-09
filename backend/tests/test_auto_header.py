@@ -99,6 +99,49 @@ def test_single_photo_gallery_uses_that_photo(admin_client):
     assert body["header_image_fallback_url"] and "/medium/" in body["header_image_fallback_url"]
 
 
+def _admin_detail(admin_client, gallery_id):
+    r = admin_client.get(f"/api/galleries/{gallery_id}")
+    assert r.status_code == 200, r.text
+    return r.json()
+
+
+def test_admin_detail_previews_the_same_fallback_as_the_client(admin_client):
+    # The photographer must see the auto-picked banner in the admin view to judge whether it works.
+    _enable(admin_client)
+    g = make_gallery(admin_client, "Preview")
+    for i in range(3):
+        add_image(g["id"], sort_order=i)
+
+    public = _public(admin_client, g["share_token"])
+    detail = _admin_detail(admin_client, g["id"])
+    assert detail["header_image_url"] is None
+    assert detail["header_image_fallback_url"] == public["header_image_fallback_url"]
+
+
+def test_admin_detail_fallback_is_none_when_setting_off_or_header_set(admin_client):
+    g = make_gallery(admin_client, "Off")
+    add_image(g["id"], sort_order=0)
+    assert _admin_detail(admin_client, g["id"])["header_image_fallback_url"] is None
+
+    _enable(admin_client)
+    assert _admin_detail(admin_client, g["id"])["header_image_fallback_url"] is not None
+    _set_header(admin_client, g["id"])
+    detail = _admin_detail(admin_client, g["id"])
+    assert detail["header_image_url"] and detail["header_image_fallback_url"] is None
+
+
+def test_gallery_tree_skips_the_fallback(admin_client):
+    """Perf contract: the pick costs a query per gallery, so only the detail endpoint computes it."""
+    _enable(admin_client)
+    g = make_gallery(admin_client, "Tree")
+    add_image(g["id"], sort_order=0)
+
+    r = admin_client.get("/api/galleries")
+    assert r.status_code == 200, r.text
+    node = next(n for n in r.json() if n["id"] == g["id"])
+    assert node["header_image_fallback_url"] is None
+
+
 def test_hero_medium_url_watermark_routes_through_proxy():
     """A watermarked gallery must serve the auto-header via the access-checked proxy (which
     composites the watermark) — never the raw static /uploads path — so it can't leak un-watermarked."""

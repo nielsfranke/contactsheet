@@ -379,6 +379,7 @@
     "detail": {
       "loading": "Wird geladen…",
       "editHeaderImage": "Header-Bild bearbeiten",
+      "autoHeader": "Automatisch gewählt",
       "setHeaderImage": "Header-Bild festlegen",
       "setCoverImage": "Cover-Bild festlegen",
       "emptyNoImages": "Noch keine Bilder — ziehen Sie Fotos in den Bereich unten.",

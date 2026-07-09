@@ -22,7 +22,8 @@ import { GalleryFooter } from "@/components/gallery/GalleryFooter";
 import { useAdminMobileHeader } from "@/store/adminMobileHeader";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Image as ImageIcon, Plus } from "lucide-react";
+import { OverlayPill } from "@/components/chrome/OverlayPill";
+import { Image as ImageIcon, Plus, Sparkles } from "lucide-react";
 
 export default function GalleryDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -143,6 +144,12 @@ export default function GalleryDetailPage() {
   // photos is noise). A leaf or a mixed gallery (has photos) stays photo-first.
   const isContainer = images.length === 0 && children.length > 0;
 
+  // Preview the banner the client actually gets: a manual header wins, else the auto-picked photo
+  // (only present when the instance opted in). Mirrors the public layouts' `?? fallback`, so the
+  // photographer sees straight away whether the automatic pick works or needs overriding.
+  const headerImage = gallery.header_image_url ?? gallery.header_image_fallback_url;
+  const headerIsAuto = !gallery.header_image_url && !!gallery.header_image_fallback_url;
+
   // The sub-galleries block — rendered at the top for a container, at the bottom otherwise.
   const subGalleriesSection = (
     <section className="pt-2">
@@ -222,14 +229,14 @@ export default function GalleryDetailPage() {
           a separate in-page bar, so the parent context shares one row with the menu button. */}
 
       {/* Full-width header strip — sits above the padded canvas */}
-      {gallery.header_image_url ? (
+      {headerImage ? (
         <button
           onClick={() => setHeaderImageOpen(true)}
           className="group relative block w-full overflow-hidden"
         >
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
-            src={gallery.header_image_url}
+            src={headerImage}
             alt="Header"
             className="w-full object-cover transition-[filter] duration-200 group-hover:brightness-75"
             style={{
@@ -237,9 +244,14 @@ export default function GalleryDetailPage() {
               objectPosition: `${gallery.header_focus_x ?? 50}% ${gallery.header_focus_y ?? 50}%`,
             }}
           />
+          {headerIsAuto && (
+            <OverlayPill variant="badge" size="sm" shape="pill" className="absolute left-3 top-3">
+              <Sparkles size={12} /> {t("autoHeader")}
+            </OverlayPill>
+          )}
           <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-200">
             <span className="inline-flex items-center gap-2 rounded-lg bg-black/60 px-4 py-2 text-sm font-medium text-white backdrop-blur-sm">
-              <ImageIcon size={14} /> {t("editHeaderImage")}
+              <ImageIcon size={14} /> {headerIsAuto ? t("setHeaderImage") : t("editHeaderImage")}
             </span>
           </div>
         </button>

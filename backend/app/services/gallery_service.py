@@ -201,17 +201,25 @@ def _build_response(
     image_counts: dict[str, int] | None = None,
     cover_images: dict[str, object] | None = None,
     comment_counts: dict[str, int] | None = None,
+    include_auto_header: bool = False,
 ) -> GalleryResponse:
     image_count = image_counts.get(gallery.id, 0) if image_counts is not None else gallery_repo.count_images(db, gallery.id)
     cover = cover_images.get(gallery.id) if cover_images is not None else gallery_repo.get_cover_image(db, gallery)
     cover_url = _effective_cover_url(gallery, cover, storage)
     gallery_comment_count = comment_counts.get(gallery.id, 0) if comment_counts is not None else comment_repo.count_by_gallery(db, gallery.id)
+    # Off by default: the auto-header pick costs a query per gallery, which the tree list can't
+    # afford. Only the detail endpoint (one gallery) opts in, so the admin sees the same banner
+    # the client gets. Watermarks are off — admin views are never watermarked (see image_service).
+    fallback_url = None
+    if include_auto_header and settings_repo.get(db).auto_header_enabled:
+        fallback_url = _auto_header_fallback_url(db, gallery, cover, image_count, False, storage)
     return GalleryResponse.model_validate({
         **gallery.__dict__,
         "image_count": image_count,
         "comment_count": gallery_comment_count,
         "cover_image_url": cover_url,
         "header_image_url": _header_image_url(gallery),
+        "header_image_fallback_url": fallback_url,
         "children": [],
     })
 
@@ -251,7 +259,7 @@ def get_gallery(db: Session, gallery_id: str, storage: StorageProvider) -> Galle
     gallery = gallery_repo.get_by_id(db, gallery_id)
     if not gallery:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Gallery not found")
-    return _build_response(gallery, db, storage)
+    return _build_response(gallery, db, storage, include_auto_header=True)
 
 
 def create_gallery(db: Session, data: GalleryCreate, storage: StorageProvider) -> GalleryResponse:
