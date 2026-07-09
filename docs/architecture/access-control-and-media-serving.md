@@ -52,9 +52,12 @@ Protection rests on `gallery_id` + `stored_filename` being unguessable UUIDv4s. 
 ## Upload pipeline hardening
 
 - **Decompression-bomb / giant-dimension guard** — `process_image` rejects on the header-declared
-  pixel area (`settings.max_image_pixels`, default 100 MP) *before* allocating any bitmap, and
-  `Image.MAX_IMAGE_PIXELS` is pinned as a second layer. Over-limit files end `processing_status =
-  error`, never an OOM.
+  pixel area (`settings.max_image_pixels`, default **250 MP**, env `MAX_IMAGE_PIXELS`) *before*
+  allocating any bitmap, and `Image.MAX_IMAGE_PIXELS` is pinned as a second layer. Over-limit files
+  end `processing_status = error`, never an OOM. The **attacker-reachable client-upload path keeps a
+  far stricter 50 MP cap** (`client_upload_max_pixels`) — the admin ceiling was raised to 250 MP so
+  high-end medium format (Phase One 150 MP, GFX 100) and panorama stitches process instead of
+  failing rendition.
 - **MIME / magic / naming** — stored name is always a server `{uuid}{ext}` derived from the
   *declared* MIME, magic bytes are checked against that MIME, renditions are re-encoded by Pillow,
   and files are served with extension-derived content-type + `X-Content-Type-Options: nosniff`. A

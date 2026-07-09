@@ -3,6 +3,14 @@
 Status: **implemented** (Phase 1, 2026-06-22). Decisions: `max_upload_bytes` → **300 MB**;
 client-upload path **also** accepts the new formats (existing size caps apply); RAW via **`rawpy`**.
 
+> **Superseded in part by [psb-support.md](psb-support.md) (2026-06-22).** This doc rejects PSB with
+> `upload_psb_unsupported` (see Detection + "Why this stays lean" below). That decision was reversed
+> the same month: PSB is now **accepted**, previewed from the thumbnail Photoshop embeds near the
+> start of the file — no heavy decoder, no convert sidecar. `detect_format` returns
+> `Format("psb", …)` instead of a rejection, the `upload_psb_unsupported` error code is gone, and a
+> PSB without an embedded thumbnail lands as `processing_status="no_preview"` (stored + downloadable,
+> no rendition). Everything else in this doc still holds.
+
 **Verified:** backend + frontend suites green; detector unit-tested across all families; TIFF upload
 renders to `done`; PSB rejected with `upload_psb_unsupported`. `rawpy==0.24.0` installs from a
 self-contained wheel on `python:3.12-slim` (no apt/Dockerfile change).
@@ -55,7 +63,8 @@ served for download exactly as today.
   addition is small.
 - **No DB migration.** `images.mime_type` is already a free-form string; no new columns.
 - **PSB is rejected, not half-supported** — Pillow can't read it and the files are often
-  multi-GB. Clean 415 with a dedicated error code; revisit in Phase 2.
+  multi-GB. Clean 415 with a dedicated error code; revisit in Phase 2. *(Superseded: PSB is now
+  accepted via its embedded thumbnail — see [psb-support.md](psb-support.md).)*
 
 ## Format detection (the real change)
 
@@ -72,7 +81,7 @@ replaces MIME-trust with **content sniffing + extension disambiguation** in a ne
 | `89 PNG` | — | `png` |
 | `RIFF`…`WEBP` | — | `webp` |
 | `II*\0` / `MM\0*` (TIFF) | ext ∈ {.tif,.tiff} → TIFF; ext ∈ raw set (.cr2/.nef/.arw/.dng/.pef/.srw…) → RAW | `tiff` / `raw` |
-| `8BPS` | version word `00 01` → PSD; `00 02` → **PSB → reject** (`upload_psb_unsupported`) | `psd` |
+| `8BPS` | version word `00 01` → PSD; `00 02` → PSB (*was reject; now accepted — see [psb-support.md](psb-support.md)*) | `psd` / `psb` |
 | `FUJIFILMCCD-RAW` | — | `raw` (RAF) |
 | `IIU\0` / `IIRO` / `MMOR` | — | `raw` (RW2 / ORF) |
 | ISO-BMFF `ftyp` | brand `crx ` → RAW (CR3); else video as today | `raw` / `mp4`/`mov` |

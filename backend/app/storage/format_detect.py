@@ -13,8 +13,10 @@ drives the pipeline:
   ``tasks/image_processing``). Stored extension keeps the real raw extension so the delivered
   original opens in the right app.
 - ``video``  — stored as-is, no Pillow pipeline.
-- ``reject_psb`` — Photoshop *large-document* (.psb): detected so the caller can return a specific
-  error. Pillow can't read it; full support is Phase 2 (a convert sidecar).
+- ``psb``    — Photoshop *large-document* (.psb): Pillow can't decode it, so the rendition worker
+  reads the thumbnail Photoshop embeds near the start of the file (see ``storage/psd_thumbnail``).
+  With no embedded thumbnail the image lands ``processing_status="no_preview"`` — stored and
+  downloadable, but no rendition.
 
 ``detect_format`` never trusts the extension alone: the magic must match. The extension only
 *disambiguates* the many TIFF-based raws (.cr2/.nef/.arw/.dng…) from a real .tiff, since they share

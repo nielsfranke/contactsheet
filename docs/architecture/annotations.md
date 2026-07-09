@@ -212,4 +212,3 @@ rate limiting (inherits the comment endpoint's existing posture).
 - **Video annotations** (frame-timed anchors).
 - **Presentation-mode** annotations — review (collaboration) mode only, like all client feedback.
 - **Annotation export** (burned-in onto a downloaded JPEG / contact sheet).
-```

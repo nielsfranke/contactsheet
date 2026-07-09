@@ -119,5 +119,3 @@ this reduces load headroom. Not required for the fix.
   no migration.
 - New optional env vars (`DB_POOL_SIZE`, `DB_MAX_OVERFLOW`, `DB_POOL_TIMEOUT`) have safe
   defaults; the current deploy needs no compose edit to benefit.
-</content>
-</invoke>

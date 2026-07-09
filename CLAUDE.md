@@ -182,6 +182,7 @@ Migrations live in `backend/alembic/versions/`. Always create a new file — nev
 0043 — client review-mode switch: galleries.client_mode_switch_enabled
 0044 — lightbox zoom settings: app_settings.lightbox_zoom_enabled + lightbox_zoom_max
 0045 — per-container sub-gallery presets: galleries.subgallery_presets JSON (per-mode look & behaviour templates for new sub-galleries)
+0046 — optional auto-fill header: app_settings.auto_header_enabled (display-time fallback, off by default)
 ```
 
 ## Feature invariants

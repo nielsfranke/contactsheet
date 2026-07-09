@@ -118,4 +118,3 @@ implementation; the builder is unit-trivial and isolated in `presets.py`.)
 - Frontend: live-drive `/admin/settings/notifications` — add a Pushover + an Email channel via the
   pickers, Test each, reload and confirm fields repopulate with masked secrets, edit a non-secret
   field and save without losing credentials. `tsc` / `lint` / `validate-i18n` / `build` green.
-```
