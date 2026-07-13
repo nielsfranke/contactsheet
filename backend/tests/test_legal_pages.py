@@ -7,6 +7,7 @@ See docs/architecture/impressum-and-powered-by-strip.md."""
 
 import os
 import subprocess
+import sys
 from pathlib import Path
 
 import sqlalchemy as sa
@@ -36,9 +37,13 @@ def test_existing_install_keeps_support_link_off(tmp_path):
     `start.sh` runs, rather than re-typing its DDL.
 
     Driven as a subprocess because `backend/alembic/` (the migrations package) shadows the Alembic
-    library on sys.path, so `from alembic import command` can't be imported here.
+    library on sys.path, so `from alembic import command` can't be imported here. The `alembic`
+    console script is resolved next to the running interpreter (`sys.executable`) rather than a
+    hard-coded `.venv/` — CI installs deps straight into the runner's Python (no virtualenv), so a
+    `.venv/bin/alembic` assumption made this test pass locally but crash on CI.
     """
     root = Path(__file__).resolve().parents[1]
+    alembic_bin = Path(sys.executable).parent / "alembic"
     db_path = tmp_path / "existing.db"
     env = {
         **os.environ,
@@ -51,7 +56,7 @@ def test_existing_install_keeps_support_link_off(tmp_path):
 
     def alembic(target: str) -> None:
         result = subprocess.run(
-            [str(root / ".venv" / "bin" / "alembic"), "upgrade", target],
+            [str(alembic_bin), "upgrade", target],
             cwd=root, env=env, capture_output=True, text=True,
         )
         assert result.returncode == 0, f"alembic upgrade {target} failed:\n{result.stderr}"
