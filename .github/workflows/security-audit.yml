@@ -1,9 +1,9 @@
 # SPDX-FileCopyrightText: 2026 Niels Franke
 # SPDX-License-Identifier: AGPL-3.0-or-later
 #
-# Scans the pinned backend (pip) and frontend (npm) dependencies for known CVEs.
-# Runs when a dependency manifest changes, on a weekly schedule (so advisories
-# published against an unchanged pin still surface), and on demand.
+# Scans the pinned backend + ML-sidecar (pip) and frontend (npm) dependencies for
+# known CVEs. Runs when a dependency manifest changes, on a weekly schedule (so
+# advisories published against an unchanged pin still surface), and on demand.
 
 name: Security audit
 
@@ -12,11 +12,13 @@ on:
     branches: [main]
     paths:
       - "backend/requirements.txt"
+      - "ml/requirements.txt"
       - "frontend/package-lock.json"
       - ".github/workflows/security-audit.yml"
   pull_request:
     paths:
       - "backend/requirements.txt"
+      - "ml/requirements.txt"
       - "frontend/package-lock.json"
       - ".github/workflows/security-audit.yml"
   schedule:
@@ -42,6 +44,30 @@ jobs:
         uses: pypa/gh-action-pip-audit@v1.1.0
         with:
           inputs: backend/requirements.txt
+
+  ml-pip-audit:
+    # The optional semantic-search sidecar (ml/) ships its own pinned stack. It's not on the default
+    # deploy path, but a drifting pin should still surface here — same runner/Python as the backend job.
+    if: ${{ github.server_url == 'https://github.com' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Audit ML sidecar dependencies
+        uses: pypa/gh-action-pip-audit@v1.1.0
+        with:
+          inputs: ml/requirements.txt
+          # Residual transformers advisories on the latest 4.x pin. The sidecar loads a fixed, trusted
+          # SigLIP repo (not user-supplied models), so these are low-relevance here; two require the
+          # transformers 5.x major bump (deferred until the container can be re-tested), two have no
+          # upstream fix yet. Revisit when moving to transformers 5.x.
+          ignore-vulns: |
+            PYSEC-2026-2288
+            PYSEC-2026-2289
+            PYSEC-2025-217
+            PYSEC-2026-2290
 
   npm-audit:
     if: ${{ github.server_url == 'https://github.com' }}
