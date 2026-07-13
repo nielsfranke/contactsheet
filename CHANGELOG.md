@@ -12,6 +12,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.9.1] - 2026-07-13
+
+### Security
+
+- **Pillow bumped 12.2.0 → 12.3.0** in the backend, closing five advisories flagged by `pip-audit`
+  (PYSEC-2026-2253 … 2257): four decompression-bomb bypasses in the PCF/BDF/GD/FontFile loaders and
+  a Windows-only shell-injection in `WindowsViewer`. None are reachable on ContactSheet's photo
+  pipeline, but the pins are now clean.
+- **Optional ML sidecar dependencies refreshed** (`ml/requirements.txt`): Pillow 11.0.0 → 12.3.0,
+  transformers 4.47.1 → 4.57.6, huggingface_hub 0.27.0 → 0.36.2, sentencepiece 0.2.0 → 0.2.2 and
+  fastapi 0.115.6 → 0.139.0 (pulling a patched Starlette) — dropping the sidecar from ~40 known
+  advisories to two residual ones that require the transformers 5.x major bump. Verified with an
+  end-to-end embedding run: image and text encoders still produce valid, correctly-ranked vectors,
+  and existing embeddings stay compatible (no re-index needed).
+
+### Changed
+
+- The **security-audit** CI workflow now also scans `ml/requirements.txt`, so the optional
+  semantic-search sidecar's pinned stack is watched alongside the backend.
+
 ## [1.9.0] - 2026-07-09
 
 ### Added
@@ -882,7 +902,8 @@ contract are considered stable as of this release.
   caps (stricter for public uploads).
 - Docker Compose deployment (backend + frontend + nginx); SQLite + local filesystem.
 
-[Unreleased]: https://github.com/nielsfranke/contactsheet/compare/v1.9.0...HEAD
+[Unreleased]: https://github.com/nielsfranke/contactsheet/compare/v1.9.1...HEAD
+[1.9.1]: https://github.com/nielsfranke/contactsheet/compare/v1.9.0...v1.9.1
 [1.9.0]: https://github.com/nielsfranke/contactsheet/compare/v1.8.1...v1.9.0
 [1.8.1]: https://github.com/nielsfranke/contactsheet/compare/v1.8.0...v1.8.1
 [1.8.0]: https://github.com/nielsfranke/contactsheet/compare/v1.7.1...v1.8.0
