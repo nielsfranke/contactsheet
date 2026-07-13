@@ -1,11 +1,15 @@
 # ContactSheet ML sidecar — CPU-only ONNX inference. No PyTorch (that's the whole point: it keeps
 # the image small enough to ship as an optional add-on).
-fastapi==0.115.6
+fastapi==0.139.0
 uvicorn[standard]==0.32.1
 onnxruntime==1.20.1
-transformers==4.47.1
-huggingface_hub==0.27.0
-Pillow==11.0.0
+# transformers pinned to the latest 4.x: clears every fixable advisory without the 5.0 major bump.
+# Only AutoImageProcessor/AutoTokenizer + from_pretrained are used (stable across 4→5); the model is
+# a fixed, trusted SigLIP repo, not user input. Two residual advisories need transformers 5.x
+# (PYSEC-2026-2288/2289) — deferred until the container can be re-tested against a 5.x release.
+transformers==4.57.6
+huggingface_hub==0.36.2
+Pillow==12.3.0
 numpy==2.2.1
 # SigLIP uses a SentencePiece tokenizer.
-sentencepiece==0.2.0
+sentencepiece==0.2.2
