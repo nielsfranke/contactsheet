@@ -260,16 +260,24 @@ export function useGalleryView(
 
   function handleVote(imageId: string, flag: string) {
     if (!reviewerName) return;
-    api.public.setVote(shareToken, imageId, reviewerName, flag, galleryToken).then(() => {
-      qc.invalidateQueries({ queryKey: ["public-votes", shareToken, reviewerName] });
-    });
+    api.public
+      .setVote(shareToken, imageId, reviewerName, flag, galleryToken)
+      .then(() => {
+        qc.invalidateQueries({ queryKey: ["public-votes", shareToken, reviewerName] });
+      })
+      // The tile shows the optimistic value until the next refetch — without feedback a failed
+      // vote silently reverts and the reviewer never learns their pick didn't stick.
+      .catch((err) => toast.error(errMsg(err)));
   }
 
   function handleRatingVote(imageId: string, rating: number) {
     if (!reviewerName) return;
-    api.public.setRatingVote(shareToken, imageId, reviewerName, rating, galleryToken).then(() => {
-      qc.invalidateQueries({ queryKey: ["public-votes", shareToken, reviewerName] });
-    });
+    api.public
+      .setRatingVote(shareToken, imageId, reviewerName, rating, galleryToken)
+      .then(() => {
+        qc.invalidateQueries({ queryKey: ["public-votes", shareToken, reviewerName] });
+      })
+      .catch((err) => toast.error(errMsg(err)));
   }
 
   const hasNav = gallery.subgalleries.length > 0 || !!gallery.parent_share_token;

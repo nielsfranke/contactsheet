@@ -13,6 +13,7 @@ import { Loader2, MessageCircle, Trash2 } from "lucide-react";
 import { Icons } from "@/lib/ui-icons";
 import { useTranslations } from "next-intl";
 import { useReviewerStore } from "@/store/reviewer";
+import { toast } from "sonner";
 import { ConfirmDialog } from "@/components/chrome/ConfirmDialog";
 import type { LightboxTones } from "@/lib/lightbox-theme";
 
@@ -75,6 +76,8 @@ export function CommentPanel({
       else qc.invalidateQueries({ queryKey: ["public-images", shareToken] });
       setText("");
     },
+    // A failed post/delete/edit otherwise just stops the spinner with zero feedback.
+    onError: (err: Error) => toast.error(err.message),
   });
 
   const deleteMutation = useMutation({
@@ -87,6 +90,7 @@ export function CommentPanel({
       if (adminGalleryId) qc.invalidateQueries({ queryKey: ["gallery-images", adminGalleryId] });
       else qc.invalidateQueries({ queryKey: ["public-images", shareToken] });
     },
+    onError: (err: Error) => toast.error(err.message),
   });
 
   // Editing is admin-only (the photographer's tool); no public edit endpoint exists.
@@ -98,6 +102,7 @@ export function CommentPanel({
       qc.invalidateQueries({ queryKey: ["gallery-images", adminGalleryId] });
       setEditingId(null);
     },
+    onError: (err: Error) => toast.error(err.message),
   });
 
   // Admin may delete any; a public viewer only their own (author matches their reviewer name).

@@ -602,10 +602,12 @@ export function useGalleryDetail(id: string) {
         action: {
           label: t("undo"),
           onClick: () =>
-            Promise.all(imgIds.map((iid) => api.images.move(iid, id))).then(() => {
-              qc.invalidateQueries({ queryKey: ["gallery-images"] });
-              qc.invalidateQueries({ queryKey: ["galleries"] });
-            }),
+            Promise.all(imgIds.map((iid) => api.images.move(iid, id)))
+              .then(() => {
+                qc.invalidateQueries({ queryKey: ["gallery-images"] });
+                qc.invalidateQueries({ queryKey: ["galleries"] });
+              })
+              .catch((err: Error) => toast.error(err.message)),
         },
       });
     },
@@ -636,12 +638,20 @@ export function useGalleryDetail(id: string) {
       const reordered = [...filteredSorted];
       reordered.splice(newIndex, 0, reordered.splice(oldIndex, 1)[0]);
       const newIds = reordered.map((img) => img.id);
+      const previous = qc.getQueryData<ImageResponse[]>(["gallery-images", id]);
       qc.setQueryData<ImageResponse[]>(["gallery-images", id], (prev) => {
         if (!prev) return prev;
         const byId = new Map(prev.map((img) => [img.id, img]));
         return newIds.map((iid, i) => ({ ...byId.get(iid)!, sort_order: i }));
       });
-      reorderMutation.mutate(newIds);
+      reorderMutation.mutate(newIds, {
+        // Roll the optimistic reorder back if the server rejected it — otherwise the grid keeps
+        // showing an order that silently reverts on the next unrelated refetch.
+        onError: () => {
+          qc.setQueryData(["gallery-images", id], previous);
+          qc.invalidateQueries({ queryKey: ["gallery-images", id] });
+        },
+      });
     }
   }
 
