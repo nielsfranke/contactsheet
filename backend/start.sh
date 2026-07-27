@@ -24,4 +24,12 @@ echo "Starting ContactSheet API..."
 # the in-process notification flusher (app/main.py) and FastAPI BackgroundTasks all assume
 # one process. Adding --workers >1 would duplicate notifications and break rate limiting;
 # scale via multiple containers + a shared store instead.
+#
+# Trust X-Forwarded-* only when a reverse proxy is declared (TRUSTED_PROXY_HOPS > 0, the
+# default). With hops=0 the app is directly exposed and uvicorn must keep the socket peer
+# as the client address — a wildcard --forwarded-allow-ips would let anyone spoof
+# X-Forwarded-For and bypass rate limiting (see app/rate_limit.py).
+if [ "${TRUSTED_PROXY_HOPS:-1}" = "0" ]; then
+  exec uvicorn app.main:app --host 0.0.0.0 --port 8000
+fi
 exec uvicorn app.main:app --host 0.0.0.0 --port 8000 --forwarded-allow-ips "*"
