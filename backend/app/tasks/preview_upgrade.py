@@ -11,6 +11,7 @@ from PIL import Image as PilImage
 from app.config import settings
 from app.tasks.image_processing import (
     _auto_rotate,
+    _open_source,
     _save_resized,
     _to_srgb,
     original_needs_srgb,
@@ -54,6 +55,8 @@ def _sync_previews() -> None:
             select(Image.gallery_id, Image.stored_filename, Image.width, Image.height).where(
                 Image.processing_status == "done",
                 Image.deleted_at.is_(None),
+                # Videos have status "done" but no renditions — nothing to sync.
+                Image.is_video.is_(False),
             )
         ).all()
     except Exception:
@@ -99,7 +102,8 @@ def _sync_previews() -> None:
                         continue
                 # Missing (e.g. a newly-added tier), wrong size, corrupt, or a wide-gamut source whose
                 # rendition predates colour management → (re)generate, converting to sRGB.
-                with PilImage.open(original_path) as orig:
+                # _open_source (not PilImage.open): camera RAW must decode via its embedded preview.
+                with _open_source(original_path, stored_filename) as orig:
                     _save_resized(
                         _to_srgb(_auto_rotate(orig), orig.info.get("icc_profile")),
                         max_px, path, quality=quality,
