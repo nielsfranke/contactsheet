@@ -59,8 +59,16 @@ export function useGalleryRealtime(args: Args): void {
             invalidate(["public-images", shareToken, galleryToken]);
             break;
           case "flag":
+            invalidate(["public-images", shareToken, galleryToken]);
+            // Likes ride the "flag" signal (public_toggle_like) — refresh every reviewer's
+            // liked-set (prefix match; the reviewer name isn't known here).
+            invalidate(["public-likes", shareToken]);
+            break;
           case "image":
             invalidate(["public-images", shareToken, galleryToken]);
+            // Uploads/deletes/moves change image_count, which gates the container view
+            // (image_count === 0 → sub-gallery cover cards) — keep the gallery meta fresh too.
+            invalidate(["public-gallery", shareToken, galleryToken]);
             break;
           case "vote":
             invalidate(["public-votes", shareToken]);
@@ -78,8 +86,13 @@ export function useGalleryRealtime(args: Args): void {
             invalidate(["gallery-images", id]);
             break;
           case "flag":
+            invalidate(["gallery-images", id]);
+            break;
           case "image":
             invalidate(["gallery-images", id]);
+            // image_count feeds the detail header and the sidebar/overview cards.
+            invalidate(["gallery", id]);
+            invalidate(["galleries"]);
             break;
           case "vote":
             invalidate(["votes-summary", id]);
