@@ -16,6 +16,7 @@ import { Button } from "@/components/ui/button";
 import { useTranslations } from "next-intl";
 import { api } from "@/lib/api";
 import { lightboxTones } from "@/lib/lightbox-theme";
+import { formatExposure } from "@/lib/exif-format";
 import { previewSrcSet, withGalleryToken } from "@/lib/gridLayout";
 import { Icons } from "@/lib/ui-icons";
 import { useLightboxKeys } from "./lightbox-keys";
@@ -1240,14 +1241,14 @@ export function Lightbox({
         const model = exif.Model as string | undefined;
         const focal = exif.FocalLength as number | undefined;
         const fnum = exif.FNumber as number | undefined;
-        const exp = exif.ExposureTime as number | undefined;
+        const exp = formatExposure(exif.ExposureTime);
         const iso = exif.ISOSpeedRatings as number | undefined;
         return (
           <div className={`px-4 py-3 border-t ${borderTone} text-xs ${muted} flex gap-4 flex-wrap flex-shrink-0`}>
             {make && model && <span>{make} {model}</span>}
             {focal != null && <span>{Number(focal).toFixed(0)}mm</span>}
             {fnum != null && <span>f/{Number(fnum).toFixed(1)}</span>}
-            {exp != null && <span>1/{Math.round(1 / Number(exp))}s</span>}
+            {exp && <span>{exp}</span>}
             {iso != null && <span>ISO {iso}</span>}
             {image.width && image.height && (
               <span>{image.width} × {image.height}px</span>
