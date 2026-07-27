@@ -71,6 +71,13 @@ jobs:
       - name: Install backend deps
         working-directory: backend
         run: pip install -r requirements.txt -r requirements-dev.txt
+      # The browser download (~170 MB) only changes when the playwright pin in
+      # requirements-dev.txt moves; `install` below is a no-op on a cache hit.
+      - name: Cache Playwright browsers
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ hashFiles('backend/requirements-dev.txt') }}
       - name: Install Playwright Chromium
         run: python -m playwright install --with-deps chromium
       - name: Install frontend deps
