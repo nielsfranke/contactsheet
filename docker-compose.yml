@@ -101,7 +101,9 @@ services:
       start_period: 20s
 
   nginx:
-    image: nginx:alpine
+    # Pinned minor (not bare :alpine) so a compose pull can't silently jump a major/minor
+    # with changed config semantics.
+    image: nginx:1.27-alpine
     ports:
       - "${PORT:-8765}:80"
     volumes:
@@ -114,3 +116,11 @@ services:
       frontend:
         condition: service_healthy
     restart: unless-stopped
+    healthcheck:
+      # busybox wget ships in the alpine image; /api/health exercises nginx AND its route to the
+      # backend (which is already gated healthy by depends_on before nginx starts).
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1/api/health"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 10s
