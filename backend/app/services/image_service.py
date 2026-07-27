@@ -1,6 +1,7 @@
 # SPDX-FileCopyrightText: 2026 Niels Franke
 # SPDX-License-Identifier: AGPL-3.0-or-later
 
+import glob
 import json
 import os
 import tempfile
@@ -264,6 +265,18 @@ def _replace_in_place(
     old_stored = target.stored_filename
     for subdir in _IMAGE_SUBDIRS:
         storage.delete(f"{gallery_id}/{subdir}/{old_stored}")
+    # The watermark cache is keyed on the image *id* (which replace deliberately keeps) — purge it,
+    # or the public proxy would keep serving the pre-replace pixels under an unchanged ETag.
+    for subdir in _IMAGE_SUBDIRS:
+        if subdir == "original":
+            continue
+        for stale in glob.glob(
+            os.path.join(settings.upload_dir, gallery_id, f"{subdir}-wm", f"{target.id}_*.jpg")
+        ):
+            try:
+                os.remove(stale)
+            except OSError:
+                pass
     for sibling in matches[1:]:
         image_repo.soft_delete(db, sibling)
     updated = image_repo.update_fields(

@@ -489,8 +489,11 @@ def _watermarked_variant(
         with open(src_path, "rb") as f:
             img_bytes = f.read()
         composited = watermark_service.apply_watermark(img_bytes, gallery.id, ws)
-        with open(cache_path, "wb") as f:
+        # Atomic publish: a concurrent request must never see (and browser-cache) a half-written file.
+        tmp_path = f"{cache_path}.{os.getpid()}.{id(composited)}.tmp"
+        with open(tmp_path, "wb") as f:
             f.write(composited)
+        os.replace(tmp_path, cache_path)
 
     return FileResponse(
         cache_path,
