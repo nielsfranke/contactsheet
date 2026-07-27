@@ -12,6 +12,107 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.9.2] - 2026-07-27
+
+A maintenance release: no new features, but a broad sweep of security hardening, correctness fixes
+and performance work across the review lightbox, the realtime layer and the public gallery.
+
+### Security
+
+- **Per-gallery review toggles are now enforced on the API, not just in the UI.** With colour flags,
+  likes or comments switched off, anyone holding the share link could still `POST` a flag, rating,
+  like or comment (and read stored comments) — overwriting the shared flags you cull with, and
+  injecting comments that fired notifications. All three are gated server-side now, like the
+  annotation and team-voting toggles already were.
+- **Renditions of protected galleries stay behind the access-checked proxy.** Cover images (public
+  gallery, sub-gallery cards, parent navigation, public collections, link-preview source) were built
+  on the static `/uploads` path, so swapping `thumb` for `original` in the URL fetched the full-size,
+  un-watermarked file past the download gate. Covers now route through the public proxy whenever the
+  owning gallery is protected, and password-protected parents/children expose no cover on navigation
+  cards at all. Cover lookups also respect moderation, so a pending client upload can never surface
+  as a public cover.
+- **Cross-origin admin WebSocket handshakes are rejected** (close 4401). Cross-site WebSocket
+  handshakes are not covered by CORS, so `SameSite=Strict` was the only thing stopping a malicious
+  page from opening the admin socket with your ambient cookie.
+- **Login no longer leaks which usernames exist.** A wrong username returned 401 in microseconds
+  while a correct one paid for a full password hash — a reliable existence oracle within the
+  rate-limit budget. Both paths now cost the same.
+- **`TRUSTED_PROXY_HOPS=0` is respected again.** The container always trusted forwarded headers, so
+  in the documented "directly exposed" mode a spoofed `X-Forwarded-For` could bypass rate limiting
+  and poison the activity IP log. Forwarded headers are trusted only when a proxy is declared (the
+  default; the shipped Compose setup is unaffected).
+- **The nginx static locations stopped dropping security headers.** `add_header` inheritance is
+  all-or-nothing, so `/uploads/` and `/branding/` silently lost `X-Frame-Options` and
+  `Referrer-Policy`. Both now repeat the full set, and every copy is marked `always` so error
+  responses carry them too.
+
+### Fixed
+
+- **Escape inside an editor cancels the editor, not the lightbox.** Cancelling a comment draft or an
+  annotation note also threw you out of the lightbox and discarded the text.
+- **An open lightbox now follows live data.** The slide list was snapshotted on open and never
+  updated, so flags you set (or another reviewer's changes arriving over the socket) visually
+  reverted when you swiped away and back; like and comment counts went stale the same way.
+- **Exposure times of a second or longer display correctly** — 2s rendered as "1/1s".
+- **The gallery settings dialog fits on a laptop screen.** Tall tabs pushed the title and close
+  button off-screen with no way to scroll back to them. It also re-reads the gallery every time it
+  opens: previously a stale copy was displayed after a rename or a cascade, and leaving the name
+  field could commit that stale value back and undo the rename.
+- **ZIP status polling stops when you leave the page.** Navigating away from a preparing export left
+  a loop hitting the status endpoint indefinitely and triggering the download into a page you had
+  already left.
+- **The admin ZIP job list no longer 500s** once a gallery has at least one export job.
+- **Watermarked previews refresh on replace-in-place.** The composited cache is keyed on the image
+  id — which replacing a photo deliberately keeps — so a re-upload kept serving the old photo's
+  pixels indefinitely. Cache entries are now purged with the renditions, and cache files are written
+  atomically so a concurrent request can never see (and cache for an hour) a half-written JPEG.
+- **Changing watermark settings clears the old composited cache** instead of stranding every
+  previous variant on disk forever.
+- **Setting a gallery header writes the new file before deleting the old one**, so a failure mid-way
+  no longer leaves the gallery pointing at a deleted file.
+- **Expired sub-galleries disappear from their parent's public page.** They were still listed as
+  cover cards that simply returned "gone" when opened.
+- **Startup rendition sync skips videos and reads RAW through the proper decoder.** Videos logged
+  three stack traces per clip on every boot, and RAW originals silently missed both rendition-size
+  changes and the wide-gamut colour self-heal.
+- **A permanently rejected WebSocket is replaced on the next subscribe**, so live updates come back
+  after a re-login or a gallery password re-entry instead of staying dead.
+- **Upload, delete and move events refresh the counts that depend on them** — the public
+  container view (sub-gallery cards) and the admin sidebar/overview counts no longer need a manual
+  refresh.
+- **Failed writes are surfaced instead of failing silently.** Rejected team-voting flags and stars,
+  comment posts/edits/deletes and manual reorders left the optimistic value on screen with no hint
+  that nothing had saved.
+- **Uploads survive a non-JSON response.** A 2xx whose body isn't JSON (a proxy interposing an HTML
+  page, say) left the upload hanging forever; error messages from the XHR paths also no longer read
+  `[object Object]`.
+- **`no_preview` is a valid processing status on the backend too** — serializing it (reachable when
+  replacing a file that has no embedded preview) raised a 500.
+- **The nginx auth rate limit no longer locks out a whole client team.** Behind a fronting proxy the
+  zone collapsed every visitor into one bucket, so a handful of people entering a gallery password
+  together got bare 503s. The backend's own per-client limiter still does the real work.
+
+### Accessibility
+
+- **The lightbox, the reviewer-name prompt and the mobile filter sheet are proper dialogs.** They
+  now carry `role="dialog"`/`aria-modal`, take focus on open, return it to the trigger on close, and
+  trap Tab inside — previously the page behind stayed fully reachable in the tab order.
+
+### Performance
+
+- **Large galleries stay responsive while filtering.** Every keystroke re-rendered all mounted
+  photo tiles; tiles are memoised now and receive identity-stable handlers.
+- **Bulk operations batch their writes.** Moving images between galleries, approving moderated
+  uploads and cascading settings to sub-galleries each committed once per row (and, for moves,
+  re-counted the target gallery every time). Behaviour is unchanged.
+
+### Internal
+
+- Tagging a release now requires a green Tests run on the tagged commit before any image is pushed.
+- CI caches the Playwright browser download (~170 MB per E2E run).
+- Added tests pinning the WebSocket auth rejections and cross-gallery token reuse across REST, the
+  ZIP stream and the image proxy.
+
 ## [1.9.1] - 2026-07-13
 
 ### Security
@@ -902,7 +1003,8 @@ contract are considered stable as of this release.
   caps (stricter for public uploads).
 - Docker Compose deployment (backend + frontend + nginx); SQLite + local filesystem.
 
-[Unreleased]: https://github.com/nielsfranke/contactsheet/compare/v1.9.1...HEAD
+[Unreleased]: https://github.com/nielsfranke/contactsheet/compare/v1.9.2...HEAD
+[1.9.2]: https://github.com/nielsfranke/contactsheet/compare/v1.9.1...v1.9.2
 [1.9.1]: https://github.com/nielsfranke/contactsheet/compare/v1.9.0...v1.9.1
 [1.9.0]: https://github.com/nielsfranke/contactsheet/compare/v1.8.1...v1.9.0
 [1.8.1]: https://github.com/nielsfranke/contactsheet/compare/v1.8.0...v1.8.1
