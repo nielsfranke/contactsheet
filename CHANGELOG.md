@@ -12,6 +12,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Security
+
+- **Next.js bumped 16.2.9 → 16.2.12**, closing four advisories: a server-side request forgery in
+  rewrites via an attacker-controlled destination hostname, an unbounded Server Action payload on
+  the Edge runtime, a denial of service in the Image Optimization API via SVG, and unauthenticated
+  disclosure of internal Server Function endpoints.
+- The npm audit job now runs through `frontend/scripts/audit-prod.mjs`, which fails on any
+  high/critical advisory outside a **reviewed allowlist** — and equally when an allowlisted advisory
+  stops being reported, so the list cannot quietly go stale. The two remaining entries (`sharp`'s
+  inherited libvips CVEs and `postcss`) live inside packages Next bundles and can only be fixed
+  upstream; neither is reachable here — the Image Optimization API is disabled outright
+  (`images: { unoptimized: true }`), so sharp is never invoked, and postcss only ever sees this
+  repo's own Tailwind sources at build time.
+
+### Fixed
+
+- **A gallery subtitle can be removed again.** Clearing the field and leaving it saved nothing: the
+  settings dialog sent `null`, which the API reads as "field omitted, no change", where clearing
+  requires the empty string. Once set, a subtitle could never be taken off. Pinned with a test for
+  the clear-vs-omit contract, which had none.
+
 ## [1.9.2] - 2026-07-27
 
 A maintenance release: no new features, but a broad sweep of security hardening, correctness fixes

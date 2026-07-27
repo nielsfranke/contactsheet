@@ -81,4 +81,9 @@ jobs:
         working-directory: frontend
         # Production deps only: a dev-only transitive advisory shouldn't gate the app. The lockfile
         # alone is enough — no install needed.
-        run: npm audit --omit=dev --audit-level=high
+        #
+        # Wrapped rather than bare `npm audit --audit-level=high`: advisories inside packages Next
+        # bundles can only be fixed upstream, and a permanently red job is a job everyone ignores.
+        # The script fails on any high/critical advisory that isn't in its reviewed allowlist — and
+        # also when an allowlisted one disappears, so the list can't rot. See scripts/audit-prod.mjs.
+        run: node scripts/audit-prod.mjs
