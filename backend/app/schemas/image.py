@@ -12,7 +12,9 @@ from pydantic import BaseModel, Field
 ColorFlag = Literal["none", "green", "red", "yellow", "blue"]
 # 0 = unrated, 1–5 = stars.
 Rating = Literal[0, 1, 2, 3, 4, 5]
-ProcessingStatus = Literal["pending", "done", "error"]
+# "no_preview" = stored but unviewable (e.g. a PSB without an embedded thumbnail) — persisted by
+# tasks/image_processing.py; the frontend renders these as download-only tiles.
+ProcessingStatus = Literal["pending", "done", "error", "no_preview"]
 
 
 class ImagePicks(BaseModel):

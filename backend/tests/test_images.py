@@ -281,3 +281,16 @@ def test_moderation_approve_makes_public(admin_client):
     assert admin_client.get(f"/api/public/g/{g['share_token']}/images").json() == []
     assert admin_client.post(f"/api/galleries/{g['id']}/images/{img}/approve").status_code == 200
     assert len(admin_client.get(f"/api/public/g/{g['share_token']}/images").json()) == 1
+
+
+def test_upload_response_schema_accepts_no_preview():
+    # "no_preview" is persisted by the processing task (e.g. a PSB without an embedded
+    # thumbnail) and can surface in an UploadResponse via the replace-in-place path —
+    # the Literal missing it turned such uploads into a 500.
+    from app.schemas.image import UploadResponse
+
+    r = UploadResponse(
+        id="x", original_filename="art.psb", file_size=1, mime_type="image/vnd.adobe.photoshop",
+        processing_status="no_preview",
+    )
+    assert r.processing_status == "no_preview"
