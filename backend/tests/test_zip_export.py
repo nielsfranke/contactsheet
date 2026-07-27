@@ -54,3 +54,16 @@ def test_public_zip_blocked_when_downloads_disabled(admin_client):
     pub = TestClient(app)
     r = pub.post(f"/api/public/g/{g['share_token']}/zip", json={})
     assert r.status_code == 403
+
+
+def test_zip_job_list_returns_existing_jobs(admin_client):
+    """Regression: the list endpoint 500'd (TypeError) as soon as one job existed."""
+    g = make_gallery(admin_client, "G")
+    _upload(admin_client, g["id"])
+    job = admin_client.post(f"/api/galleries/{g['id']}/export/zip", json={"filter_type": "all"})
+    assert job.status_code == 202
+
+    r = admin_client.get(f"/api/galleries/{g['id']}/export/zip")
+    assert r.status_code == 200
+    jobs = r.json()
+    assert len(jobs) == 1 and jobs[0]["id"] == job.json()["id"]

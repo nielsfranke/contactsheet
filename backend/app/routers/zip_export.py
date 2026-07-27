@@ -90,7 +90,7 @@ def list_zip_jobs(
     _admin: str = Depends(get_current_admin),
 ):
     jobs = zip_job_repo.list_for_gallery(db, gallery_id)
-    return [_to_response(j, "") for j in jobs]
+    return [_to_response(j) for j in jobs]
 
 
 @router.get("/{gallery_id}/export/zip/{job_id}", response_model=ZipJobResponse)
