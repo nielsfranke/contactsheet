@@ -47,6 +47,13 @@ function errorDetail(body: { detail?: unknown }, fallback: string): string {
   return fallback;
 }
 
+function handleUnauthorized(status: number): void {
+  if (status === 401 && typeof window !== "undefined" && window.location.pathname.startsWith("/admin")) {
+    clearAuthenticated();
+    window.location.href = "/login";
+  }
+}
+
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const res = await fetch(`${API_BASE}${path}`, {
     credentials: "include",
@@ -57,15 +64,71 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
     },
   });
   if (!res.ok) {
-    if (res.status === 401 && typeof window !== "undefined" && window.location.pathname.startsWith("/admin")) {
-      clearAuthenticated();
-      window.location.href = "/login";
-    }
+    handleUnauthorized(res.status);
     const body = await res.json().catch(() => ({}));
     throw Object.assign(new Error(errorDetail(body, res.statusText)), { status: res.status, body });
   }
   if (res.status === 204) return undefined as T;
   return res.json();
+}
+
+/**
+ * Shared promise wiring for the XHR upload paths (multipart + progress, where fetch won't do):
+ * resolves parsed JSON, rejects with the same error shape as `request()` (message via
+ * `errorDetail`, `status`, `code`), applies the admin 401 clear+redirect, and detaches the
+ * external abort listener once the request settles so a long-lived AbortSignal doesn't
+ * accumulate dead listeners across uploads.
+ */
+function sendXhr<T>(
+  xhr: XMLHttpRequest,
+  form: FormData,
+  opts: { signal?: AbortSignal; onProgress?: (pct: number) => void } = {},
+): Promise<T> {
+  return new Promise((resolve, reject) => {
+    const { signal, onProgress } = opts;
+    if (signal?.aborted) {
+      reject(Object.assign(new Error("Upload cancelled"), { aborted: true }));
+      return;
+    }
+    if (onProgress) {
+      xhr.upload.onprogress = (e) => {
+        if (e.lengthComputable) onProgress(Math.round((e.loaded / e.total) * 100));
+      };
+    }
+    // Cancel support: aborting the signal aborts the in-flight request (onabort rejects below).
+    const onExternalAbort = () => xhr.abort();
+    signal?.addEventListener("abort", onExternalAbort);
+    const settle = (fn: () => void) => {
+      signal?.removeEventListener("abort", onExternalAbort);
+      fn();
+    };
+    xhr.onabort = () =>
+      settle(() => reject(Object.assign(new Error("Upload cancelled"), { aborted: true })));
+    xhr.onerror = () => settle(() => reject(new Error("Network error")));
+    xhr.onload = () =>
+      settle(() => {
+        if (xhr.status >= 200 && xhr.status < 300) {
+          // A 2xx whose body isn't JSON (e.g. a proxy interposing an HTML page) must reject —
+          // an exception thrown inside onload would leave the promise pending forever.
+          try {
+            resolve(JSON.parse(xhr.responseText || "{}"));
+          } catch {
+            reject(Object.assign(new Error("Invalid server response"), { status: xhr.status }));
+          }
+          return;
+        }
+        handleUnauthorized(xhr.status);
+        let body: { detail?: unknown; code?: unknown } = {};
+        try {
+          body = JSON.parse(xhr.responseText || "{}");
+        } catch {
+          /* non-JSON error body */
+        }
+        const code = typeof body.code === "string" ? body.code : undefined;
+        reject(Object.assign(new Error(errorDetail(body, xhr.statusText)), { status: xhr.status, code }));
+      });
+    xhr.send(form);
+  });
 }
 
 function authHeaders(token?: string): HeadersInit {
@@ -348,7 +411,7 @@ export const api = {
       }).then(async (res) => {
         if (!res.ok) {
           const body = await res.json().catch(() => ({}));
-          throw Object.assign(new Error(body.detail ?? res.statusText), { status: res.status });
+          throw Object.assign(new Error(errorDetail(body, res.statusText)), { status: res.status });
         }
         return res.json();
       });
@@ -394,36 +457,15 @@ export const api = {
     // Restore streams a (potentially large) archive upload; XHR gives progress + a typed
     // error code. On success the server has rotated the runtime key, so the caller must
     // re-login (hard redirect) — this session's cookie is already dead.
-    restore: (file: File, password: string, onProgress?: (pct: number) => void): Promise<{ ok: boolean }> =>
-      new Promise((resolve, reject) => {
-        const form = new FormData();
-        form.append("file", file);
-        form.append("password", password);
-        const xhr = new XMLHttpRequest();
-        xhr.open("POST", `${API_BASE}/api/admin/settings/restore`);
-        xhr.withCredentials = true;
-        if (onProgress) {
-          xhr.upload.onprogress = (e) => {
-            if (e.lengthComputable) onProgress(Math.round((e.loaded / e.total) * 100));
-          };
-        }
-        xhr.onload = () => {
-          if (xhr.status >= 200 && xhr.status < 300) {
-            resolve(JSON.parse(xhr.responseText || "{}"));
-          } else {
-            let detail = xhr.statusText;
-            let code: string | undefined;
-            try {
-              const parsed = JSON.parse(xhr.responseText || "{}");
-              detail = parsed.detail ?? detail;
-              code = typeof parsed.code === "string" ? parsed.code : undefined;
-            } catch { /* non-JSON error body */ }
-            reject(Object.assign(new Error(detail), { status: xhr.status, code }));
-          }
-        };
-        xhr.onerror = () => reject(new Error("Network error"));
-        xhr.send(form);
-      }),
+    restore: (file: File, password: string, onProgress?: (pct: number) => void): Promise<{ ok: boolean }> => {
+      const form = new FormData();
+      form.append("file", file);
+      form.append("password", password);
+      const xhr = new XMLHttpRequest();
+      xhr.open("POST", `${API_BASE}/api/admin/settings/restore`);
+      xhr.withCredentials = true;
+      return sendXhr(xhr, form, { onProgress });
+    },
   },
 
   // Personal access tokens for third-party API clients (e.g. the Capture One export plugin).
@@ -453,44 +495,15 @@ export const api = {
       signal?: AbortSignal,
       duplicateActions?: Record<string, DuplicateAction>,
     ): Promise<UploadResponse[]> => {
-      return new Promise((resolve, reject) => {
-        if (signal?.aborted) {
-          reject(Object.assign(new Error("Upload cancelled"), { aborted: true }));
-          return;
-        }
-        const form = new FormData();
-        files.forEach((f) => form.append("files", f));
-        if (duplicateActions && Object.keys(duplicateActions).length) {
-          form.append("duplicate_actions", JSON.stringify(duplicateActions));
-        }
-        const xhr = new XMLHttpRequest();
-        xhr.open("POST", `${API_BASE}/api/galleries/${galleryId}/images`);
-        xhr.withCredentials = true;
-        if (onProgress) {
-          xhr.upload.onprogress = (e) => {
-            if (e.lengthComputable) onProgress(Math.round((e.loaded / e.total) * 100));
-          };
-        }
-        // Cancel support: aborting the signal aborts the in-flight request (onabort rejects below).
-        if (signal) signal.addEventListener("abort", () => xhr.abort(), { once: true });
-        xhr.onabort = () => reject(Object.assign(new Error("Upload cancelled"), { aborted: true }));
-        xhr.onload = () => {
-          if (xhr.status >= 200 && xhr.status < 300) {
-            resolve(JSON.parse(xhr.responseText));
-          } else {
-            let detail = xhr.statusText;
-            let code: string | undefined;
-            try {
-              const parsed = JSON.parse(xhr.responseText || "{}");
-              detail = parsed.detail ?? detail;
-              code = typeof parsed.code === "string" ? parsed.code : undefined;
-            } catch { /* non-JSON error body */ }
-            reject(Object.assign(new Error(detail), { status: xhr.status, code }));
-          }
-        };
-        xhr.onerror = () => reject(new Error("Network error"));
-        xhr.send(form);
-      });
+      const form = new FormData();
+      files.forEach((f) => form.append("files", f));
+      if (duplicateActions && Object.keys(duplicateActions).length) {
+        form.append("duplicate_actions", JSON.stringify(duplicateActions));
+      }
+      const xhr = new XMLHttpRequest();
+      xhr.open("POST", `${API_BASE}/api/galleries/${galleryId}/images`);
+      xhr.withCredentials = true;
+      return sendXhr(xhr, form, { signal, onProgress });
     },
     update: (id: string, data: ImageUpdate) =>
       request<ImageResponse>(`/api/images/${id}`, {
@@ -539,42 +552,13 @@ export const api = {
       onProgress?: (pct: number) => void,
       signal?: AbortSignal,
     ): Promise<UploadResponse[]> => {
-      return new Promise((resolve, reject) => {
-        if (signal?.aborted) {
-          reject(Object.assign(new Error("Upload cancelled"), { aborted: true }));
-          return;
-        }
-        const form = new FormData();
-        files.forEach((f) => form.append("files", f));
-        form.append("uploader", uploader);
-        const xhr = new XMLHttpRequest();
-        xhr.open("POST", `${API_BASE}/api/public/g/${token}/images`);
-        if (galleryToken) xhr.setRequestHeader("Authorization", `Bearer ${galleryToken}`);
-        if (onProgress) {
-          xhr.upload.onprogress = (e) => {
-            if (e.lengthComputable) onProgress(Math.round((e.loaded / e.total) * 100));
-          };
-        }
-        // Cancel support: aborting the signal aborts the in-flight request (onabort rejects below).
-        if (signal) signal.addEventListener("abort", () => xhr.abort(), { once: true });
-        xhr.onabort = () => reject(Object.assign(new Error("Upload cancelled"), { aborted: true }));
-        xhr.onload = () => {
-          if (xhr.status >= 200 && xhr.status < 300) {
-            resolve(JSON.parse(xhr.responseText));
-          } else {
-            let detail = xhr.statusText;
-            let code: string | undefined;
-            try {
-              const parsed = JSON.parse(xhr.responseText || "{}");
-              detail = parsed.detail ?? detail;
-              code = typeof parsed.code === "string" ? parsed.code : undefined;
-            } catch { /* non-JSON error body */ }
-            reject(Object.assign(new Error(detail), { status: xhr.status, code }));
-          }
-        };
-        xhr.onerror = () => reject(new Error("Network error"));
-        xhr.send(form);
-      });
+      const form = new FormData();
+      files.forEach((f) => form.append("files", f));
+      form.append("uploader", uploader);
+      const xhr = new XMLHttpRequest();
+      xhr.open("POST", `${API_BASE}/api/public/g/${token}/images`);
+      if (galleryToken) xhr.setRequestHeader("Authorization", `Bearer ${galleryToken}`);
+      return sendXhr(xhr, form, { signal, onProgress });
     },
     collections: (token: string, galleryToken?: string) =>
       request<Collection[]>(`/api/public/g/${token}/collections`, {
