@@ -141,13 +141,17 @@ export function GalleryDetailDialogs({
 
   return (
     <>
-      {/* Settings modal */}
-      <GallerySettingsModal
-        open={settingsOpen}
-        onOpenChange={setSettingsOpen}
-        gallery={galleryWithChildren}
-        initialTab={settingsTab}
-      />
+      {/* Settings modal — mounted only while open so every open re-seeds its local field state
+          from the current gallery. Kept mounted, a stale seed (e.g. after a rename or cascade)
+          would be committed back to the server on the next blur, reverting the external change. */}
+      {settingsOpen && (
+        <GallerySettingsModal
+          open={settingsOpen}
+          onOpenChange={setSettingsOpen}
+          gallery={galleryWithChildren}
+          initialTab={settingsTab}
+        />
+      )}
 
       {/* Download dialog (sub-gallery selection; same popup as the public gallery) */}
       {/* Save collection name dialog */}

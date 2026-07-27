@@ -217,7 +217,9 @@ export function GallerySettingsModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-2xl">
+      {/* Taller than many laptop viewports (the Allgemein/Aussehen tabs) — cap the height and
+          scroll inside, or the header incl. the close button ends up above the viewport. */}
+      <DialogContent className="sm:max-w-2xl max-h-[calc(100dvh-2rem)] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>{t("title")}</DialogTitle>
           <DialogDescription>
