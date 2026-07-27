@@ -12,6 +12,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.9.3] - 2026-07-27
+
 ### Security
 
 - **Next.js bumped 16.2.9 → 16.2.12**, closing four advisories: a server-side request forgery in
@@ -1024,7 +1026,8 @@ contract are considered stable as of this release.
   caps (stricter for public uploads).
 - Docker Compose deployment (backend + frontend + nginx); SQLite + local filesystem.
 
-[Unreleased]: https://github.com/nielsfranke/contactsheet/compare/v1.9.2...HEAD
+[Unreleased]: https://github.com/nielsfranke/contactsheet/compare/v1.9.3...HEAD
+[1.9.3]: https://github.com/nielsfranke/contactsheet/compare/v1.9.2...v1.9.3
 [1.9.2]: https://github.com/nielsfranke/contactsheet/compare/v1.9.1...v1.9.2
 [1.9.1]: https://github.com/nielsfranke/contactsheet/compare/v1.9.0...v1.9.1
 [1.9.0]: https://github.com/nielsfranke/contactsheet/compare/v1.8.1...v1.9.0
