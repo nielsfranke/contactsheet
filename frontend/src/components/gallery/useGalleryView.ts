@@ -3,7 +3,7 @@
 
 "use client";
 
-import { useMemo, useRef, useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -79,22 +79,29 @@ export function useGalleryView(
   const bright = gallery.bg_brightness === "bright";
   const openerFont = resolveOpenerFont(gallery.opener_font);
   // Collaboration features gated by per-gallery toggles. Presentation mode is delivery-only —
-  // no flags/likes/comments — so everything collapses to false there.
-  const features = {
-    colorFlags: collabMode && gallery.color_flags_enabled,
-    ratingMode: gallery.rating_mode,
-    likes: collabMode && gallery.likes_enabled,
-    comments: collabMode && gallery.comments_enabled,
-    annotations: collabMode && gallery.comments_enabled && gallery.annotations_enabled,
-  };
-  const presentation = {
-    previewSize: gallery.preview_size,
-    previewSpacing: gallery.preview_spacing,
-    previewCorners: gallery.preview_corners,
-    showFilename: gallery.show_filename,
-    bright,
-    highRes: gallery.high_res_previews,
-  };
+  // no flags/likes/comments — so everything collapses to false there. Memoized so the identity
+  // only moves with the underlying data — the grid tiles are React.memo'd on these props.
+  const features = useMemo(
+    () => ({
+      colorFlags: collabMode && gallery.color_flags_enabled,
+      ratingMode: gallery.rating_mode,
+      likes: collabMode && gallery.likes_enabled,
+      comments: collabMode && gallery.comments_enabled,
+      annotations: collabMode && gallery.comments_enabled && gallery.annotations_enabled,
+    }),
+    [collabMode, gallery],
+  );
+  const presentation = useMemo(
+    () => ({
+      previewSize: gallery.preview_size,
+      previewSpacing: gallery.preview_spacing,
+      previewCorners: gallery.preview_corners,
+      showFilename: gallery.show_filename,
+      bright,
+      highRes: gallery.high_res_previews,
+    }),
+    [gallery, bright],
+  );
 
   const { data: rawImages = [], isLoading } = useQuery({
     queryKey: ["public-images", shareToken, galleryToken],
@@ -118,20 +125,23 @@ export function useGalleryView(
   });
   const likedSet = useMemo(() => new Set(likedIds), [likedIds]);
 
-  function toggleLike(imageId: string) {
-    if (!reviewerName) {
-      setShowPrompt(true); // need a name to dedupe the like — re-tap after confirming
-      return;
-    }
-    // Optimistically flip the liked set so the heart responds instantly.
-    qc.setQueryData<string[]>(["public-likes", shareToken, reviewerName], (prev = []) =>
-      prev.includes(imageId) ? prev.filter((id) => id !== imageId) : [...prev, imageId],
-    );
-    api.public
-      .likeImage(shareToken, imageId, reviewerName, galleryToken)
-      .then(() => qc.invalidateQueries({ queryKey: ["public-images"] }))
-      .catch(() => qc.invalidateQueries({ queryKey: ["public-likes", shareToken, reviewerName] }));
-  }
+  const toggleLike = useCallback(
+    (imageId: string) => {
+      if (!reviewerName) {
+        setShowPrompt(true); // need a name to dedupe the like — re-tap after confirming
+        return;
+      }
+      // Optimistically flip the liked set so the heart responds instantly.
+      qc.setQueryData<string[]>(["public-likes", shareToken, reviewerName], (prev = []) =>
+        prev.includes(imageId) ? prev.filter((id) => id !== imageId) : [...prev, imageId],
+      );
+      api.public
+        .likeImage(shareToken, imageId, reviewerName, galleryToken)
+        .then(() => qc.invalidateQueries({ queryKey: ["public-images"] }))
+        .catch(() => qc.invalidateQueries({ queryKey: ["public-likes", shareToken, reviewerName] }));
+    },
+    [reviewerName, shareToken, galleryToken, qc],
+  );
 
   const { data: collections = [] } = useQuery({
     queryKey: ["public-collections", shareToken, galleryToken],
@@ -151,11 +161,14 @@ export function useGalleryView(
     onError: (err: Error) => toast.error(err.message),
   });
 
-  function errMsg(err: unknown): string {
-    const code = getErrorCode(err);
-    if (code && te.has(code)) return te(code);
-    return err instanceof Error ? err.message : t("collections.actionFailed");
-  }
+  const errMsg = useCallback(
+    (err: unknown): string => {
+      const code = getErrorCode(err);
+      if (code && te.has(code)) return te(code);
+      return err instanceof Error ? err.message : t("collections.actionFailed");
+    },
+    [t, te],
+  );
 
   const deleteCollectionMutation = useMutation({
     mutationFn: (collectionId: string) =>
@@ -258,27 +271,33 @@ export function useGalleryView(
 
   const { isOpen } = useLightboxStore();
 
-  function handleVote(imageId: string, flag: string) {
-    if (!reviewerName) return;
-    api.public
-      .setVote(shareToken, imageId, reviewerName, flag, galleryToken)
-      .then(() => {
-        qc.invalidateQueries({ queryKey: ["public-votes", shareToken, reviewerName] });
-      })
-      // The tile shows the optimistic value until the next refetch — without feedback a failed
-      // vote silently reverts and the reviewer never learns their pick didn't stick.
-      .catch((err) => toast.error(errMsg(err)));
-  }
+  const handleVote = useCallback(
+    (imageId: string, flag: string) => {
+      if (!reviewerName) return;
+      api.public
+        .setVote(shareToken, imageId, reviewerName, flag, galleryToken)
+        .then(() => {
+          qc.invalidateQueries({ queryKey: ["public-votes", shareToken, reviewerName] });
+        })
+        // The tile shows the optimistic value until the next refetch — without feedback a failed
+        // vote silently reverts and the reviewer never learns their pick didn't stick.
+        .catch((err) => toast.error(errMsg(err)));
+    },
+    [reviewerName, shareToken, galleryToken, qc, errMsg],
+  );
 
-  function handleRatingVote(imageId: string, rating: number) {
-    if (!reviewerName) return;
-    api.public
-      .setRatingVote(shareToken, imageId, reviewerName, rating, galleryToken)
-      .then(() => {
-        qc.invalidateQueries({ queryKey: ["public-votes", shareToken, reviewerName] });
-      })
-      .catch((err) => toast.error(errMsg(err)));
-  }
+  const handleRatingVote = useCallback(
+    (imageId: string, rating: number) => {
+      if (!reviewerName) return;
+      api.public
+        .setRatingVote(shareToken, imageId, reviewerName, rating, galleryToken)
+        .then(() => {
+          qc.invalidateQueries({ queryKey: ["public-votes", shareToken, reviewerName] });
+        })
+        .catch((err) => toast.error(errMsg(err)));
+    },
+    [reviewerName, shareToken, galleryToken, qc, errMsg],
+  );
 
   const hasNav = gallery.subgalleries.length > 0 || !!gallery.parent_share_token;
   // A "container" gallery has sub-galleries but no photos of its own — show its children as cover

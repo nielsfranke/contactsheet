@@ -3,7 +3,7 @@
 
 "use client";
 
-import { useEffect, useState } from "react";
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import type { ColorFlag, CollabFeatures, GridPresentation, ImageResponse, LayoutType } from "@/lib/types";
 import { showsFlags, showsStars } from "@/lib/types";
@@ -92,14 +92,37 @@ export function PhotoGrid({
 }: Props) {
   const { open } = useLightboxStore();
   // "no_preview" (e.g. a PSB without an embedded thumbnail) is displayable as a download-only tile.
-  const ready = images.filter(
-    (img) => img.processing_status === "done" || img.processing_status === "no_preview",
+  const ready = useMemo(
+    () =>
+      images.filter(
+        (img) => img.processing_status === "done" || img.processing_status === "no_preview",
+      ),
+    [images],
   );
-  const pending = images.filter((img) => img.processing_status === "pending");
-  const failed = images.filter((img) => img.processing_status === "error");
+  const pending = useMemo(() => images.filter((img) => img.processing_status === "pending"), [images]);
+  const failed = useMemo(() => images.filter((img) => img.processing_status === "error"), [images]);
 
   // The lightbox traverses the gallery-wide list when given, else just this grid.
   const lightboxList = lightboxImages ?? ready;
+
+  // Identity-stable callbacks for the memoized tiles: they read the latest values through a ref
+  // (synced post-render, read only from event handlers), so a parent re-render (e.g. a filter
+  // keystroke upstream) doesn't hand every tile a fresh closure and defeat React.memo. Tiles
+  // re-render only when their data props change.
+  const latest = useRef({ lightboxList, onToggleSelect, onRangeSelect });
+  useEffect(() => {
+    latest.current = { lightboxList, onToggleSelect, onRangeSelect };
+  });
+  const handleOpen = useCallback(
+    (imageId: string, intent?: LightboxIntent) => {
+      const list = latest.current.lightboxList;
+      open(list, list.findIndex((x) => x.id === imageId), intent);
+    },
+    [open],
+  );
+  const handleSelect = useCallback((imageId: string, shift: boolean) => {
+    (shift ? latest.current.onRangeSelect : latest.current.onToggleSelect)?.(imageId);
+  }, []);
 
   // Keep an open lightbox on live data: refetches (flag saved, WS invalidation) must reach the
   // slides, or flags/likes/counts visually revert when navigating back. No dep array — the list is
@@ -111,15 +134,15 @@ export function PhotoGrid({
 
   const rounded = cornerRounding(presentation.previewCorners);
 
-  function tile(img: ImageResponse, i: number, aspectSquare: boolean, fixedHeight?: number) {
+  function tile(img: ImageResponse, aspectSquare: boolean, fixedHeight?: number) {
     return (
       <PhotoTile
         key={img.id}
         img={img}
-        onOpen={(intent) => open(lightboxList, lightboxImages ? lightboxList.findIndex((x) => x.id === img.id) : i, intent)}
+        onOpen={handleOpen}
         selectionMode={selectionMode}
         selected={isSelected?.(img.id) ?? false}
-        onSelect={(shift) => (shift ? onRangeSelect : onToggleSelect)?.(img.id)}
+        onSelect={handleSelect}
         aspectSquare={aspectSquare}
         fixedHeight={fixedHeight}
         highRes={presentation.highRes}
@@ -151,7 +174,7 @@ export function PhotoGrid({
           aspect={imageAspect}
           targetRowHeight={JUSTIFIED_ROW_HEIGHT[presentation.previewSize]}
           gap={GAP_PX[presentation.previewSpacing]}
-          renderItem={(img, i, height) => tile(img, i, false, height)}
+          renderItem={(img, _i, height) => tile(img, false, height)}
         />
         <PendingStrip pending={pending} failed={failed} />
       </div>
@@ -165,14 +188,18 @@ export function PhotoGrid({
         layout={layout}
         size={presentation.previewSize}
         spacing={presentation.previewSpacing}
-        renderTile={(i, square) => tile(ready[i], i, square)}
+        renderTile={(i, square) => tile(ready[i], square)}
       />
       <PendingStrip pending={pending} failed={failed} />
     </div>
   );
 }
 
-function PhotoTile({
+// Memoized: a gallery can mount hundreds of tiles, and without memo every parent re-render
+// (filter keystroke, selection change) re-renders them all. The callback props are identity-stable
+// (see PhotoGrid); data changes arrive as new `img` objects (React Query structural sharing), which
+// the render-time sync below picks up.
+const PhotoTile = memo(function PhotoTile({
   img,
   onOpen,
   selectionMode = false,
@@ -198,10 +225,10 @@ function PhotoTile({
   bright,
 }: {
   img: ImageResponse;
-  onOpen: (intent?: LightboxIntent) => void;
+  onOpen: (imageId: string, intent?: LightboxIntent) => void;
   selectionMode?: boolean;
   selected?: boolean;
-  onSelect?: (shift: boolean) => void;
+  onSelect?: (imageId: string, shift: boolean) => void;
   aspectSquare?: boolean;
   /** Exact tile height in px (justified rows); the image fills and covers the box. */
   fixedHeight?: number;
@@ -308,7 +335,7 @@ function PhotoTile({
       >
         {/* Clickable image → lightbox, or toggle selection in selection mode */}
         <button
-          onClick={(e) => (selectionMode ? onSelect?.(e.shiftKey) : onOpen())}
+          onClick={(e) => (selectionMode ? onSelect?.(img.id, e.shiftKey) : onOpen(img.id))}
           aria-label={img.original_filename}
           className={`block w-full h-full rounded-[inherit] outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-white ${selectionMode || collabMode ? "cursor-pointer" : "cursor-zoom-in"}`}
         >
@@ -479,7 +506,7 @@ function PhotoTile({
                     variant="control"
                     size="sm"
                     shape="pill"
-                    onClick={(e) => { e.stopPropagation(); onOpen({ panel: "annotations" }); }}
+                    onClick={(e) => { e.stopPropagation(); onOpen(img.id, { panel: "annotations" }); }}
                     title={t("annotate")}
                   >
                     <Icons.annotation size={13} />
@@ -492,7 +519,7 @@ function PhotoTile({
                     variant="control"
                     size="sm"
                     shape="pill"
-                    onClick={(e) => { e.stopPropagation(); onOpen({ panel: "comments" }); }}
+                    onClick={(e) => { e.stopPropagation(); onOpen(img.id, { panel: "comments" }); }}
                     title={t("comments")}
                   >
                     <Icons.comment size={13} />
@@ -518,7 +545,7 @@ function PhotoTile({
       )}
     </div>
   );
-}
+});
 
 function PendingStrip({
   pending,
