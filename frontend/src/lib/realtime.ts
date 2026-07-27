@@ -53,6 +53,8 @@ interface Connection {
   listeners: Set<Listener>;
   attempts: number;
   closed: boolean;
+  /** Permanently rejected by the server (4401/4404) — no reconnect; replaced on next subscribe. */
+  dead: boolean;
   reconnectTimer?: ReturnType<typeof setTimeout>;
   heartbeatTimer?: ReturnType<typeof setInterval>;
 }
@@ -100,9 +102,13 @@ function open(url: string, conn: Connection): void {
 
   ws.onclose = (ev) => {
     if (conn.heartbeatTimer) clearInterval(conn.heartbeatTimer);
-    // A permanent rejection (auth / not found) — don't reconnect. A fresh subscribe (e.g. after
-    // re-login + navigating back) tears this connection down and starts a new one.
-    if (PERMANENT_CLOSE_CODES.has(ev.code)) return;
+    // A permanent rejection (auth / not found) — don't reconnect. Mark the connection dead so the
+    // next subscribe (e.g. after re-login + navigating back) replaces it with a fresh attempt;
+    // otherwise the corpse would sit in the map for as long as it has subscribers.
+    if (PERMANENT_CLOSE_CODES.has(ev.code)) {
+      conn.dead = true;
+      return;
+    }
     if (!conn.closed) scheduleReconnect(url, conn);
   };
 
@@ -127,16 +133,17 @@ function scheduleReconnect(url: string, conn: Connection): void {
 /** Subscribe to live events for a gallery socket. Returns an unsubscribe function. */
 export function connectRealtime(url: string, listener: Listener): () => void {
   let conn = connections.get(url);
-  if (!conn) {
-    conn = { ws: null, listeners: new Set(), attempts: 0, closed: false };
+  if (!conn || conn.dead) {
+    conn = { ws: null, listeners: new Set(), attempts: 0, closed: false, dead: false };
     connections.set(url, conn);
     open(url, conn);
   }
-  conn.listeners.add(listener);
+  // Capture the connection this listener was registered on: the map entry may later be replaced
+  // (dead-connection retry), and this unsubscribe must not mutate the replacement.
+  const c = conn;
+  c.listeners.add(listener);
 
   return () => {
-    const c = connections.get(url);
-    if (!c) return;
     c.listeners.delete(listener);
     if (c.listeners.size === 0) {
       c.closed = true;
@@ -147,7 +154,7 @@ export function connectRealtime(url: string, listener: Listener): () => void {
       } catch {
         /* ignore */
       }
-      connections.delete(url);
+      if (connections.get(url) === c) connections.delete(url);
     }
   };
 }
