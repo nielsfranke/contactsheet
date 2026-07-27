@@ -152,6 +152,15 @@ def _uploaded_cover_url(gallery: Gallery) -> str | None:
     return f"/branding/gallery-covers/{gallery.id}/{gallery.cover_image_filename}"
 
 
+def _is_expired(gallery: Gallery) -> bool:
+    if not gallery.expires_at:
+        return False
+    expires = gallery.expires_at
+    if expires.tzinfo is None:
+        expires = expires.replace(tzinfo=timezone.utc)
+    return expires < datetime.now(timezone.utc)
+
+
 def _variants_protected(gallery: Gallery) -> bool:
     """True when this gallery's renditions must not be served from the static /uploads mount on
     public surfaces — watermark active or downloads disabled. Mirrors the `proxy_variants` logic in
@@ -551,16 +560,12 @@ def get_public_gallery(
     if not gallery:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Gallery not found")
 
-    if gallery.expires_at:
-        expires = gallery.expires_at
-        if expires.tzinfo is None:
-            expires = expires.replace(tzinfo=timezone.utc)
-        if expires < datetime.now(timezone.utc):
-            raise CodedHTTPException(
-                status_code=status.HTTP_410_GONE,
-                code="gallery_expired",
-                detail="This gallery has expired",
-            )
+    if _is_expired(gallery):
+        raise CodedHTTPException(
+            status_code=status.HTTP_410_GONE,
+            code="gallery_expired",
+            detail="This gallery has expired",
+        )
 
     # Public view: pending (unapproved) client uploads are invisible and don't count — so a gallery
     # whose only photos are pending reads as empty (container/content gate stays correct).
@@ -575,8 +580,9 @@ def get_public_gallery(
         except Exception:
             pass
 
-    # Build navigation data: direct sub-galleries and parent info.
-    raw_children = gallery_repo.get_children(db, gallery.id)
+    # Build navigation data: direct sub-galleries and parent info. Expired children would only
+    # 410 when opened — don't list them.
+    raw_children = [c for c in gallery_repo.get_children(db, gallery.id) if not _is_expired(c)]
     child_ids = [c.id for c in raw_children]
     child_counts = gallery_repo.batch_image_counts(db, child_ids, only_approved=True) if child_ids else {}
     child_covers = gallery_repo.batch_cover_images(db, raw_children, only_approved=True) if raw_children else {}

@@ -499,3 +499,15 @@ def test_variant_proxy_accepts_query_token(admin_client):
 
     assert pub.get(thumb_url).status_code == 401
     assert pub.get(f"{thumb_url}?token={token}").status_code == 200
+
+
+def test_expired_children_hidden_from_public_nav(admin_client):
+    parent = make_gallery(admin_client, "Parent")
+    make_gallery(admin_client, "Live", parent_id=parent["id"])
+    dead = make_gallery(admin_client, "Dead", parent_id=parent["id"])
+    past = (datetime.now(timezone.utc) - timedelta(days=1)).isoformat()
+    admin_client.patch(f"/api/galleries/{dead['id']}", json={"expires_at": past})
+
+    r = admin_client.get(f"/api/public/g/{parent['share_token']}")
+    assert r.status_code == 200
+    assert [s["name"] for s in r.json()["subgalleries"]] == ["Live"]
