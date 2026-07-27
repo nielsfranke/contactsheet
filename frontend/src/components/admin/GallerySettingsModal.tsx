@@ -139,7 +139,9 @@ export function GallerySettingsModal({
   }
   function commitHeadline() {
     const v = headline.trim();
-    if (v !== (gallery.headline ?? "")) save({ headline: v || null });
+    // Send the empty string, not null: the API reads `headline: ""` as "clear" and treats null as
+    // "field omitted, no change" — so `v || null` made an emptied subtitle silently unsaveable.
+    if (v !== (gallery.headline ?? "")) save({ headline: v });
   }
   function commitExpiry() {
     if (expiresAt !== (gallery.expires_at ? gallery.expires_at.slice(0, 10) : "")) {

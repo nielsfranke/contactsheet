@@ -314,3 +314,24 @@ def test_use_video_as_header_rejected(admin_client):
     vid = add_image(g["id"], is_video=True, filename="clip.mp4")
     r = admin_client.post(f"/api/galleries/{g['id']}/header-image/from-image", json={"image_id": vid})
     assert r.status_code == 400, r.text
+
+
+def test_headline_empty_string_clears_null_is_no_change(admin_client):
+    """The subtitle's clear-vs-omit contract (schemas.gallery.GalleryUpdate: "" = clear).
+
+    `null` deliberately means "field omitted" for headline, so an admin UI that sent null for an
+    emptied field made the subtitle unremovable once set — pinned here so the two stay distinct.
+    """
+    g = make_gallery(admin_client, "Head")
+
+    set_ = admin_client.patch(f"/api/galleries/{g['id']}", json={"headline": "Sub"})
+    assert set_.status_code == 200 and set_.json()["headline"] == "Sub"
+
+    # null → no change (the pass-through convention shared with every other optional field)
+    noop = admin_client.patch(f"/api/galleries/{g['id']}", json={"headline": None})
+    assert noop.status_code == 200 and noop.json()["headline"] == "Sub"
+
+    # "" → cleared, and stored as NULL rather than an empty string
+    cleared = admin_client.patch(f"/api/galleries/{g['id']}", json={"headline": ""})
+    assert cleared.status_code == 200 and cleared.json()["headline"] is None
+    assert admin_client.get(f"/api/galleries/{g['id']}").json()["headline"] is None
