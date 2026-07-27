@@ -161,7 +161,7 @@ def test_pending_image_blocked_on_per_image_endpoints(admin_client):
     g = make_gallery(admin_client, "Mod", mode="collaboration")
     admin_client.patch(
         f"/api/galleries/{g['id']}",
-        json={"client_upload_moderation": True, "comments_enabled": True},
+        json={"client_upload_moderation": True, "comments_enabled": True, "likes_enabled": True},
     )
     pending = add_image(g["id"], moderation_status="pending")
     t = g["share_token"]

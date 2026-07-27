@@ -374,6 +374,14 @@ def get_comments(
     gallery, _ = gallery_service.get_public_gallery(db, share_token, storage)
     _require_gallery_access(gallery, gallery_id_from_token)
 
+    # Comments switched off → the stored feedback is not public (writes are gated the same way).
+    if not gallery.comments_enabled:
+        raise CodedHTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            code="comments_disabled",
+            detail="Comments are not enabled for this gallery",
+        )
+
     # Verify image belongs to this gallery
     image = image_repo.get_by_id(db, image_id)
     if not image or image.gallery_id != gallery.id or image.moderation_status != "approved":
@@ -545,6 +553,12 @@ def add_comment(
 
     if not gallery_service.review_active(gallery):
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Gallery is not in collaboration mode")
+    if not gallery.comments_enabled:
+        raise CodedHTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            code="comments_disabled",
+            detail="Comments are not enabled for this gallery",
+        )
 
     image = image_repo.get_by_id(db, image_id)
     if not image or image.gallery_id != gallery.id or image.moderation_status != "approved":

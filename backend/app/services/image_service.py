@@ -721,6 +721,12 @@ def public_set_flag(
 ) -> Image:
     if not gallery_service.review_active(gallery):
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Gallery is not in collaboration mode")
+    if not gallery.color_flags_enabled:
+        raise CodedHTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            code="flags_disabled",
+            detail="Ratings are not enabled for this gallery",
+        )
     image = image_repo.get_by_id(db, image_id)
     if not image or image.gallery_id != gallery.id or image.moderation_status != "approved":
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Image not found")
@@ -741,6 +747,13 @@ def public_set_rating(
     Rides the same activity/notification/realtime channel so the grid invalidates identically."""
     if not gallery_service.review_active(gallery):
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Gallery is not in collaboration mode")
+    # color_flags_enabled is the generic per-gallery "ratings enabled" gate in every rating mode.
+    if not gallery.color_flags_enabled:
+        raise CodedHTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            code="flags_disabled",
+            detail="Ratings are not enabled for this gallery",
+        )
     image = image_repo.get_by_id(db, image_id)
     if not image or image.gallery_id != gallery.id or image.moderation_status != "approved":
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Image not found")
@@ -759,6 +772,12 @@ def public_toggle_like(db: Session, gallery: Gallery, image_id: str, reviewer_na
     not on un-like, to avoid noise."""
     if not gallery_service.review_active(gallery):
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Gallery is not in collaboration mode")
+    if not gallery.likes_enabled:
+        raise CodedHTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            code="likes_disabled",
+            detail="Likes are not enabled for this gallery",
+        )
     image = image_repo.get_by_id(db, image_id)
     if not image or image.gallery_id != gallery.id or image.moderation_status != "approved":
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Image not found")

@@ -109,6 +109,8 @@ def test_likes_follow_image_on_move(admin_client):
     an image moves — otherwise the heart reads empty in the destination gallery."""
     a = make_gallery(admin_client, "A", mode="collaboration")
     b = make_gallery(admin_client, "B", mode="collaboration")
+    for g in (a, b):
+        admin_client.patch(f"/api/galleries/{g['id']}", json={"likes_enabled": True})
     img = add_image(a["id"])
 
     # Reviewer likes the image while it lives in gallery A.
