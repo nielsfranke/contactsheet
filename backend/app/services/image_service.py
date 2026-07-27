@@ -662,21 +662,23 @@ def use_image_as_header(
     dst_dir = os.path.join(header_dir, gallery_id)
     os.makedirs(dst_dir, exist_ok=True)
 
-    # Remove old header file if present
-    if gallery.header_image_filename:
-        old = os.path.join(dst_dir, gallery.header_image_filename)
-        try:
-            os.remove(old)
-        except FileNotFoundError:
-            pass
-
+    # Generate and write the new header *before* touching the old one — if resize_bytes raises
+    # (corrupt rendition), the gallery must keep its working header instead of pointing at a
+    # deleted file.
     data = resize_bytes(
         storage.read_bytes(src_path), settings.header_max_px, settings.header_quality
     )
     with open(os.path.join(dst_dir, filename), "wb") as f:
         f.write(data)
 
+    old_filename = gallery.header_image_filename
     gallery_repo.update(db, gallery, header_image_filename=filename)
+
+    if old_filename:
+        try:
+            os.remove(os.path.join(dst_dir, old_filename))
+        except OSError:
+            pass
 
 
 def delete_image(db: Session, image_id: str) -> None:
