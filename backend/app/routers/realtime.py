@@ -10,6 +10,7 @@ See ``docs/architecture/realtime-updates.md``.
 
 import logging
 from datetime import datetime, timezone
+from urllib.parse import urlparse
 
 from fastapi import APIRouter, Cookie, Query, WebSocket, WebSocketDisconnect
 
@@ -54,6 +55,22 @@ async def _serve(gallery_id: str, websocket: WebSocket) -> None:
         hub.disconnect(gallery_id, websocket)
 
 
+def _cross_origin(websocket: WebSocket) -> bool:
+    """True when the handshake carries an Origin from a different host than the request target.
+
+    Cross-site WebSocket handshakes aren't covered by CORS, so without this the only thing keeping
+    a malicious page from riding the admin cookie is SameSite=Strict. Browsers always send Origin
+    on WebSocket; a missing Origin (non-browser client) passes — such clients have no ambient
+    cookie to steal. Hostname-only comparison: dev/proxy setups rewrite the Host header's port,
+    and the threat is a foreign *site*, not a foreign port."""
+    origin = websocket.headers.get("origin")
+    if not origin:
+        return False
+    origin_host = urlparse(origin).hostname
+    request_host = (websocket.headers.get("host") or "").split(":")[0]
+    return not origin_host or not request_host or origin_host.lower() != request_host.lower()
+
+
 @router.websocket("/admin/galleries/{gallery_id}")
 async def admin_gallery_ws(
     websocket: WebSocket,
@@ -66,6 +83,9 @@ async def admin_gallery_ws(
     # otherwise a pre-accept close is a bare handshake rejection (code 1006) and the client can't
     # tell "rejected, stop retrying" from "network blip, reconnect".
     await websocket.accept()
+    if _cross_origin(websocket):
+        await websocket.close(code=_CLOSE_UNAUTHORIZED)
+        return
     payload = None
     if access_token:
         try:

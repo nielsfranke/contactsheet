@@ -202,3 +202,28 @@ def test_client_upload_pixel_cap_enforced(admin_client, monkeypatch):
         assert image_repo.get_by_id(db, admin_id).processing_status == "done"
     finally:
         db.close()
+
+
+# --- admin websocket rejects cross-origin handshakes ------------------------------------------
+
+def test_admin_ws_rejects_cross_origin(admin_client):
+    from starlette.websockets import WebSocketDisconnect
+
+    g = make_gallery(admin_client, "WsOrigin")
+
+    # A foreign page riding the admin cookie (cross-site WS isn't covered by CORS) → 4401.
+    with admin_client.websocket_connect(
+        f"/api/ws/admin/galleries/{g['id']}", headers={"origin": "https://evil.example"}
+    ) as ws:
+        try:
+            ws.receive_text()
+            closed_code = None
+        except WebSocketDisconnect as exc:
+            closed_code = exc.code
+    assert closed_code == 4401
+
+    # The same-origin handshake (matching host) stays open.
+    with admin_client.websocket_connect(
+        f"/api/ws/admin/galleries/{g['id']}", headers={"origin": "http://testserver"}
+    ):
+        pass
