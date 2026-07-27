@@ -3,7 +3,7 @@
 
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import type { ColorFlag, CollabFeatures, GridPresentation, ImageResponse, LayoutType } from "@/lib/types";
 import { showsFlags, showsStars } from "@/lib/types";
@@ -100,6 +100,14 @@ export function PhotoGrid({
 
   // The lightbox traverses the gallery-wide list when given, else just this grid.
   const lightboxList = lightboxImages ?? ready;
+
+  // Keep an open lightbox on live data: refetches (flag saved, WS invalidation) must reach the
+  // slides, or flags/likes/counts visually revert when navigating back. No dep array — the list is
+  // re-derived every render and syncImages no-ops on identical content.
+  const syncLightbox = useLightboxStore((s) => s.syncImages);
+  useEffect(() => {
+    syncLightbox(lightboxList);
+  });
 
   const rounded = cornerRounding(presentation.previewCorners);
 

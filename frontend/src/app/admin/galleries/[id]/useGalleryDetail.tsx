@@ -552,6 +552,13 @@ export function useGalleryDetail(id: string) {
     );
   }, [groups, filteredSorted]);
 
+  // Keep an open lightbox on live data (see store/lightbox.ts syncImages) — same contract as the
+  // public grid: a refetch after flag/rating/comment edits must reach the open slides.
+  const syncLightbox = useLightboxStore((s) => s.syncImages);
+  useEffect(() => {
+    syncLightbox(lightboxList);
+  }, [lightboxList, syncLightbox]);
+
   function openPreview(img: ImageResponse, intent?: LightboxIntent) {
     const idx = lightboxList.findIndex((x) => x.id === img.id);
     if (idx >= 0) openLightbox(lightboxList, idx, intent);

@@ -17,6 +17,10 @@ interface LightboxState {
   currentIndex: number;
   intent: LightboxIntent;
   open: (images: ImageResponse[], index: number, intent?: LightboxIntent) => void;
+  /** Replace the slide list with fresh data (React Query refetch / WS invalidation) while open,
+   *  keeping the current slide by id. Without this the lightbox works on the snapshot taken at
+   *  open() and flags/likes/counts visually revert when navigating back to an edited slide. */
+  syncImages: (images: ImageResponse[]) => void;
   close: () => void;
   next: () => void;
   prev: () => void;
@@ -30,6 +34,24 @@ export const useLightboxStore = create<LightboxState>((set, get) => ({
   intent: {},
   open: (images, index, intent = {}) =>
     set({ isOpen: true, images, currentIndex: index, intent }),
+  syncImages: (images) => {
+    const { isOpen, images: prev, currentIndex } = get();
+    if (!isOpen) return;
+    if (images.length === 0) {
+      set({ isOpen: false });
+      return;
+    }
+    // Callers re-derive their list every render; only item identities matter (they change when
+    // React Query refetches). Bail on identical content so this can run unconditionally.
+    if (images.length === prev.length && images.every((img, i) => img === prev[i])) return;
+    const current = prev[currentIndex];
+    const nextIndex = current ? images.findIndex((i) => i.id === current.id) : -1;
+    set({
+      images,
+      // Current slide deleted/filtered out → clamp instead of wrapping to a random photo.
+      currentIndex: nextIndex >= 0 ? nextIndex : Math.min(currentIndex, images.length - 1),
+    });
+  },
   close: () => set({ isOpen: false }),
   next: () => {
     const { images, currentIndex } = get();
