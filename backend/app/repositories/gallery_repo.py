@@ -132,19 +132,23 @@ def count_images(db: Session, gallery_id: str, only_approved: bool = False) -> i
     return db.execute(stmt).scalar_one()
 
 
-def get_cover_image(db: Session, gallery: Gallery) -> Image | None:
+def get_cover_image(db: Session, gallery: Gallery, only_approved: bool = False) -> Image | None:
     if gallery.cover_image_id:
-        img = db.execute(
-            select(Image).where(Image.id == gallery.cover_image_id, Image.deleted_at.is_(None))
-        ).scalar_one_or_none()
+        stmt = select(Image).where(Image.id == gallery.cover_image_id, Image.deleted_at.is_(None))
+        if only_approved:
+            stmt = stmt.where(Image.moderation_status == "approved")
+        img = db.execute(stmt).scalar_one_or_none()
         if img:
             return img
-    return db.execute(
+    stmt = (
         select(Image)
         .where(Image.gallery_id == gallery.id, Image.deleted_at.is_(None))
         .order_by(Image.sort_order)
         .limit(1)
-    ).scalar_one_or_none()
+    )
+    if only_approved:
+        stmt = stmt.where(Image.moderation_status == "approved")
+    return db.execute(stmt).scalar_one_or_none()
 
 
 def get_auto_header_candidates(db: Session, gallery_id: str) -> list[tuple[str, str]]:
@@ -179,7 +183,7 @@ def batch_image_counts(
     return {row[0]: row[1] for row in rows}
 
 
-def batch_cover_images(db: Session, galleries: list[Gallery]) -> dict[str, Image]:
+def batch_cover_images(db: Session, galleries: list[Gallery], only_approved: bool = False) -> dict[str, Image]:
     if not galleries:
         return {}
     result: dict[str, Image] = {}
@@ -189,31 +193,36 @@ def batch_cover_images(db: Session, galleries: list[Gallery]) -> dict[str, Image
     auto_ids = [g.id for g in galleries if not g.cover_image_id]
 
     if pinned:
-        imgs = db.execute(
-            select(Image).where(Image.id.in_(pinned.values()), Image.deleted_at.is_(None))
-        ).scalars().all()
+        stmt = select(Image).where(Image.id.in_(pinned.values()), Image.deleted_at.is_(None))
+        if only_approved:
+            stmt = stmt.where(Image.moderation_status == "approved")
+        imgs = db.execute(stmt).scalars().all()
         img_by_id = {img.id: img for img in imgs}
         for gid, img_id in pinned.items():
             if img_id in img_by_id:
                 result[gid] = img_by_id[img_id]
-            # If pinned image was deleted, fall through to auto logic below
+            # If pinned image was deleted (or is pending moderation), fall through to auto logic below
             elif gid not in result:
                 auto_ids.append(gid)
 
     if auto_ids:
+        sub_where = [
+            Image.gallery_id.in_(auto_ids),
+            Image.deleted_at.is_(None),
+            Image.processing_status == "done",
+        ]
+        if only_approved:
+            sub_where.append(Image.moderation_status == "approved")
         sub = (
             select(Image.gallery_id, func.min(Image.sort_order).label("min_sort"))
-            .where(
-                Image.gallery_id.in_(auto_ids),
-                Image.deleted_at.is_(None),
-                Image.processing_status == "done",
-            )
+            .where(*sub_where)
             .group_by(Image.gallery_id)
             .subquery()
         )
         rows = db.execute(
             select(Image)
             .join(sub, (Image.gallery_id == sub.c.gallery_id) & (Image.sort_order == sub.c.min_sort))
+            .where(*sub_where)
         ).scalars().all()
         for img in rows:
             result[img.gallery_id] = img

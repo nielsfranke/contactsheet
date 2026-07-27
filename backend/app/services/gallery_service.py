@@ -152,12 +152,33 @@ def _uploaded_cover_url(gallery: Gallery) -> str | None:
     return f"/branding/gallery-covers/{gallery.id}/{gallery.cover_image_filename}"
 
 
-def _effective_cover_url(gallery: Gallery, photo_cover, storage: StorageProvider) -> str | None:
-    """Cover for the gallery card: an uploaded cover image wins; else the first/pinned photo."""
+def _variants_protected(gallery: Gallery) -> bool:
+    """True when this gallery's renditions must not be served from the static /uploads mount on
+    public surfaces — watermark active or downloads disabled. Mirrors the `proxy_variants` logic in
+    image_service._image_to_response: a static URL exposes `stored_filename`, from which a viewer
+    can derive the un-watermarked `…/original/{sf}` path and bypass the download gate."""
+    if not gallery.downloads_enabled:
+        return True
+    if gallery.watermark_settings:
+        try:
+            return watermark_service.is_active(json.loads(gallery.watermark_settings))
+        except Exception:
+            pass
+    return False
+
+
+def _effective_cover_url(
+    gallery: Gallery, photo_cover, storage: StorageProvider, public: bool = False
+) -> str | None:
+    """Cover for the gallery card: an uploaded cover image wins; else the first/pinned photo.
+    Public callers set `public=True` so a protected gallery's photo cover routes through the
+    access-checked proxy (by image id) instead of leaking the static rendition URL."""
     uploaded = _uploaded_cover_url(gallery)
     if uploaded:
         return uploaded
     if photo_cover and photo_cover.processing_status == "done":
+        if public and _variants_protected(gallery):
+            return f"/api/public/g/{gallery.share_token}/images/{photo_cover.id}/thumb"
         return storage.get_url(f"{gallery.id}/thumb/{photo_cover.stored_filename}")
     return None
 
@@ -544,8 +565,8 @@ def get_public_gallery(
     # Public view: pending (unapproved) client uploads are invisible and don't count — so a gallery
     # whose only photos are pending reads as empty (container/content gate stays correct).
     image_count = gallery_repo.count_images(db, gallery.id, only_approved=True)
-    cover = gallery_repo.get_cover_image(db, gallery)
-    cover_url = _effective_cover_url(gallery, cover, storage)
+    cover = gallery_repo.get_cover_image(db, gallery, only_approved=True)
+    cover_url = _effective_cover_url(gallery, cover, storage, public=True)
 
     watermark_enabled = False
     if gallery.watermark_settings:
@@ -558,11 +579,15 @@ def get_public_gallery(
     raw_children = gallery_repo.get_children(db, gallery.id)
     child_ids = [c.id for c in raw_children]
     child_counts = gallery_repo.batch_image_counts(db, child_ids, only_approved=True) if child_ids else {}
-    child_covers = gallery_repo.batch_cover_images(db, raw_children) if raw_children else {}
+    child_covers = gallery_repo.batch_cover_images(db, raw_children, only_approved=True) if raw_children else {}
     subgalleries = []
     for c in raw_children:
         # Locally scoped so they don't clobber the gallery's own cover_url computed above.
-        child_cover_url = _effective_cover_url(c, child_covers.get(c.id), storage)
+        # A password-protected child keeps its cover behind the gate (same policy as the OG image).
+        child_cover_url = (
+            None if c.password_hash
+            else _effective_cover_url(c, child_covers.get(c.id), storage, public=True)
+        )
         subgalleries.append(SubGalleryNavItem(
             name=c.name,
             share_token=c.share_token,
@@ -582,8 +607,9 @@ def get_public_gallery(
             parent_name = parent.name
             parent_share_token = parent.share_token
             parent_mode = parent.mode
-            parent_cover = gallery_repo.get_cover_image(db, parent)
-            parent_cover_image_url = _effective_cover_url(parent, parent_cover, storage)
+            if not parent.password_hash:
+                parent_cover = gallery_repo.get_cover_image(db, parent, only_approved=True)
+                parent_cover_image_url = _effective_cover_url(parent, parent_cover, storage, public=True)
         # Walk up for the breadcrumb, stopping (inclusive) at the first standalone ancestor so the
         # chain is clamped to the visible subtree.
         node = parent
@@ -644,7 +670,7 @@ def _meta_image_path(gallery: Gallery, db: Session, storage: StorageProvider) ->
     if gallery.cover_image_filename:
         p = os.path.join(app_config.branding_dir, "gallery-covers", gallery.id, gallery.cover_image_filename)
         return p if os.path.exists(p) else None
-    photo = gallery_repo.get_cover_image(db, gallery)
+    photo = gallery_repo.get_cover_image(db, gallery, only_approved=True)
     if photo and photo.processing_status == "done":
         rel = f"{gallery.id}/medium/{photo.stored_filename}"
         if storage.exists(rel):

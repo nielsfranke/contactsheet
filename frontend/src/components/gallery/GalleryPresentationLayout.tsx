@@ -10,6 +10,7 @@ import { StudioMasthead } from "./StudioMasthead";
 import { Loader2, Download } from "lucide-react";
 import { Icons } from "@/lib/ui-icons";
 import type { GalleryViewModel } from "./useGalleryView";
+import { withGalleryToken } from "@/lib/gridLayout";
 
 const OPENER_SIZE: Record<string, string> = {
   small: "text-2xl",
@@ -87,7 +88,9 @@ export function GalleryPresentationLayout({
     : "drop-shadow-md";
 
   // Manual header wins; else the opt-in auto-header fallback (a photo picked server-side).
-  const headerImage = gallery.header_image_url ?? gallery.header_image_fallback_url;
+  const headerImageRaw = gallery.header_image_url ?? gallery.header_image_fallback_url;
+  // The auto-header fallback is a proxy URL in protected galleries → needs the gallery token.
+  const headerImage = headerImageRaw ? withGalleryToken(headerImageRaw, galleryToken) : null;
 
   return (
     /* Full-width layout for presentation galleries */

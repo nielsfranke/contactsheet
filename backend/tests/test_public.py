@@ -420,3 +420,82 @@ def test_stream_zip_fires_download_notification(admin_client, db):
     _upload(admin_client, g["id"])
     _pub().get(f"/api/public/g/{g['share_token']}/zip/stream")
     assert any(r.event_type == "download" for r in notification_repo.list_pending(db))
+
+
+# --- cover URLs must respect the same protection as the image variants -------------------------
+
+
+def test_protected_gallery_cover_routes_through_proxy(admin_client):
+    """Regression: with downloads disabled (or watermark on) the photo-derived cover leaked the
+    static /uploads URL, from which the un-watermarked original path could be derived."""
+    g = make_gallery(admin_client, "NoDl", mode="presentation")
+    _upload(admin_client, g["id"])
+    admin_client.patch(f"/api/galleries/{g['id']}", json={"downloads_enabled": False})
+
+    r = admin_client.get(f"/api/public/g/{g['share_token']}")
+    assert r.status_code == 200
+    cover = r.json()["cover_image_url"]
+    assert cover is not None
+    assert cover.startswith(f"/api/public/g/{g['share_token']}/images/")
+    assert "/uploads/" not in cover
+
+
+def test_subgallery_covers_proxied_and_password_children_hidden(admin_client):
+    parent = make_gallery(admin_client, "Parent")
+    protected = make_gallery(admin_client, "Protected", parent_id=parent["id"])
+    _upload(admin_client, protected["id"])
+    admin_client.patch(f"/api/galleries/{protected['id']}", json={"downloads_enabled": False})
+    locked = make_gallery(admin_client, "Locked", parent_id=parent["id"])
+    _upload(admin_client, locked["id"])
+    admin_client.patch(f"/api/galleries/{locked['id']}", json={"password": "secret"})
+
+    r = admin_client.get(f"/api/public/g/{parent['share_token']}")
+    assert r.status_code == 200
+    subs = {s["name"]: s for s in r.json()["subgalleries"]}
+    # Protected child's card cover goes through its own access-checked proxy.
+    assert subs["Protected"]["cover_image_url"].startswith(
+        f"/api/public/g/{protected['share_token']}/images/"
+    )
+    # A password-protected child keeps its cover behind the gate (same policy as the OG image).
+    assert subs["Locked"]["cover_image_url"] is None
+
+
+def test_pending_upload_never_becomes_public_cover(admin_client):
+    g = make_gallery(admin_client, "Mod", mode="collaboration")
+    admin_client.patch(f"/api/galleries/{g['id']}", json={"client_upload_moderation": True})
+    add_image(g["id"], moderation_status="pending", sort_order=0)
+
+    r = admin_client.get(f"/api/public/g/{g['share_token']}")
+    assert r.status_code == 200
+    assert r.json()["cover_image_url"] is None
+
+    # An approved photo (even sorted after the pending one) becomes the cover instead.
+    add_image(g["id"], moderation_status="approved", sort_order=1)
+    r = admin_client.get(f"/api/public/g/{g['share_token']}")
+    assert r.json()["cover_image_url"] is not None
+
+
+def test_variant_proxy_accepts_query_token(admin_client):
+    """<img> tags can't send an Authorization header — the proxy must accept ?token= (like the
+    zip stream), or password-protected galleries with watermark/downloads-off render no images."""
+    g = make_gallery(admin_client, "Locked", mode="presentation")
+    _upload(admin_client, g["id"])
+    admin_client.patch(
+        f"/api/galleries/{g['id']}", json={"password": "secret", "downloads_enabled": False}
+    )
+
+    from fastapi.testclient import TestClient
+    from app.main import app
+    pub = TestClient(app)
+    token = pub.post(
+        f"/api/public/g/{g['share_token']}/auth", json={"password": "secret"}
+    ).json()["access_token"]
+
+    imgs = pub.get(
+        f"/api/public/g/{g['share_token']}/images", headers={"Authorization": f"Bearer {token}"}
+    ).json()
+    thumb_url = imgs[0]["thumb_url"]
+    assert thumb_url.startswith("/api/public/")
+
+    assert pub.get(thumb_url).status_code == 401
+    assert pub.get(f"{thumb_url}?token={token}").status_code == 200

@@ -16,7 +16,7 @@ import { Button } from "@/components/ui/button";
 import { useTranslations } from "next-intl";
 import { api } from "@/lib/api";
 import { lightboxTones } from "@/lib/lightbox-theme";
-import { previewSrcSet } from "@/lib/gridLayout";
+import { previewSrcSet, withGalleryToken } from "@/lib/gridLayout";
 import { Icons } from "@/lib/ui-icons";
 import { useLightboxKeys } from "./lightbox-keys";
 import { usePinchZoom } from "@/hooks/usePinchZoom";
@@ -467,11 +467,11 @@ export function Lightbox({
   // and `medium` on desktop. Shared by the displayed photo, the swipe-peek neighbors, and the neighbor
   // preloader effect below — declared here (above that effect) so it's never used before declaration.
   function variantSrc(im: (typeof images)[number], variant: "small" | "medium"): string {
-    return resolveVariantSrc(im, variant, { watermarkEnabled, shareToken });
+    return resolveVariantSrc(im, variant, { watermarkEnabled, shareToken, galleryToken });
   }
   // The displayed source for a slide: small on phones, medium (+srcset) on desktop.
   function photoSrc(im: (typeof images)[number]): string {
-    return resolvePhotoSrc(im, compact, { watermarkEnabled, shareToken });
+    return resolvePhotoSrc(im, compact, { watermarkEnabled, shareToken, galleryToken });
   }
 
   // Detect a phone-class device → serve `small` instead of `medium` (see `compact` above).
@@ -496,14 +496,14 @@ export function Lightbox({
       if (im.thumb_url) {
         const t = new window.Image();
         t.fetchPriority = "low";
-        t.src = im.thumb_url;
+        t.src = withGalleryToken(im.thumb_url, galleryToken);
       }
       const pre = new window.Image();
       pre.fetchPriority = "low";
       if (compact) {
         pre.src = variantSrc(im, "small");
       } else {
-        const ss = previewSrcSet(im, highRes);
+        const ss = previewSrcSet(im, highRes, galleryToken);
         if (ss) {
           pre.srcset = ss;
           pre.sizes = "100vw";
@@ -787,7 +787,7 @@ export function Lightbox({
           // eslint-disable-next-line @next/next/no-img-element
           <img
             key="blur"
-            src={im.thumb_url}
+            src={withGalleryToken(im.thumb_url, galleryToken)}
             alt=""
             aria-hidden
             draggable={false}
@@ -801,7 +801,7 @@ export function Lightbox({
             ref={isCurrent ? (el) => { imgRef.current = el; } : undefined}
             data-lightbox-photo=""
             src={compact && upgradedIds.has(im.id) ? variantSrc(im, "medium") : photoSrc(im)}
-            srcSet={compact ? undefined : previewSrcSet(im, highRes)}
+            srcSet={compact ? undefined : previewSrcSet(im, highRes, galleryToken)}
             sizes={compact ? undefined : isCurrent && zoomBoost ? "200vw" : "100vw"}
             alt={isCurrent ? im.original_filename : ""}
             fetchPriority={isCurrent ? "high" : "auto"}

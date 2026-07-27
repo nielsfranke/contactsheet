@@ -9,6 +9,7 @@ import { GalleryToolbar } from "./GalleryToolbar";
 import { CollabSidebar } from "./CollabSidebar";
 import { Menu } from "lucide-react";
 import type { GalleryViewModel } from "./useGalleryView";
+import { withGalleryToken } from "@/lib/gridLayout";
 
 /**
  * Two-column layout for collaboration galleries (and their sub-galleries): the CollabSidebar plus
@@ -64,7 +65,9 @@ export function GalleryCollabLayout({
   } = vm;
 
   // Manual header wins; else the opt-in auto-header fallback (a photo picked server-side).
-  const headerImage = gallery.header_image_url ?? gallery.header_image_fallback_url;
+  const headerImageRaw = gallery.header_image_url ?? gallery.header_image_fallback_url;
+  // The auto-header fallback is a proxy URL in protected galleries → needs the gallery token.
+  const headerImage = headerImageRaw ? withGalleryToken(headerImageRaw, galleryToken) : null;
 
   return (
     /* Two-column layout for collaboration galleries (and their sub-galleries) */

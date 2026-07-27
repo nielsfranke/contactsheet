@@ -10,7 +10,7 @@ from app.models.image import Image
 from app.realtime import publish as realtime_publish
 from app.repositories import activity_repo, collection_repo, gallery_repo, image_repo
 from app.schemas.collection import CollectionCreate, CollectionResponse, CollectionUpdate
-from app.services import notification_service
+from app.services import gallery_service, notification_service
 from app.storage.base import StorageProvider
 
 
@@ -27,16 +27,26 @@ def _authorize(collection: Collection, actor: str | None, is_admin: bool) -> Non
         )
 
 
-def _thumb_url(gallery_id: str, image: Image, storage: StorageProvider) -> str | None:
+def _thumb_url(
+    gallery_id: str, image: Image, storage: StorageProvider, public_gallery=None
+) -> str | None:
     if image.processing_status != "done":
         return None
+    # Public callers pass the gallery so a protected one (watermark / downloads off) serves its
+    # cover through the access-checked proxy instead of leaking the static rendition URL.
+    if public_gallery is not None and gallery_service._variants_protected(public_gallery):
+        return f"/api/public/g/{public_gallery.share_token}/images/{image.id}/thumb"
     return storage.get_url(f"{gallery_id}/thumb/{image.stored_filename}")
 
 
-def _to_response(collection: Collection, live: dict[str, Image], storage: StorageProvider) -> CollectionResponse:
+def _to_response(
+    collection: Collection, live: dict[str, Image], storage: StorageProvider, public_gallery=None
+) -> CollectionResponse:
     # Members are ordered by position; drop any whose image was (soft-)deleted.
     ordered = [m.image_id for m in collection.members if m.image_id in live]
-    cover_url = _thumb_url(collection.gallery_id, live[ordered[0]], storage) if ordered else None
+    cover_url = (
+        _thumb_url(collection.gallery_id, live[ordered[0]], storage, public_gallery) if ordered else None
+    )
     return CollectionResponse(
         id=collection.id,
         gallery_id=collection.gallery_id,
@@ -53,9 +63,14 @@ def _live_images(db: Session, gallery_id: str) -> dict[str, Image]:
     return {img.id: img for img in image_repo.get_by_gallery(db, gallery_id)}
 
 
-def list_collections(db: Session, gallery_id: str, storage: StorageProvider) -> list[CollectionResponse]:
+def list_collections(
+    db: Session, gallery_id: str, storage: StorageProvider, public_gallery=None
+) -> list[CollectionResponse]:
     live = _live_images(db, gallery_id)
-    return [_to_response(c, live, storage) for c in collection_repo.list_by_gallery(db, gallery_id)]
+    return [
+        _to_response(c, live, storage, public_gallery)
+        for c in collection_repo.list_by_gallery(db, gallery_id)
+    ]
 
 
 def create_collection(
@@ -64,6 +79,7 @@ def create_collection(
     data: CollectionCreate,
     storage: StorageProvider,
     created_by: str | None = None,
+    public_gallery=None,
 ) -> CollectionResponse:
     gallery = gallery_repo.get_by_id(db, gallery_id)
     if not gallery:
@@ -89,7 +105,7 @@ def create_collection(
     if created_by:
         notification_service.enqueue(db, gallery_id, "collection", created_by, meta={"name": name})
     realtime_publish(gallery_id, "collection")
-    return _to_response(collection, live, storage)
+    return _to_response(collection, live, storage, public_gallery)
 
 
 def update_collection(
@@ -101,6 +117,7 @@ def update_collection(
     *,
     actor: str | None = None,
     is_admin: bool = False,
+    public_gallery=None,
 ) -> CollectionResponse:
     collection = collection_repo.get(db, collection_id)
     if not collection or collection.gallery_id != gallery_id:
@@ -127,7 +144,7 @@ def update_collection(
         collection_repo.replace_members(db, collection, image_ids)
 
     realtime_publish(gallery_id, "collection")
-    return _to_response(collection, live, storage)
+    return _to_response(collection, live, storage, public_gallery)
 
 
 def delete_collection(

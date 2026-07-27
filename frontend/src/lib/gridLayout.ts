@@ -73,7 +73,19 @@ interface PreviewSources {
 /** srcset over the thumb / small / medium renditions so the browser picks a right-sized source per
  *  rendered width + DPR. Width descriptors are each rendition's actual pixel width (long edge capped,
  *  never upscaled); tiers that don't end up wider than the previous (small originals) are dropped. */
-export function previewSrcSet(img: PreviewSources, highRes: boolean): string | undefined {
+/** Append the gallery JWT to a proxied rendition URL so it survives being an <img src> (which
+ *  can't carry an Authorization header — same `?token=` contract as the zip stream). Static
+ *  `/uploads/...` URLs are returned untouched — only the access-checked proxy needs the token. */
+export function withGalleryToken(url: string, galleryToken?: string | null): string {
+  if (!galleryToken || !url.startsWith("/api/public/")) return url;
+  return `${url}${url.includes("?") ? "&" : "?"}token=${encodeURIComponent(galleryToken)}`;
+}
+
+export function previewSrcSet(
+  img: PreviewSources,
+  highRes: boolean,
+  galleryToken?: string,
+): string | undefined {
   const caps = highRes ? PREVIEW_CAPS.high : PREVIEW_CAPS.low;
   const renditionWidth = (cap: number) =>
     img.width && img.height
@@ -89,7 +101,7 @@ export function previewSrcSet(img: PreviewSources, highRes: boolean): string | u
     if (!url) continue;
     const w = renditionWidth(caps[variant]);
     if (entries.length && w <= lastW) continue;
-    entries.push(`${url} ${w}w`);
+    entries.push(`${withGalleryToken(url, galleryToken)} ${w}w`);
     lastW = w;
   }
   return entries.length ? entries.join(", ") : undefined;

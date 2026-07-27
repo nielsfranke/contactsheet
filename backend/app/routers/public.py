@@ -219,7 +219,7 @@ def list_public_collections(
     gallery, _ = gallery_service.get_public_gallery(db, share_token, storage)
     _require_gallery_access(gallery, gallery_id_from_token)
     _require_collections(gallery)
-    return collection_service.list_collections(db, gallery.id, storage)
+    return collection_service.list_collections(db, gallery.id, storage, public_gallery=gallery)
 
 
 @router.post("/g/{share_token}/collections", response_model=CollectionResponse, status_code=201)
@@ -236,7 +236,9 @@ def create_public_collection(
     _require_gallery_access(gallery, gallery_id_from_token)
     _require_collections(gallery)
     created_by = (body.creator or "").strip()[:100] or "Guest"
-    return collection_service.create_collection(db, gallery.id, body, storage, created_by=created_by)
+    return collection_service.create_collection(
+        db, gallery.id, body, storage, created_by=created_by, public_gallery=gallery
+    )
 
 
 @router.patch("/g/{share_token}/collections/{collection_id}", response_model=CollectionResponse)
@@ -255,7 +257,8 @@ def update_public_collection(
     _require_collections(gallery)
     actor = (body.actor or "").strip()[:100] or "Guest"
     return collection_service.update_collection(
-        db, gallery.id, collection_id, body, storage, actor=actor, is_admin=False
+        db, gallery.id, collection_id, body, storage, actor=actor, is_admin=False,
+        public_gallery=gallery,
     )
 
 
@@ -395,11 +398,17 @@ def get_watermarked_medium(
     share_token: str,
     image_id: str,
     request: Request,
+    token: str | None = None,
     db: Session = Depends(get_db),
     storage: StorageProvider = Depends(get_storage),
     gallery_id_from_token: str | None = Depends(get_optional_gallery_token),
 ):
-    return _watermarked_variant("medium", share_token, image_id, request, db, storage, gallery_id_from_token)
+    # `?token=` because these URLs land in <img src>, which can't carry an auth header
+    # (same contract as the zip stream).
+    return _watermarked_variant(
+        "medium", share_token, image_id, request, db, storage,
+        gallery_id_from_token or gallery_id_from_token_value(token),
+    )
 
 
 @router.get("/g/{share_token}/images/{image_id}/small")
@@ -407,11 +416,15 @@ def get_watermarked_small(
     share_token: str,
     image_id: str,
     request: Request,
+    token: str | None = None,
     db: Session = Depends(get_db),
     storage: StorageProvider = Depends(get_storage),
     gallery_id_from_token: str | None = Depends(get_optional_gallery_token),
 ):
-    return _watermarked_variant("small", share_token, image_id, request, db, storage, gallery_id_from_token)
+    return _watermarked_variant(
+        "small", share_token, image_id, request, db, storage,
+        gallery_id_from_token or gallery_id_from_token_value(token),
+    )
 
 
 @router.get("/g/{share_token}/images/{image_id}/thumb")
@@ -419,11 +432,15 @@ def get_watermarked_thumb(
     share_token: str,
     image_id: str,
     request: Request,
+    token: str | None = None,
     db: Session = Depends(get_db),
     storage: StorageProvider = Depends(get_storage),
     gallery_id_from_token: str | None = Depends(get_optional_gallery_token),
 ):
-    return _watermarked_variant("thumb", share_token, image_id, request, db, storage, gallery_id_from_token)
+    return _watermarked_variant(
+        "thumb", share_token, image_id, request, db, storage,
+        gallery_id_from_token or gallery_id_from_token_value(token),
+    )
 
 
 def _watermarked_variant(

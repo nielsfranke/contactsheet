@@ -9,7 +9,7 @@ import type { ColorFlag, CollabFeatures, GridPresentation, ImageResponse, Layout
 import { showsFlags, showsStars } from "@/lib/types";
 import { useLightboxStore, type LightboxIntent } from "@/store/lightbox";
 import { api } from "@/lib/api";
-import { GAP_PX, JUSTIFIED_ROW_HEIGHT, cornerRounding, gridSizes, imageAspect, previewSrcSet } from "@/lib/gridLayout";
+import { GAP_PX, JUSTIFIED_ROW_HEIGHT, cornerRounding, gridSizes, imageAspect, previewSrcSet, withGalleryToken } from "@/lib/gridLayout";
 import { JustifiedGrid } from "@/components/JustifiedGrid";
 import { WindowedFixedGrid } from "@/components/WindowedFixedGrid";
 import { Loader2, AlertCircle, Check } from "lucide-react";
@@ -328,8 +328,8 @@ function PhotoTile({
           ) : (
             /* eslint-disable-next-line @next/next/no-img-element */
             <img
-              src={img.thumb_url!}
-              srcSet={highRes ? previewSrcSet(img, true) : undefined}
+              src={withGalleryToken(img.thumb_url!, galleryToken)}
+              srcSet={highRes ? previewSrcSet(img, true, galleryToken) : undefined}
               sizes={highRes ? sizes : undefined}
               alt={img.original_filename}
               loading="lazy"
