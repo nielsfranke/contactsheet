@@ -13,6 +13,7 @@ export interface LightboxKeyInput {
   ctrlKey?: boolean;
   metaKey?: boolean;
   shiftKey?: boolean;
+  defaultPrevented?: boolean;
   target?: { tagName?: string; type?: string; isContentEditable?: boolean } | null;
 }
 
@@ -29,11 +30,17 @@ function isEditableTarget(target: LightboxKeyInput["target"]): boolean {
 /**
  * Map a keydown to a lightbox action. Returns null when the key isn't a nav key. Arrow navigation
  * is suppressed while a modifier is held or focus is in an editable field — otherwise typing a
- * comment/annotation and using ←/→ to move the caret would flip the visible slide. Escape always
- * closes (matches the long-standing behaviour).
+ * comment/annotation and using ←/→ to move the caret would flip the visible slide. Escape closes,
+ * but not while an editor owns the keyboard: cancelling a comment draft or annotation note must not
+ * also throw the reviewer out of the lightbox. An inner layer (e.g. a Radix dialog) that already
+ * handled the key marks it via preventDefault — respect that too.
  */
 export function lightboxKeyAction(e: LightboxKeyInput): LightboxKeyAction {
-  if (e.key === "Escape") return "close";
+  if (e.defaultPrevented) return null;
+  if (e.key === "Escape") {
+    if (isEditableTarget(e.target)) return null;
+    return "close";
+  }
   if (e.key !== "ArrowRight" && e.key !== "ArrowLeft") return null;
   if (e.altKey || e.ctrlKey || e.metaKey || e.shiftKey) return null;
   if (isEditableTarget(e.target)) return null;
@@ -51,6 +58,7 @@ export function useLightboxKeys(handlers: { close: () => void; next: () => void;
         ctrlKey: e.ctrlKey,
         metaKey: e.metaKey,
         shiftKey: e.shiftKey,
+        defaultPrevented: e.defaultPrevented,
         target: e.target as LightboxKeyInput["target"],
       });
       if (action === "close") close();

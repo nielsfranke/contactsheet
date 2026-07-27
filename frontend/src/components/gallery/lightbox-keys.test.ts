@@ -46,7 +46,16 @@ describe("lightboxKeyAction", () => {
     expect(lightboxKeyAction({ key: "ArrowRight", target: { tagName: "INPUT", type: "text" } })).toBeNull();
   });
 
-  it("closes on Escape even from within an input", () => {
-    expect(lightboxKeyAction({ key: "Escape", target: { tagName: "INPUT" } })).toBe("close");
+  it("leaves Escape to the editor when focus is in an editable field", () => {
+    // Cancelling a comment draft / annotation note must not also close the lightbox.
+    expect(lightboxKeyAction({ key: "Escape", target: { tagName: "INPUT" } })).toBeNull();
+    expect(lightboxKeyAction({ key: "Escape", target: { tagName: "TEXTAREA" } })).toBeNull();
+    // The zoom slider is not a text editor — Escape still closes from there.
+    expect(lightboxKeyAction({ key: "Escape", target: { tagName: "INPUT", type: "range" } })).toBe("close");
+  });
+
+  it("ignores keys an inner layer already handled (defaultPrevented)", () => {
+    expect(lightboxKeyAction({ key: "Escape", defaultPrevented: true })).toBeNull();
+    expect(lightboxKeyAction({ key: "ArrowRight", defaultPrevented: true })).toBeNull();
   });
 });
