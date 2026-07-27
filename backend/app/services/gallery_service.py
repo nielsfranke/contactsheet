@@ -455,8 +455,8 @@ def update_gallery(
             if "subgallery_presets" in updates:
                 cascade["subgallery_presets"] = updates["subgallery_presets"]
             if cascade:
-                for child in gallery_repo.get_descendants(db, gallery.id):
-                    gallery_repo.update(db, child, **cascade)
+                descendant_ids = [c.id for c in gallery_repo.get_descendants(db, gallery.id)]
+                gallery_repo.bulk_update(db, descendant_ids, **cascade)
 
     return _build_response(gallery, db, storage)
 

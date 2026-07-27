@@ -621,15 +621,34 @@ def transfer_images(
     if not ordered:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="No valid images to transfer")
 
-    base = len(image_repo.get_by_gallery(db, target_gallery_id))
+    base = image_repo.count_by_gallery(db, target_gallery_id)
     results: list[Image] = []
-    for offset, image in enumerate(ordered):
-        if operation == "copy":
-            results.append(copy_image_to_gallery(db, image, target_gallery_id, storage, base + offset))
-        else:
-            results.append(move_image(db, image.id, target_gallery_id, storage))
     if operation == "copy":
+        for offset, image in enumerate(ordered):
+            results.append(copy_image_to_gallery(db, image, target_gallery_id, storage, base + offset))
         realtime_publish(target_gallery_id, "image")
+        return results
+
+    # Move: batch the row updates + like/vote reassignments and publish once per gallery —
+    # per-image move_image() would re-count the target, commit three times and publish twice
+    # for every image (O(n·m) on large transfers).
+    for offset, image in enumerate(ordered):
+        sf = image.stored_filename
+        for subdir in _IMAGE_SUBDIRS:
+            src = f"{source_gallery_id}/{subdir}/{sf}"
+            if storage.exists(src):
+                storage.move(src, f"{target_gallery_id}/{subdir}/{sf}")
+        image.gallery_id = target_gallery_id
+        image.sort_order = base + offset
+        results.append(image)
+    db.commit()
+    # Per-reviewer likes/votes are filtered by gallery_id, so they must follow the images (see
+    # move_image).
+    moved_ids = [img.id for img in results]
+    like_repo.reassign_gallery_bulk(db, moved_ids, target_gallery_id)
+    vote_repo.reassign_gallery_bulk(db, moved_ids, target_gallery_id)
+    realtime_publish(source_gallery_id, "image")
+    realtime_publish(target_gallery_id, "image")
     return results
 
 
@@ -708,12 +727,7 @@ def approve_image(db: Session, image_id: str) -> Image:
 
 def approve_images(db: Session, gallery_id: str, image_ids: list[str]) -> int:
     """Bulk-approve pending uploads in a gallery. Returns the number actually flipped."""
-    n = 0
-    for image_id in image_ids:
-        image = image_repo.get_by_id(db, image_id)
-        if image and image.gallery_id == gallery_id and image.moderation_status != "approved":
-            image_repo.update_fields(db, image, moderation_status="approved")
-            n += 1
+    n = image_repo.bulk_approve(db, gallery_id, image_ids)
     if n:
         try:
             activity_repo.log(db, gallery_id, "approved", "admin", meta={"count": n})

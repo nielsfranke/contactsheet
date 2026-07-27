@@ -294,3 +294,39 @@ def test_upload_response_schema_accepts_no_preview():
         processing_status="no_preview",
     )
     assert r.processing_status == "no_preview"
+
+
+def test_bulk_transfer_move_appends_and_carries_likes(admin_client):
+    """The batched transfer path must keep move_image's semantics: images append after the
+    target's existing photos in request order, and per-reviewer likes follow to the new
+    gallery (they're filtered by gallery_id)."""
+    a = make_gallery(admin_client, "A", mode="collaboration")
+    b = make_gallery(admin_client, "B", mode="collaboration")
+    for g in (a, b):
+        admin_client.patch(f"/api/galleries/{g['id']}", json={"likes_enabled": True})
+    img1 = add_image(a["id"], filename="one.jpg", sort_order=0)
+    img2 = add_image(a["id"], filename="two.jpg", sort_order=1)
+    existing = add_image(b["id"], filename="existing.jpg", sort_order=0)
+
+    like = admin_client.post(
+        f"/api/public/g/{a['share_token']}/images/{img1}/like", json={"reviewer": "Alice"}
+    )
+    assert like.status_code == 200
+
+    r = admin_client.post(
+        f"/api/galleries/{a['id']}/images/transfer",
+        json={"image_ids": [img2, img1], "target_gallery_id": b["id"], "operation": "move"},
+    )
+    assert r.status_code == 200 and r.json()["count"] == 2
+
+    imgs = admin_client.get(f"/api/galleries/{b['id']}/images").json()
+    order = [(i["id"], i["sort_order"]) for i in sorted(imgs, key=lambda i: i["sort_order"])]
+    assert order == [(existing, 0), (img2, 1), (img1, 2)]
+    assert admin_client.get(f"/api/galleries/{a['id']}/images").json() == []
+
+    db = SessionLocal()
+    try:
+        assert like_repo.liked_image_ids(db, b["id"], "Alice") == [img1]
+        assert like_repo.liked_image_ids(db, a["id"], "Alice") == []
+    finally:
+        db.close()

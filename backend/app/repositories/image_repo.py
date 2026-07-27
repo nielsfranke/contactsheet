@@ -115,6 +115,27 @@ def increment_likes(db: Session, image_id: str) -> Image:
     return db.get(Image, image_id)
 
 
+def bulk_approve(db: Session, gallery_id: str, image_ids: list[str]) -> int:
+    """Flip pending client uploads in this gallery to approved — one UPDATE, one commit.
+    Returns the number of rows actually changed (already-approved / foreign / deleted ids are
+    filtered by the WHERE, mirroring the per-row checks of the old loop)."""
+    if not image_ids:
+        return 0
+    result = db.execute(
+        update(Image)
+        .where(
+            Image.id.in_(image_ids),
+            Image.gallery_id == gallery_id,
+            Image.deleted_at.is_(None),
+            Image.moderation_status != "approved",
+        )
+        .values(moderation_status="approved")
+        .execution_options(synchronize_session=False)
+    )
+    db.commit()
+    return result.rowcount
+
+
 def update_fields(db: Session, image: Image, **kwargs) -> Image:
     for key, value in kwargs.items():
         setattr(image, key, value)

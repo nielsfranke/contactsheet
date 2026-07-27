@@ -4,6 +4,7 @@
 from datetime import datetime, timezone
 
 from sqlalchemy import func, select
+from sqlalchemy import update as sa_update
 from sqlalchemy.orm import Session
 
 from app.models.comment import Comment
@@ -79,6 +80,20 @@ def update(db: Session, gallery: Gallery, **kwargs) -> Gallery:
     db.commit()
     db.refresh(gallery)
     return gallery
+
+
+def bulk_update(db: Session, gallery_ids: list[str], **kwargs) -> None:
+    """Apply the same field values to many galleries (settings cascade) — one UPDATE, one commit,
+    instead of a commit + refresh per row."""
+    if not gallery_ids:
+        return
+    db.execute(
+        sa_update(Gallery)
+        .where(Gallery.id.in_(gallery_ids))
+        .values(updated_at=_now(), **kwargs)
+        .execution_options(synchronize_session=False)
+    )
+    db.commit()
 
 
 def soft_delete(db: Session, gallery: Gallery) -> Gallery:

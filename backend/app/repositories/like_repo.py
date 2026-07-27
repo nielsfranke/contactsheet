@@ -38,6 +38,19 @@ def reassign_gallery(db: Session, image_id: str, gallery_id: str) -> None:
     db.commit()
 
 
+def reassign_gallery_bulk(db: Session, image_ids: list[str], gallery_id: str) -> None:
+    """Bulk variant of reassign_gallery for multi-image transfers — one UPDATE, one commit."""
+    if not image_ids:
+        return
+    db.execute(
+        update(ImageLike)
+        .where(ImageLike.image_id.in_(image_ids))
+        .values(gallery_id=gallery_id)
+        .execution_options(synchronize_session=False)
+    )
+    db.commit()
+
+
 def liked_image_ids(db: Session, gallery_id: str, reviewer_name: str) -> list[str]:
     """Image ids in the gallery this reviewer has liked."""
     return list(
