@@ -511,3 +511,37 @@ def test_expired_children_hidden_from_public_nav(admin_client):
     r = admin_client.get(f"/api/public/g/{parent['share_token']}")
     assert r.status_code == 200
     assert [s["name"] for s in r.json()["subgalleries"]] == ["Live"]
+
+
+def test_gallery_token_not_valid_for_other_gallery(admin_client):
+    """A gallery JWT authorizes exactly the gallery it was issued for. Presenting gallery A's
+    token to password-protected gallery B must 401 on every carrier: the Authorization header
+    (REST) and the ?token= query variants (zip stream + image serving proxy, which live in
+    URLs and can't carry a header)."""
+    a = make_gallery(admin_client, "LockedA")
+    b = make_gallery(admin_client, "LockedB")
+    img_b = _upload(admin_client, b["id"], "b.png").json()[0]["id"]
+    for g in (a, b):
+        admin_client.patch(f"/api/galleries/{g['id']}", json={"password": "secret"})
+    pub = _pub()
+    tok_a = pub.post(
+        f"/api/public/g/{a['share_token']}/auth", json={"password": "secret"}
+    ).json()["access_token"]
+
+    hdr_a = {"Authorization": f"Bearer {tok_a}"}
+    assert pub.get(f"/api/public/g/{b['share_token']}", headers=hdr_a).json() == {"requires_password": True}
+    assert pub.get(f"/api/public/g/{b['share_token']}/images", headers=hdr_a).status_code == 401
+    assert pub.get(f"/api/public/g/{b['share_token']}/zip/stream", params={"token": tok_a}).status_code == 401
+    assert (
+        pub.get(f"/api/public/g/{b['share_token']}/images/{img_b}/thumb", params={"token": tok_a}).status_code
+        == 401
+    )
+
+    # Control: B's own token passes the same gates.
+    tok_b = pub.post(
+        f"/api/public/g/{b['share_token']}/auth", json={"password": "secret"}
+    ).json()["access_token"]
+    assert pub.get(
+        f"/api/public/g/{b['share_token']}/images", headers={"Authorization": f"Bearer {tok_b}"}
+    ).status_code == 200
+    assert pub.get(f"/api/public/g/{b['share_token']}/zip/stream", params={"token": tok_b}).status_code == 200

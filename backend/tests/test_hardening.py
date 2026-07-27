@@ -227,3 +227,67 @@ def test_admin_ws_rejects_cross_origin(admin_client):
         f"/api/ws/admin/galleries/{g['id']}", headers={"origin": "http://testserver"}
     ):
         pass
+
+
+# --- WS auth rejections (admin cookie / public gallery token) ---------------------------------
+
+def _ws_close_code(client, path, **kwargs):
+    """Connect, then read once: an auth rejection surfaces as a WebSocketDisconnect whose code is
+    the application close code (4401/4404/4410); None means the socket stayed open."""
+    from starlette.websockets import WebSocketDisconnect
+
+    with client.websocket_connect(path, **kwargs) as ws:
+        try:
+            ws.receive_text()
+            return None
+        except WebSocketDisconnect as exc:
+            return exc.code
+
+
+def test_admin_ws_rejects_missing_and_invalid_cookie(admin_client):
+    g = make_gallery(admin_client, "WsAuth")
+    anon = TestClient(app)
+    # No cookie at all → 4401.
+    assert _ws_close_code(anon, f"/api/ws/admin/galleries/{g['id']}") == 4401
+    # A cookie that isn't a valid JWT → 4401.
+    assert _ws_close_code(
+        anon, f"/api/ws/admin/galleries/{g['id']}",
+        headers={"cookie": "access_token=not-a-jwt"},
+    ) == 4401
+
+
+def test_admin_ws_rejects_stale_token_version(admin_client):
+    """"Sign out everywhere" bumps token_version; a previously issued admin cookie must be
+    rejected by the WS handshake exactly like it is by REST."""
+    g = make_gallery(admin_client, "WsStale")
+    old_cookie = admin_client.cookies.get("access_token")
+    assert old_cookie
+    assert admin_client.post("/api/auth/logout-all").status_code == 200
+    anon = TestClient(app)
+    assert _ws_close_code(
+        anon, f"/api/ws/admin/galleries/{g['id']}",
+        headers={"cookie": f"access_token={old_cookie}"},
+    ) == 4401
+
+
+def test_public_ws_password_gallery_rejects_missing_and_foreign_token(admin_client):
+    """A password-protected gallery's socket requires *its own* gallery JWT: no token and another
+    gallery's token both close with 4401; the matching token stays open."""
+    a = make_gallery(admin_client, "WsLockedA")
+    b = make_gallery(admin_client, "WsLockedB")
+    for g in (a, b):
+        admin_client.patch(f"/api/galleries/{g['id']}", json={"password": "secret"})
+    pub = TestClient(app)
+
+    assert _ws_close_code(pub, f"/api/ws/public/g/{b['share_token']}") == 4401
+
+    tok_a = pub.post(
+        f"/api/public/g/{a['share_token']}/auth", json={"password": "secret"}
+    ).json()["access_token"]
+    assert _ws_close_code(pub, f"/api/ws/public/g/{b['share_token']}?token={tok_a}") == 4401
+
+    tok_b = pub.post(
+        f"/api/public/g/{b['share_token']}/auth", json={"password": "secret"}
+    ).json()["access_token"]
+    with pub.websocket_connect(f"/api/ws/public/g/{b['share_token']}?token={tok_b}"):
+        pass
