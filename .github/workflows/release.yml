@@ -33,10 +33,47 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  # A v* tag must not ship images (or move :latest) unless the Tests workflow passed on the
+  # tagged commit. The tag push itself doesn't trigger tests, so look the result up via the
+  # API — waiting a while, since the mirror can deliver the branch and tag pushes together
+  # and the Tests run may still be in flight.
+  tests-passed:
+    if: ${{ github.server_url == 'https://github.com' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Require a green Tests run on this commit
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          # Peel annotated tags: GITHUB_SHA can be the tag object, not the commit.
+          SHA="$(git rev-parse 'HEAD^{commit}')"
+          echo "Looking for a completed Tests run on $SHA"
+          for attempt in $(seq 1 60); do
+            runs="$(gh api "repos/$GITHUB_REPOSITORY/actions/workflows/tests.yml/runs?head_sha=$SHA&per_page=20" \
+              --jq '[.workflow_runs[] | {status, conclusion}]')"
+            if echo "$runs" | jq -e 'any(.[]; .status == "completed" and .conclusion == "success")' >/dev/null; then
+              echo "Tests passed on $SHA"
+              exit 0
+            fi
+            if echo "$runs" | jq -e 'length > 0 and all(.[]; .status == "completed")' >/dev/null; then
+              echo "Tests completed without success on $SHA — refusing to release:"
+              echo "$runs"
+              exit 1
+            fi
+            echo "Tests not finished yet (attempt $attempt/60) — waiting 30s"
+            sleep 30
+          done
+          echo "Timed out waiting for a green Tests run on $SHA — refusing to release."
+          echo "(Is the tagged commit on main? Tests only run on pushes to main and PRs.)"
+          exit 1
+
   build:
     # Only run on GitHub Actions. The Forgejo mirror may surface this file too, but it
     # has no runner today — this guard keeps it a no-op there even if one is added.
     if: ${{ github.server_url == 'https://github.com' }}
+    needs: tests-passed
     runs-on: ${{ matrix.runner }}
     strategy:
       fail-fast: false
