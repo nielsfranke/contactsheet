@@ -3,7 +3,7 @@
 
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import type { ColorFlag, RatingMode } from "@/lib/types";
 import { showsFlags, showsStars } from "@/lib/types";
@@ -97,6 +97,16 @@ export function GalleryToolbar({
   const ts = useTranslations("gallery.stars");
   const tc = useTranslations("common");
   const [sheetOpen, setSheetOpen] = useState(false);
+
+  // Focus lands inside the sheet when it opens (so Escape/tab work from the keyboard) and returns
+  // to the trigger when it closes.
+  const sheetRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!sheetOpen) return;
+    const trigger = document.activeElement as HTMLElement | null;
+    sheetRef.current?.focus();
+    return () => trigger?.focus?.();
+  }, [sheetOpen]);
   const starsUI = showsStars(features.ratingMode ?? "flags");
   const flagUI = showsFlags(features.ratingMode ?? "flags");
 
@@ -366,10 +376,18 @@ export function GalleryToolbar({
             aria-hidden
           />
           <div
+            ref={sheetRef}
             role="dialog"
             aria-modal="true"
             aria-label={t("filterSort")}
-            className="fixed inset-x-0 bottom-0 z-50 max-h-[80vh] overflow-y-auto rounded-t-2xl border-t border-border bg-background p-4 pb-[max(1rem,env(safe-area-inset-bottom))] shadow-2xl space-y-5"
+            tabIndex={-1}
+            onKeyDown={(e) => {
+              if (e.key === "Escape") {
+                e.stopPropagation();
+                setSheetOpen(false);
+              }
+            }}
+            className="fixed inset-x-0 bottom-0 z-50 max-h-[80vh] overflow-y-auto rounded-t-2xl border-t border-border bg-background p-4 pb-[max(1rem,env(safe-area-inset-bottom))] shadow-2xl space-y-5 outline-none"
           >
             <div className="flex items-center justify-between">
               <h2 className="text-sm font-semibold text-foreground">{t("filterSort")}</h2>

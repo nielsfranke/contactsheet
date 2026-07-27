@@ -529,6 +529,37 @@ export function Lightbox({
     };
   }, []);
 
+  // Dialog semantics: move focus into the overlay on open and hand it back to the trigger (the
+  // grid tile) on close, so keyboard/screen-reader users don't land in the visually hidden page.
+  useEffect(() => {
+    const trigger = document.activeElement as HTMLElement | null;
+    containerRef.current?.focus();
+    return () => trigger?.focus?.();
+  }, []);
+
+  // Keep Tab cycling inside the overlay — the page behind is scroll-locked but would otherwise
+  // still be reachable through the tab order.
+  function trapTab(e: React.KeyboardEvent) {
+    if (e.key !== "Tab") return;
+    const root = containerRef.current;
+    if (!root) return;
+    const focusables = Array.from(
+      root.querySelectorAll<HTMLElement>(
+        'button, [href], input, textarea, select, [tabindex]:not([tabindex="-1"])',
+      ),
+    ).filter((el) => el.offsetParent !== null && !el.hasAttribute("disabled"));
+    if (!focusables.length) return;
+    const first = focusables[0];
+    const last = focusables[focusables.length - 1];
+    if (e.shiftKey && (document.activeElement === first || document.activeElement === root)) {
+      e.preventDefault();
+      last.focus();
+    } else if (!e.shiftKey && document.activeElement === last) {
+      e.preventDefault();
+      first.focus();
+    }
+  }
+
   // Mirror the top toolbar's rendered height (its buttons/padding may change) into state. The bar
   // is conditionally mounted (immersive), so re-bind when it returns.
   useLayoutEffect(() => {
@@ -854,7 +885,12 @@ export function Lightbox({
   return (
     <div
       ref={containerRef}
-      className={`fixed inset-0 z-50 ${surface} flex flex-col`}
+      role="dialog"
+      aria-modal="true"
+      aria-label={image?.original_filename}
+      tabIndex={-1}
+      onKeyDown={trapTab}
+      className={`fixed inset-0 z-50 ${surface} flex flex-col outline-none`}
     >
       {/* Top toolbar — hidden in immersive mode */}
       {!immersive && (
