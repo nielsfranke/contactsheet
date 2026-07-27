@@ -10,12 +10,18 @@ from app.errors import CodedHTTPException
 from app.repositories import settings_repo
 from app.runtime_config import set_token_version
 
+# Burned on username mismatch so both 401 paths cost one bcrypt — otherwise the response time
+# reveals whether a guessed admin username exists (wrong name returns in microseconds, right
+# name only after the ~100 ms hash check).
+_DUMMY_HASH = hash_password("timing-equalizer-not-a-real-password")
+
 
 def login(username: str, password: str, db: Session, remember: bool = False) -> str:
     s = settings_repo.get(db)
     if not s.setup_complete:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Setup not complete")
     if username != s.admin_username:
+        verify_password(password, _DUMMY_HASH)
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid credentials")
     if not s.admin_password_hash or not verify_password(password, s.admin_password_hash):
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid credentials")
