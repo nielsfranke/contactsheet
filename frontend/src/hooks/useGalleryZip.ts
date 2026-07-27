@@ -3,7 +3,7 @@
 
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { api } from "@/lib/api";
 import type { ZipJob } from "@/lib/types";
 
@@ -30,13 +30,26 @@ function useZipBuilder(ops: ZipOps) {
   const [error, setError] = useState<string | null>(null);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  // Stop the poll loop when the owning page unmounts — otherwise a pending (or stuck) job keeps
+  // hitting the status endpoint forever and triggers a download into a page the user already left.
+  const alive = useRef(true);
+  useEffect(() => {
+    alive.current = true;
+    return () => {
+      alive.current = false;
+      if (timer.current) clearTimeout(timer.current);
+    };
+  }, []);
+
   async function run(create: () => Promise<ZipJob>, onSuccess?: () => void) {
     setError(null);
     setPreparing(true);
     try {
       const job = await create();
+      if (!alive.current) return;
       poll(job.id, onSuccess);
     } catch (e) {
+      if (!alive.current) return;
       setError((e as Error).message);
       setPreparing(false);
     }
@@ -46,6 +59,7 @@ function useZipBuilder(ops: ZipOps) {
     const tick = async () => {
       try {
         const job = await ops.getStatus(jobId);
+        if (!alive.current) return;
         if (job.status === "ready") {
           triggerBrowserDownload(ops.downloadUrl(jobId));
           setPreparing(false);
@@ -57,6 +71,7 @@ function useZipBuilder(ops: ZipOps) {
           timer.current = setTimeout(tick, 1500);
         }
       } catch (e) {
+        if (!alive.current) return;
         setError((e as Error).message);
         setPreparing(false);
       }
