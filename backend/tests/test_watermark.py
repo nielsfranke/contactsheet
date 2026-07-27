@@ -83,3 +83,21 @@ def test_update_gallery_rejects_out_of_range_watermark(admin_client):
     g = make_gallery(admin_client, "G")
     payload = json.dumps({"enabled": True, "mode": "text", "text": "x", "opacity": 999})
     assert admin_client.patch(f"/api/galleries/{g['id']}", json={"watermark_settings": payload}).status_code == 400
+
+
+def test_settings_change_drops_composited_cache(admin_client):
+    """The wm cache is keyed per settings-hash — superseded hashes must not linger on disk."""
+    import os
+
+    from app.config import settings
+
+    g = make_gallery(admin_client, "WM")
+    cache_dir = os.path.join(settings.upload_dir, g["id"], "thumb-wm")
+    os.makedirs(cache_dir, exist_ok=True)
+    stale = os.path.join(cache_dir, "img_deadbeef.jpg")
+    open(stale, "wb").write(b"stale")
+
+    ws = {"enabled": True, "mode": "text", "text": "© Studio"}
+    r = admin_client.patch(f"/api/galleries/{g['id']}", json={"watermark_settings": json.dumps(ws)})
+    assert r.status_code == 200
+    assert not os.path.exists(stale)

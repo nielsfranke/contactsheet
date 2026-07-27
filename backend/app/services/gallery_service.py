@@ -6,6 +6,7 @@ import json
 import os
 import re
 import secrets
+import shutil
 import string
 import uuid
 from datetime import datetime, timezone
@@ -385,6 +386,13 @@ def update_gallery(
         except Exception:
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid watermark settings")
         updates["watermark_settings"] = normalized.model_dump_json()
+        # The composited cache is keyed per settings-hash — superseded hashes would linger on disk
+        # forever. It's pure cache, so drop it wholesale whenever the settings change.
+        for variant in ("thumb", "small", "medium"):
+            shutil.rmtree(
+                os.path.join(app_config.upload_dir, gallery.id, f"{variant}-wm"),
+                ignore_errors=True,
+            )
     if data.headline is not None:
         updates["headline"] = data.headline or None  # "" → None
 
