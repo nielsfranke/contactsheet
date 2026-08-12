@@ -49,7 +49,7 @@ are very welcome.
 ## Highlights
 
 - **Two gallery modes** — *Showcase* (a polished, view-only gallery) or *Review* (clients flag, like, comment), with an optional per-gallery switch that lets clients flip a Showcase into Review themselves.
-- **Client feedback** — color flags *or* 1–5 star ratings (an instance-wide choice), per-person likes, comments, and **freehand annotations** drawn right on a photo.
+- **Client feedback** — color flags, 1–5 star ratings, or **both side by side** (an instance-wide choice), per-person likes, comments, and **freehand annotations** drawn right on a photo — with a zoom slider in the review lightbox so clients can check detail before deciding.
 - **Collections** — multi-select photos into named, downloadable sets; admin *and* clients can build them.
 - **Content search** *(optional)* — find photos by what's *in* them ("car at sunset"), in a gallery or across your whole library, via an opt-in on-device AI model. Without it, **All Photos** still browses everything and filters by name, gallery, and IPTC keywords.
 - **Client uploads** — optionally let visitors contribute photos, with an optional **approval queue**.
@@ -62,6 +62,7 @@ are very welcome.
 - **Notifications** — email, Pushover, ntfy, Discord, Telegram, Slack, or any [Apprise](https://github.com/caronc/apprise) URL.
 - **Video** — browser-playable MP4/MOV/WebM, streamed with seek support (no transcoding).
 - **Branding & PWA** — your logo, accent color, and a public footer; installable with a branding-aware app icon.
+- **Legal pages** — publish an imprint and a privacy policy from Settings, linked from every client gallery (handy where an *Impressum* is mandatory).
 - **Backup & restore** — one-click full-instance backup (database + all media) you can download, and restore in place — in the browser or via CLI.
 - **Multilingual** — English & German out of the box, community-translatable via [Weblate](https://translate.nielsbox.cc).
 - **Mobile-first** — galleries and the admin dashboard reflow to a single column with a native swipe lightbox.
@@ -86,7 +87,10 @@ quick on a modest self-hosted box:
   one); layers aren't read. A PSB without an embedded preview still uploads as a download-only file.
 - **Video is never transcoded**, so it must be a browser-playable container/codec (H.264/VP9/AV1);
   HEVC/ProRes upload but may not play in-browser.
-- Uploads default to a **300 MB** per-file limit (configurable via `MAX_UPLOAD_BYTES`).
+- Uploads default to a **300 MB** per-file limit (`MAX_UPLOAD_BYTES`), raised to **8 GB** for
+  Photoshop/TIFF working files (`MAX_DOCUMENT_BYTES`), with a **250 MP** resolution ceiling
+  (`MAX_IMAGE_PIXELS`). A large drag-and-drop batch is split into parts automatically, so folder
+  uploads don't need a proxy reconfiguration.
 
 ## Quick start
 
