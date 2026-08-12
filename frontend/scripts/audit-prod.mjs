@@ -15,27 +15,12 @@
 
 import { execSync } from "node:child_process";
 
-const ALLOWED = [
-  {
-    id: "GHSA-f88m-g3jw-g9cj",
-    module: "sharp",
-    why:
-      "sharp/libvips CVEs are reachable only through Next's Image Optimization API, which this app " +
-      "disables outright (`images: { unoptimized: true }` in next.config.ts) — sharp is never " +
-      "invoked at runtime. Photo processing is Pillow in the backend, not sharp. Pinned by Next's " +
-      "own dependency range; clears when Next ships sharp >= 0.35.0.",
-  },
-  {
-    id: "GHSA-qx2v-qp2m-jg93",
-    module: "postcss",
-    why:
-      "postcss runs at build time over this repo's own Tailwind sources. All three advisories need " +
-      "attacker-controlled CSS (stringify XSS / sourceMappingURL file read) — no user input ever " +
-      "reaches it. Bundled inside next/node_modules; clears when Next ships postcss > 8.5.17.",
-  },
-  { id: "GHSA-6g55-p6wh-862q", module: "postcss", why: "Same postcss instance and reasoning as GHSA-qx2v-qp2m-jg93." },
-  { id: "GHSA-r28c-9q8g-f849", module: "postcss", why: "Same postcss instance and reasoning as GHSA-qx2v-qp2m-jg93." },
-];
+// Empty is the goal state: every advisory that was parked here has been fixed upstream. Next 16.3.0
+// ships postcss 8.5.23 and sharp 0.35.3, which cleared the four entries that lived here (one sharp /
+// libvips, three postcss sourceMappingURL + stringify issues). Add an entry only when an advisory is
+// genuinely unfixable from this repo — with the reasoning for why it is not exploitable *here* — and
+// drop it again as soon as the upstream fix lands (the staleness check below will insist).
+const ALLOWED = [];
 
 const BLOCKING = new Set(["high", "critical"]);
 

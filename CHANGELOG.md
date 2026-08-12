@@ -12,6 +12,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Security
+
+- **Next.js bumped 16.2.12 → 16.3.0**, which clears every advisory the frontend audit was carrying:
+  the bundled postcss goes 8.4.31 → 8.5.23 (three known sourceMappingURL / stringify issues plus a
+  fourth, newly published incomplete-fix advisory) and sharp 0.34.5 → 0.35.3 (the inherited libvips
+  CVEs). Both were previously unfixable from this repo because Next pinned them.
+- **nanoid bumped 3.3.15 → 3.3.18** (transitively, under postcss), closing two denial-of-service
+  advisories where non-secure or custom generators can loop indefinitely for a negative or zero
+  size. Not reachable here — nothing passes a caller-controlled size — but the fix is free.
+- The npm audit allowlist in `frontend/scripts/audit-prod.mjs` is now **empty**, and the job still
+  fails on any new high/critical advisory. Nothing is being suppressed.
+
 ## [1.9.3] - 2026-07-27
 
 ### Security
