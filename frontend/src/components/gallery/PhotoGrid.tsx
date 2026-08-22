@@ -252,7 +252,9 @@ const PhotoTile = memo(function PhotoTile({
   bright: boolean;
 }) {
   const t = useTranslations("gallery.grid");
-  const tf = useTranslations("gallery.flags");
+  // Semantic flag names (Select/Reject/Maybe/Favourite) — same vocabulary as the lightbox, so the
+  // flag means the same thing wherever the client meets it.
+  const tf = useTranslations("gallery.lightbox.flagLabels");
   const qc = useQueryClient();
   const [localFlag, setLocalFlag] = useState<ColorFlag>(img.color_flag);
   // Adopt the stored flag when it changes from outside this tile (e.g. set in the lightbox,
@@ -429,7 +431,7 @@ const PhotoTile = memo(function PhotoTile({
             the resting indicators above stay and all flagging/commenting happens in the lightbox.
             Shown for the collab toolbar OR a standalone download button (presentation mode). */}
         {(showToolbar || showDownload) && !selectionMode && (
-          <div className="absolute inset-0 pointer-events-none hidden sm:block opacity-0 sm:group-hover:opacity-100 transition-opacity">
+          <div className="absolute inset-0 pointer-events-none hidden sm:block opacity-0 sm:group-hover:opacity-100 focus-within:opacity-100 transition-opacity">
             <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-black/30" />
 
             {/* Top-right: rating pickers — star picker above the flag-dot row ("both" mode stacks them). */}
@@ -490,6 +492,8 @@ const PhotoTile = memo(function PhotoTile({
                   shape="pill"
                   onClick={(e) => { e.stopPropagation(); onToggleLike?.(img.id); }}
                   title={t("like")}
+                  aria-label={t("like")}
+                  aria-pressed={liked}
                 >
                   <Icons.like size={13} className={liked ? "fill-red-500 text-red-500" : ""} />
                   {img.likes > 0 && <span className="text-[11px]">{img.likes}</span>}
@@ -508,6 +512,7 @@ const PhotoTile = memo(function PhotoTile({
                     shape="pill"
                     onClick={(e) => { e.stopPropagation(); onOpen(img.id, { panel: "annotations" }); }}
                     title={t("annotate")}
+                    aria-label={t("annotate")}
                   >
                     <Icons.annotation size={13} />
                     {img.annotation_count > 0 && <span className="text-[11px]">{img.annotation_count}</span>}
@@ -521,6 +526,7 @@ const PhotoTile = memo(function PhotoTile({
                     shape="pill"
                     onClick={(e) => { e.stopPropagation(); onOpen(img.id, { panel: "comments" }); }}
                     title={t("comments")}
+                    aria-label={t("comments")}
                   >
                     <Icons.comment size={13} />
                     {plainComments > 0 && <span className="text-[11px]">{plainComments}</span>}

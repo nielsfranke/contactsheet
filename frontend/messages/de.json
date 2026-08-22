@@ -31,6 +31,7 @@
       "submit": "Review starten"
     },
     "photoCount": "{count, plural, =0 {Keine Fotos} one {# Foto} other {# Fotos}}",
+    "subGalleryCount": "{count, plural, one {# Galerie} other {# Galerien}}",
     "flags": {
       "green": "Grün",
       "red": "Rot",
@@ -48,7 +49,6 @@
       "phone": "Telefon"
     },
     "view": {
-      "filtersAndTools": "Filter & Werkzeuge",
       "navigation": "Navigation",
       "reviewingAs": "Review als <b>{name}</b>",
       "download": "Herunterladen",

@@ -94,6 +94,9 @@ export function GalleryToolbar({
 }: Props) {
   const t = useTranslations("gallery.toolbar");
   const tf = useTranslations("gallery.flags");
+  // Semantic flag names for the colour chips — the same vocabulary the lightbox and grid use, so
+  // "filter by Select" matches the action the client performed ("none" keeps its own label).
+  const tfl = useTranslations("gallery.lightbox.flagLabels");
   const ts = useTranslations("gallery.stars");
   const tc = useTranslations("common");
   const [sheetOpen, setSheetOpen] = useState(false);
@@ -168,8 +171,8 @@ export function GalleryToolbar({
         <button
           key={c.value}
           onClick={() => toggleFlag(c.value)}
-          title={tf(c.value)}
-          aria-label={tf(c.value)}
+          title={c.value === "none" ? tf("none") : tfl(c.value)}
+          aria-label={c.value === "none" ? tf("none") : tfl(c.value)}
           aria-pressed={active}
           className={`${sizeCls} rounded-full flex items-center justify-center transition-all outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 focus-visible:ring-offset-background ${c.bg} ${
             active ? "ring-2 ring-foreground/50 scale-110" : "opacity-40 hover:opacity-80"

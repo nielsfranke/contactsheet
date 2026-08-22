@@ -87,6 +87,14 @@ export function GalleryPresentationLayout({
     ? "drop-shadow-[0_2px_10px_rgba(0,0,0,0.85)]"
     : "drop-shadow-md";
 
+  // A container (no own photos, only sub-galleries) counts its sections — "Keine Fotos" under a
+  // gallery whose sub-galleries are full of photos would mislead the client.
+  const containerSubCount =
+    gallery.image_count === 0 && gallery.subgalleries.length > 0 ? gallery.subgalleries.length : null;
+  const countLine = containerSubCount
+    ? t("subGalleryCount", { count: containerSubCount })
+    : t("photoCount", { count: gallery.image_count });
+
   // Manual header wins; else the opt-in auto-header fallback (a photo picked server-side).
   const headerImageRaw = gallery.header_image_url ?? gallery.header_image_fallback_url;
   // The auto-header fallback is a proxy URL in protected galleries → needs the gallery token.
@@ -142,7 +150,7 @@ export function GalleryPresentationLayout({
               {gallery.headline && (
                 <p className={`mt-3 max-w-2xl text-white/85 ${titleShadow} ${HERO_SUBTITLE_SIZE[gallery.opener_font_size] ?? HERO_SUBTITLE_SIZE.medium}`}>{gallery.headline}</p>
               )}
-              <p className="mt-3 text-xs text-white/60">{t("photoCount", { count: gallery.image_count })}</p>
+              <p className={`mt-3 text-xs text-white/75 ${titleShadow}`}>{countLine}</p>
             </div>
 
             {/* Scroll-down indicator pinned to the bottom */}
@@ -229,7 +237,8 @@ export function GalleryPresentationLayout({
                 {gallery.headline && (
                   <p className={`mt-1 text-sm ${bright ? "text-zinc-600" : "text-zinc-400"}`}>{gallery.headline}</p>
                 )}
-                <p className={`text-xs mt-2 ${bright ? "text-zinc-500" : "text-zinc-600"}`}>{t("photoCount", { count: gallery.image_count })}</p>
+                {/* zinc-400, not -600: the dark tone's muted-text rung (see .gallery-scope.dark) — -600 fell under AA on zinc-950. */}
+                <p className={`text-xs mt-2 ${bright ? "text-zinc-500" : "text-zinc-400"}`}>{countLine}</p>
               </div>
               <div className="flex items-center gap-2 sm:shrink-0">
                 {canSwitchMode && (

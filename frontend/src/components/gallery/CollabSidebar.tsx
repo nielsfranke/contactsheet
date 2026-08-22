@@ -3,6 +3,7 @@
 
 "use client";
 
+import { useEffect, useRef } from "react";
 import { useTranslations } from "next-intl";
 import Link from "next/link";
 import { Button, buttonVariants } from "@/components/ui/button";
@@ -58,6 +59,24 @@ export function CollabSidebar({
   const t = useTranslations("gallery");
   const tc = useTranslations("common");
 
+  // Drawer keyboard support (below md): focus lands on the close button when it opens (the drawer
+  // sits before the trigger in the DOM, so Tab would otherwise never reach it), Escape dismisses,
+  // and focus returns to the trigger on close — same pattern as the toolbar's filter sheet.
+  const closeRef = useRef<HTMLButtonElement>(null);
+  useEffect(() => {
+    if (!toolsOpen) return;
+    const trigger = document.activeElement as HTMLElement | null;
+    closeRef.current?.focus();
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setToolsOpen(false);
+    };
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("keydown", onKey);
+      trigger?.focus?.();
+    };
+  }, [toolsOpen, setToolsOpen]);
+
   // Sidebar chrome — semantic theme tokens (resolved from the gallery scope), matching the admin
   // sidebar so the public nav can't drift from it.
   const labelCls = "text-xs font-semibold uppercase tracking-wide text-muted-foreground";
@@ -68,11 +87,12 @@ export function CollabSidebar({
     <aside className={`w-72 shrink-0 overflow-y-auto border-r border-border bg-background md:sticky md:top-0 md:h-screen max-md:fixed max-md:inset-y-0 max-md:left-0 max-md:z-50 max-md:max-w-[84vw] max-md:shadow-xl max-md:transition-transform max-md:duration-200 ${toolsOpen ? "max-md:translate-x-0" : "max-md:-translate-x-full"}`}>
       {/* Mobile drawer header with close */}
       <div className="md:hidden flex items-center justify-between px-4 pt-4">
-        <span className={labelCls}>{t("view.filtersAndTools")}</span>
+        <span className={labelCls}>{t("view.menu")}</span>
         <button
+          ref={closeRef}
           onClick={() => setToolsOpen(false)}
           aria-label={tc("close")}
-          className="rounded p-1 text-muted-foreground hover:text-foreground"
+          className="rounded p-1 text-muted-foreground outline-none hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring"
         >
           <X size={18} />
         </button>

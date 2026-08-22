@@ -118,7 +118,7 @@ export function GalleryView({ gallery, shareToken, galleryToken }: Props) {
           <h3 className={`text-xs font-medium uppercase tracking-wide mb-2 ${bright ? "text-zinc-500" : "text-zinc-500"}`}>
             {g.key.startsWith("rating:")
               ? (g.key === "rating:0" ? t("stars.unrated") : t("stars.nStars", { count: Number(g.key.slice(7)) }))
-              : t(`flags.${g.key}`)} <span className="opacity-60">({g.images.length})</span>
+              : g.key === "none" ? t("flags.none") : t(`lightbox.flagLabels.${g.key}`)} <span className="opacity-60">({g.images.length})</span>
           </h3>
           {renderGrid(g.images)}
         </section>
