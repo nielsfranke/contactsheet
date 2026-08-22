@@ -1,0 +1,146 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-08-22T00:00:00Z",
+  "title": "Design System: ContactSheet",
+  "extensions": {
+    "colorMeta": {
+      "paper-white": { "role": "neutral", "displayName": "Paper White", "canonical": "oklch(1 0 0)", "tonalRamp": ["oklch(0.15 0 0)", "oklch(0.27 0 0)", "oklch(0.39 0 0)", "oklch(0.51 0 0)", "oklch(0.63 0 0)", "oklch(0.75 0 0)", "oklch(0.87 0 0)", "oklch(0.97 0 0)"] },
+      "off-white": { "role": "neutral", "displayName": "Off White", "canonical": "oklch(0.985 0 0)", "tonalRamp": ["oklch(0.15 0 0)", "oklch(0.27 0 0)", "oklch(0.39 0 0)", "oklch(0.51 0 0)", "oklch(0.63 0 0)", "oklch(0.75 0 0)", "oklch(0.87 0 0)", "oklch(0.985 0 0)"] },
+      "soft-gray": { "role": "neutral", "displayName": "Soft Gray", "canonical": "oklch(0.97 0 0)", "tonalRamp": ["oklch(0.15 0 0)", "oklch(0.27 0 0)", "oklch(0.39 0 0)", "oklch(0.51 0 0)", "oklch(0.63 0 0)", "oklch(0.75 0 0)", "oklch(0.87 0 0)", "oklch(0.97 0 0)"] },
+      "hairline-gray": { "role": "neutral", "displayName": "Hairline Gray", "canonical": "oklch(0.87 0 0)", "tonalRamp": ["oklch(0.15 0 0)", "oklch(0.27 0 0)", "oklch(0.39 0 0)", "oklch(0.51 0 0)", "oklch(0.63 0 0)", "oklch(0.75 0 0)", "oklch(0.87 0 0)", "oklch(0.97 0 0)"] },
+      "ring-gray": { "role": "neutral", "displayName": "Ring Gray", "canonical": "oklch(0.62 0 0)", "tonalRamp": ["oklch(0.15 0 0)", "oklch(0.27 0 0)", "oklch(0.39 0 0)", "oklch(0.51 0 0)", "oklch(0.62 0 0)", "oklch(0.75 0 0)", "oklch(0.87 0 0)", "oklch(0.97 0 0)"] },
+      "mid-gray": { "role": "neutral", "displayName": "Mid Gray", "canonical": "oklch(0.47 0 0)", "tonalRamp": ["oklch(0.15 0 0)", "oklch(0.27 0 0)", "oklch(0.39 0 0)", "oklch(0.47 0 0)", "oklch(0.63 0 0)", "oklch(0.75 0 0)", "oklch(0.87 0 0)", "oklch(0.97 0 0)"] },
+      "light-gray": { "role": "neutral", "displayName": "Light Gray", "canonical": "oklch(0.708 0 0)", "tonalRamp": ["oklch(0.15 0 0)", "oklch(0.27 0 0)", "oklch(0.39 0 0)", "oklch(0.51 0 0)", "oklch(0.63 0 0)", "oklch(0.708 0 0)", "oklch(0.87 0 0)", "oklch(0.97 0 0)"] },
+      "charcoal": { "role": "neutral", "displayName": "Charcoal", "canonical": "oklch(0.269 0 0)", "tonalRamp": ["oklch(0.15 0 0)", "oklch(0.269 0 0)", "oklch(0.39 0 0)", "oklch(0.51 0 0)", "oklch(0.63 0 0)", "oklch(0.75 0 0)", "oklch(0.87 0 0)", "oklch(0.97 0 0)"] },
+      "ink": { "role": "primary", "displayName": "Ink (default Instance Accent)", "canonical": "oklch(0.205 0 0)", "tonalRamp": ["oklch(0.145 0 0)", "oklch(0.205 0 0)", "oklch(0.32 0 0)", "oklch(0.45 0 0)", "oklch(0.58 0 0)", "oklch(0.71 0 0)", "oklch(0.84 0 0)", "oklch(0.96 0 0)"] },
+      "near-black": { "role": "neutral", "displayName": "Near Black", "canonical": "oklch(0.145 0 0)", "tonalRamp": ["oklch(0.145 0 0)", "oklch(0.27 0 0)", "oklch(0.39 0 0)", "oklch(0.51 0 0)", "oklch(0.63 0 0)", "oklch(0.75 0 0)", "oklch(0.87 0 0)", "oklch(0.97 0 0)"] },
+      "signal-red": { "role": "tertiary", "displayName": "Signal Red (destructive; dark-mode variant oklch(0.704 0.191 22.216))", "canonical": "oklch(0.577 0.245 27.325)", "tonalRamp": ["oklch(0.25 0.1 27)", "oklch(0.35 0.14 27)", "oklch(0.45 0.19 27)", "oklch(0.577 0.245 27.325)", "oklch(0.66 0.21 25)", "oklch(0.75 0.15 24)", "oklch(0.85 0.08 24)", "oklch(0.95 0.03 24)"] }
+    },
+    "typographyMeta": {
+      "body": { "displayName": "Body", "purpose": "Default working size for nearly all UI text (text-sm on a 17px root)." },
+      "title": { "displayName": "Title", "purpose": "Card titles, dialog headings, gallery names in admin." },
+      "label": { "displayName": "Label", "purpose": "Form labels, metadata, toolbar captions; on-photo pills drop to a hard 10-11px grease-pencil scale." },
+      "mono": { "displayName": "Mono", "purpose": "Filenames, tokens, technical values (Geist Mono)." }
+    },
+    "shadows": [
+      { "name": "hairline-ring", "value": "0 0 0 1px color-mix(in oklab, var(--foreground, oklch(0.145 0 0)) 10%, transparent)", "purpose": "The standard card/container separator in both themes — depth is drawn, not cast." },
+      { "name": "photo-scrim", "value": "linear-gradient(to top, rgba(0,0,0,0.5), transparent, rgba(0,0,0,0.3))", "purpose": "Gradient laid under a photo tile's hover controls so white pill text stays legible on any photograph." }
+    ],
+    "motion": [
+      { "name": "transition-standard", "value": "color 150ms, background-color 150ms, border-color 150ms, box-shadow 150ms, transform 150ms", "purpose": "Default control transition set (buttons, inputs, pills)." },
+      { "name": "press-nudge", "value": "translateY(1px) on :active", "purpose": "The 1px downward press on buttons — the system's only click feedback; no scale effects." },
+      { "name": "reduced-motion-override", "value": "0.01ms animations/transitions under prefers-reduced-motion (never 0s — some libraries require a transitionend)", "purpose": "Global vestibular-safety rule covering carousel, drawers, dialogs, spinners, switches." }
+    ],
+    "breakpoints": [
+      { "name": "sm", "value": "640px" },
+      { "name": "md", "value": "768px" },
+      { "name": "lg", "value": "1024px" },
+      { "name": "xl", "value": "1280px" },
+      { "name": "2xl", "value": "1536px" },
+      { "name": "readability-4k", "value": "2200px (root font-size bumps 17px → 19px)" }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "The single accent action in a view — Instance Accent fill with auto-contrast text.",
+      "html": "<button class=\"ds-btn ds-btn-primary\">Create gallery</button>",
+      "css": ".ds-btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; height: 32px; padding: 0 10px; border: 1px solid transparent; border-radius: 0.625rem; font-family: Montserrat, 'Helvetica Neue', Helvetica, Arial, sans-serif; font-size: 0.875rem; font-weight: 500; white-space: nowrap; cursor: pointer; user-select: none; outline: none; transition: color 150ms, background-color 150ms, border-color 150ms, box-shadow 150ms, transform 150ms; } .ds-btn:active { transform: translateY(1px); } .ds-btn-primary { background: var(--primary, oklch(0.205 0 0)); color: var(--primary-foreground, oklch(0.985 0 0)); } .ds-btn-primary:hover { background: color-mix(in oklab, var(--primary, oklch(0.205 0 0)) 80%, transparent); } .ds-btn-primary:focus-visible { border-color: var(--ring, oklch(0.62 0 0)); box-shadow: 0 0 0 3px color-mix(in oklab, var(--ring, oklch(0.62 0 0)) 50%, transparent); }"
+    },
+    {
+      "name": "Outline Button",
+      "kind": "button",
+      "refersTo": "button-outline",
+      "description": "The toolbar workhorse — hairline border on paper, quiet until hovered.",
+      "html": "<button class=\"ds-btn ds-btn-outline\">Share</button>",
+      "css": ".ds-btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; height: 32px; padding: 0 10px; border: 1px solid transparent; border-radius: 0.625rem; font-family: Montserrat, 'Helvetica Neue', Helvetica, Arial, sans-serif; font-size: 0.875rem; font-weight: 500; white-space: nowrap; cursor: pointer; user-select: none; outline: none; transition: color 150ms, background-color 150ms, border-color 150ms, box-shadow 150ms, transform 150ms; } .ds-btn:active { transform: translateY(1px); } .ds-btn-outline { border-color: var(--border, oklch(0.87 0 0)); background: var(--background, oklch(1 0 0)); color: var(--foreground, oklch(0.145 0 0)); } .ds-btn-outline:hover { background: var(--muted, oklch(0.97 0 0)); } .ds-btn-outline:focus-visible { border-color: var(--ring, oklch(0.62 0 0)); box-shadow: 0 0 0 3px color-mix(in oklab, var(--ring, oklch(0.62 0 0)) 50%, transparent); }"
+    },
+    {
+      "name": "Ghost Button",
+      "kind": "button",
+      "refersTo": "button-ghost",
+      "description": "Borderless tertiary action; surfaces a soft-gray fill only on hover.",
+      "html": "<button class=\"ds-btn ds-btn-ghost\">Cancel</button>",
+      "css": ".ds-btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; height: 32px; padding: 0 10px; border: 1px solid transparent; border-radius: 0.625rem; font-family: Montserrat, 'Helvetica Neue', Helvetica, Arial, sans-serif; font-size: 0.875rem; font-weight: 500; white-space: nowrap; cursor: pointer; user-select: none; outline: none; background: transparent; color: var(--foreground, oklch(0.145 0 0)); transition: color 150ms, background-color 150ms, border-color 150ms, box-shadow 150ms, transform 150ms; } .ds-btn:active { transform: translateY(1px); } .ds-btn-ghost:hover { background: var(--muted, oklch(0.97 0 0)); } .ds-btn-ghost:focus-visible { border-color: var(--ring, oklch(0.62 0 0)); box-shadow: 0 0 0 3px color-mix(in oklab, var(--ring, oklch(0.62 0 0)) 50%, transparent); }"
+    },
+    {
+      "name": "Destructive Button",
+      "kind": "button",
+      "refersTo": "button-destructive",
+      "description": "Dangerous, not screaming: Signal Red as a 10% tinted fill with full-color text.",
+      "html": "<button class=\"ds-btn ds-btn-destructive\">Delete gallery</button>",
+      "css": ".ds-btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; height: 32px; padding: 0 10px; border: 1px solid transparent; border-radius: 0.625rem; font-family: Montserrat, 'Helvetica Neue', Helvetica, Arial, sans-serif; font-size: 0.875rem; font-weight: 500; white-space: nowrap; cursor: pointer; user-select: none; outline: none; transition: color 150ms, background-color 150ms, border-color 150ms, box-shadow 150ms, transform 150ms; } .ds-btn:active { transform: translateY(1px); } .ds-btn-destructive { background: color-mix(in oklab, oklch(0.577 0.245 27.325) 10%, transparent); color: oklch(0.577 0.245 27.325); } .ds-btn-destructive:hover { background: color-mix(in oklab, oklch(0.577 0.245 27.325) 20%, transparent); } .ds-btn-destructive:focus-visible { border-color: color-mix(in oklab, oklch(0.577 0.245 27.325) 40%, transparent); box-shadow: 0 0 0 3px color-mix(in oklab, oklch(0.577 0.245 27.325) 20%, transparent); }"
+    },
+    {
+      "name": "Text Input",
+      "kind": "input",
+      "refersTo": "input",
+      "description": "32px hairline-stroked field; the accent-tracked 3px halo is the focus language everywhere.",
+      "html": "<input class=\"ds-input\" type=\"text\" placeholder=\"Gallery name\" />",
+      "css": ".ds-input { height: 32px; width: 100%; min-width: 0; padding: 4px 10px; border: 1px solid var(--input, oklch(0.87 0 0)); border-radius: 0.625rem; background: transparent; color: var(--foreground, oklch(0.145 0 0)); font-family: Montserrat, 'Helvetica Neue', Helvetica, Arial, sans-serif; font-size: 0.875rem; outline: none; transition: color 150ms, background-color 150ms, border-color 150ms, box-shadow 150ms; } .ds-input::placeholder { color: var(--muted-foreground, oklch(0.47 0 0)); } .ds-input:focus-visible { border-color: var(--ring, oklch(0.62 0 0)); box-shadow: 0 0 0 3px color-mix(in oklab, var(--ring, oklch(0.62 0 0)) 50%, transparent); } .ds-input:disabled { pointer-events: none; opacity: 0.5; background: color-mix(in oklab, var(--input, oklch(0.87 0 0)) 50%, transparent); }"
+    },
+    {
+      "name": "Card",
+      "kind": "card",
+      "refersTo": "card",
+      "description": "Flat paper surface separated by a hairline ring — never a shadow at rest.",
+      "html": "<div class=\"ds-card\"><div class=\"ds-card-title\">Wedding — Anna &amp; Jan</div><div class=\"ds-card-desc\">128 photos · shared 3 days ago</div></div>",
+      "css": ".ds-card { display: flex; flex-direction: column; gap: 4px; padding: 16px; border-radius: 0.875rem; background: var(--card, oklch(1 0 0)); color: var(--card-foreground, oklch(0.145 0 0)); box-shadow: 0 0 0 1px color-mix(in oklab, var(--foreground, oklch(0.145 0 0)) 10%, transparent); overflow: hidden; } .ds-card-title { font-family: Montserrat, 'Helvetica Neue', Helvetica, Arial, sans-serif; font-size: 1rem; font-weight: 500; line-height: 1.375; } .ds-card-desc { font-family: Montserrat, 'Helvetica Neue', Helvetica, Arial, sans-serif; font-size: 0.875rem; color: var(--muted-foreground, oklch(0.47 0 0)); }"
+    },
+    {
+      "name": "Overlay Pill (control)",
+      "kind": "custom",
+      "refersTo": "overlay-pill-control",
+      "description": "Interactive on-photo chrome — the signature translucent-black instrument layer; white focus ring because it always sits on a photo scrim.",
+      "html": "<div class=\"ds-pill-stage\"><button class=\"ds-overlay-control\"><svg width=\"14\" height=\"14\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4\"/><polyline points=\"7 10 12 15 17 10\"/><line x1=\"12\" y1=\"15\" x2=\"12\" y2=\"3\"/></svg>Download</button></div>",
+      "css": ".ds-pill-stage { display: inline-flex; padding: 14px; border-radius: 8px; background: linear-gradient(135deg, oklch(0.45 0.03 260), oklch(0.3 0.04 290)); } .ds-overlay-control { display: inline-flex; align-items: center; gap: 4px; height: 28px; padding: 0 8px; border: none; border-radius: 9999px; background: rgba(0, 0, 0, 0.55); color: #fff; font-family: Montserrat, 'Helvetica Neue', Helvetica, Arial, sans-serif; font-size: 11px; font-weight: 500; cursor: pointer; outline: none; transition: background-color 150ms; } .ds-overlay-control:hover { background: rgba(0, 0, 0, 0.75); } .ds-overlay-control:focus-visible { box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.9); }"
+    },
+    {
+      "name": "Overlay Badge",
+      "kind": "chip",
+      "refersTo": "overlay-pill-badge",
+      "description": "Read-only count/info chip on a photo tile (comments, video play) — pointer-inert, 10px grease-pencil scale.",
+      "html": "<div class=\"ds-pill-stage\"><span class=\"ds-overlay-badge\"><svg width=\"10\" height=\"10\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M7.9 20A9 9 0 1 0 4 16.1L2 22Z\"/></svg>12</span></div>",
+      "css": ".ds-pill-stage { display: inline-flex; padding: 14px; border-radius: 8px; background: linear-gradient(135deg, oklch(0.45 0.03 260), oklch(0.3 0.04 290)); } .ds-overlay-badge { display: inline-flex; align-items: center; gap: 2px; padding: 2px 6px; border-radius: 4px; background: rgba(0, 0, 0, 0.6); color: #e4e4e7; font-family: Montserrat, 'Helvetica Neue', Helvetica, Arial, sans-serif; font-size: 10px; font-weight: 500; pointer-events: none; }"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Contact Sheet",
+    "overview": "The whole system answers to the darkroom contact sheet — the single evenly-lit page of frames a photographer studies to pick the keepers. Everything the app draws is that page: a warm, unhurried, craftsmanlike surface whose only ambition is to present photographs honestly and get out of the way. The interface is achromatic on purpose; the photographs supply the color, and the one chromatic voice in the chrome — the accent — belongs to the photographer, not to the app. Marks made on photos (flags, likes, drawn annotations, star ratings) are the digital grease pencil: small, legible, sitting on translucent-black chrome directly over the image.\n\nComponents are soft and friendly: generously rounded (10px base radius), compact but never cramped, with gentle hovers and a one-pixel press. Nothing shouts, nothing glosses. Density is calm working density, not pro-tool cockpit density — a non-technical client on a phone must feel welcomed by the same surfaces a photographer works in daily. There are two rooms in this house, deliberately separate: the admin surface (theme-able light/dark, photographer-picked accent) and the public gallery (its own zinc-ramp tone scope carrying the photographer's branding, fonts, and colors — the app's identity recedes to a legal strip).",
+    "keyCharacteristics": [
+      "Achromatic OKLCH gray chrome; photographs and the photographer's accent are the only color.",
+      "Soft, friendly geometry: 10px-radius controls, 14px-radius cards, full-round pills over photos.",
+      "Flat by default: hairline rings and tonal steps instead of drop shadows.",
+      "Two separate identity scopes — admin theme vs. .gallery-scope — that never bleed into each other.",
+      "Everything rem-based off a 17px root, so the whole UI scales as one piece."
+    ],
+    "rules": [
+      { "name": "The Two Darkrooms Rule", "body": "The admin surface and the public gallery run separate identity systems. Admin: semantic tokens + the instance accent (--primary). Public gallery: the .gallery-scope zinc ramp (bright or dark tone per gallery) plus the photographer's brand_color and fonts. Never reach for --primary inside a public gallery, and never leak gallery branding into admin chrome.", "section": "colors" },
+      { "name": "The One Voice Rule", "body": "At most one accent emphasis per view. Accent never colors large fills, body text, success/destructive states, or icons that carry their own meaning (color flags, mode chips). If two things are accent, neither reads as primary.", "section": "colors" },
+      { "name": "The Borrowed Chroma Rule", "body": "Chrome stays achromatic. All other color on screen is borrowed — from the photographs or from the photographer's chosen accent/branding. Adding a new decorative hue to the system is a design error, not a variation.", "section": "colors" },
+      { "name": "The Opener Exception Rule", "body": "Display typography exists in exactly one place: the public gallery opener, drawn from the font registry (lib/gallery-fonts.ts, literal option objects, preload: false). App chrome never borrows a display face, and new fonts enter only through the registry (synced with the backend FontType gate).", "section": "typography" },
+      { "name": "The Seventeen-Pixel Rule", "body": "The root font-size is 106.25% (17px; 118.75% ≥ 2200px viewports) and everything is rem-based, so the whole UI scales together. Size new type in rem/Tailwind steps — hard px only for the 10–11px overlay-pill scale that must hug photo chrome.", "section": "typography" },
+      { "name": "The Ladder Rule", "body": "New stacking contexts land on an existing rung of the z-index scale (10 in-content, 20 sticky toolbar, 30 collab-sidebar band, 40 backdrops, 50 modal layer, 60 above-lightbox). No in-between values.", "section": "layout" },
+      { "name": "The Hairline Rule", "body": "Depth is drawn, not cast: hairline rings and tonal layering first. A blur-radius shadow needs a floating layer and a reason.", "section": "elevation" },
+      { "name": "The Scrim Rule", "body": "All on-photo chrome sits on the centralized translucent-black tokens (lib/ui-tokens.ts: rest 55%, hover 75%, badge 60%) via <OverlayPill>. Hand-rolled bg-black/NN pills are banned — that drift is exactly what the component exists to end.", "section": "elevation" }
+    ],
+    "dos": [
+      "Do route every recurring icon concept through the Icons registry (lib/ui-icons.ts) — one concept, one glyph, on every surface.",
+      "Do pair --primary-foreground with any accent fill; accentForeground() already guarantees AA for arbitrary picked hexes.",
+      "Do keep muted text at the darkened values (Mid Gray light / Light Gray dark, zinc-600/zinc-400 in gallery scope) — the ~7:1 contrast is a deliberate accessibility choice, not a default to \"restore.\"",
+      "Do honor prefers-reduced-motion: the global near-instant override must keep covering new animations (0.01ms, not 0s — some libraries need a transitionend).",
+      "Do build on the existing primitives first — OverlayPill, MediaBadge, ConfirmDialog, DropdownMenu, shadcn Dialog — before writing any new floating or on-photo chrome.",
+      "Do keep every user-facing string translatable (next-intl, en.json source of truth) — the system ships community-translated."
+    ],
+    "donts": [
+      "Don't cross the Two Darkrooms: no --primary in public galleries, no gallery branding in admin chrome.",
+      "Don't hand-roll bg-black/NN on-photo chrome, fixed-position popovers with click-catchers, or window.confirm() — the primitives exist precisely because these drifted.",
+      "Don't use accent for status: success and destructive keep their own colors; color flags and mode chips keep their own meanings.",
+      "Don't cast shadows on resting surfaces or invent z-index rungs — hairline rings, tonal steps, and the fixed ladder.",
+      "Don't introduce a new decorative hue, a new display font outside the opener registry, or a second accent emphasis in one view.",
+      "Don't decorate the photographs: no filters, tints, rounded crops, or overlays beyond the sanctioned scrim/pill chrome and the deliberate watermark feature."
+    ]
+  }
+}
