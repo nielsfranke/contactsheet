@@ -25,11 +25,11 @@ import {
 } from "@/components/ui/dropdown-menu";
 import type { CardProps } from "./admin-grid-types";
 
-const FLAG_COLORS: { value: ColorFlag; bg: string; label: string }[] = [
-  { value: "green",  bg: "bg-green-500",  label: "Green" },
-  { value: "red",    bg: "bg-red-500",    label: "Red" },
-  { value: "yellow", bg: "bg-yellow-400", label: "Yellow" },
-  { value: "blue",   bg: "bg-blue-400",   label: "Blue" },
+const FLAG_COLORS: { value: ColorFlag; bg: string }[] = [
+  { value: "green",  bg: "bg-green-500" },
+  { value: "red",    bg: "bg-red-500" },
+  { value: "yellow", bg: "bg-yellow-400" },
+  { value: "blue",   bg: "bg-blue-400" },
 ];
 
 const FLAG_BG: Record<ColorFlag, string> = {
@@ -46,7 +46,9 @@ export function AdminTile({
   selectionMode, isSelected, onToggleSelect, onRangeSelect,
 }: { img: ImageResponse; aspectSquare: boolean; fixedHeight?: number; sizes?: string; dragProps?: Record<string, unknown> } & CardProps) {
   const t = useTranslations("admin.imageGrid");
-  const tflag = useTranslations("gallery.flags");
+  // Semantic flag names (Select/Reject/Maybe/Favourite) — the shared vocabulary of the lightbox,
+  // client grid, and toolbar; the admin sees the same meaning the client set.
+  const tflag = useTranslations("gallery.lightbox.flagLabels");
   const qc = useQueryClient();
   const starsUI = showsStars(ratingMode);
   const flagUI = showsFlags(ratingMode);
@@ -167,7 +169,13 @@ export function AdminTile({
         ) : draggable ? (
           <div {...dragProps} onClick={() => onOpen?.(img)} className="block w-full h-full cursor-grab active:cursor-grabbing">{media}</div>
         ) : (
-          <button onClick={() => onOpen?.(img)} className="block w-full h-full cursor-zoom-in">{media}</button>
+          <button
+            onClick={() => onOpen?.(img)}
+            aria-label={img.original_filename}
+            className="block w-full h-full cursor-zoom-in outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-white"
+          >
+            {media}
+          </button>
         )}
 
         {/* Selection overlay */}
@@ -232,7 +240,7 @@ export function AdminTile({
         {/* Hover overlay */}
         {img.processing_status === "done" && !selectionMode && (
           <div
-            className="absolute inset-0 pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity"
+            className="absolute inset-0 pointer-events-none opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity"
             onPointerDown={(e) => e.stopPropagation()}
           >
             <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-black/30" />
@@ -298,7 +306,9 @@ export function AdminTile({
                       onClick={(e) => { e.stopPropagation(); setFlag(f.value); }}
                       disabled={flagMutation.isPending}
                       title={tflag(f.value)}
-                      className={`w-5 h-5 rounded-full transition-all ${f.bg} ${
+                      aria-label={tflag(f.value)}
+                      aria-pressed={localFlag === f.value}
+                      className={`w-5 h-5 rounded-full transition-all outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-1 focus-visible:ring-offset-black/40 ${f.bg} ${
                         localFlag === f.value ? "opacity-100 ring-2 ring-white/70 scale-110" : "opacity-60 hover:opacity-100"
                       }`}
                     />
@@ -333,6 +343,7 @@ export function AdminTile({
                 shape="pill"
                 onClick={(e) => { e.stopPropagation(); onOpen?.(img, { panel: "annotations" }); }}
                 title={t("annotate")}
+                aria-label={t("annotate")}
               >
                 <Icons.annotation size={13} />
                 {img.annotation_count > 0 && <span className="text-[11px]">{img.annotation_count}</span>}
@@ -344,6 +355,7 @@ export function AdminTile({
                 shape="pill"
                 onClick={(e) => { e.stopPropagation(); onOpen?.(img, { panel: "comments" }); }}
                 title={t("comments")}
+                aria-label={t("comments")}
               >
                 <Icons.comment size={13} />
                 {img.comment_count - img.annotation_count > 0 && (

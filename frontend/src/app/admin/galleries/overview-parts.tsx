@@ -3,6 +3,7 @@
 
 "use client";
 
+import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { useDraggable, useDroppable } from "@dnd-kit/core";
 import type { GalleryResponse } from "@/lib/types";
@@ -73,11 +74,14 @@ export function GalleryTile({
     drag.setNodeRef(el);
     drop.setNodeRef(el);
   };
+  // drag.attributes is deliberately not spread: dnd-kit would hand the card role="button" +
+  // tabIndex, but no KeyboardSensor is configured (dragging is pointer-only) and a div with
+  // role="button" doesn't activate on Enter — the stop was dead. The gallery title is a real link
+  // instead, so the overview is one keyboard stop per gallery.
   return (
     <div
       ref={setRef}
       {...(isTouch ? {} : drag.listeners)}
-      {...(isTouch ? {} : drag.attributes)}
       onClick={onOpen}
       className={cn(
         "group text-left cursor-pointer",
@@ -94,8 +98,9 @@ export function GalleryTile({
         )}
       >
         {g.cover_image_url ? (
+          // alt="": the cover is decorative — the gallery name is the link text below the tile.
           // eslint-disable-next-line @next/next/no-img-element
-          <img src={g.cover_image_url} alt={g.name} className="w-full h-full object-cover" />
+          <img src={g.cover_image_url} alt="" className="w-full h-full object-cover" />
         ) : (
           <CoverPlaceholder name={g.name} />
         )}
@@ -125,7 +130,8 @@ export function GalleryTile({
             className="absolute bottom-2 right-2 gap-1"
             title={t("subGalleryCount", { count: g.children.length })}
           >
-            <Icons.subGallery size={11} /> <span className="tabular-nums">{g.children.length}</span>
+            <Icons.subGallery size={11} aria-hidden /> <span className="tabular-nums" aria-hidden>{g.children.length}</span>
+            <span className="sr-only">{t("subGalleryCount", { count: g.children.length })}</span>
           </OverlayPill>
         )}
         {/* Mode chip — icon-only at rest; the label (Review / Showcase) expands on hover. */}
@@ -169,7 +175,13 @@ export function GalleryTile({
       <div className="mt-2 min-w-0">
         <div className="flex items-center gap-1">
           {g.has_password && <Icons.locked size={12} className="text-muted-foreground flex-shrink-0" />}
-          <span className="text-sm font-medium text-foreground truncate">{g.name}</span>
+          <Link
+            href={`/admin/galleries/${g.id}`}
+            onClick={(e) => e.stopPropagation()}
+            className="min-w-0 truncate rounded text-sm font-medium text-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          >
+            {g.name}
+          </Link>
         </div>
         {g.headline && (
           <p className="mt-0.5 text-xs text-muted-foreground/80 truncate">{g.headline}</p>
@@ -178,7 +190,8 @@ export function GalleryTile({
           <span>{countParts.join(" · ")}</span>
           {g.comment_count > 0 && (
             <span className="flex items-center gap-0.5">
-              <Icons.comment size={10} /> {g.comment_count}
+              <Icons.comment size={10} aria-hidden /> <span aria-hidden>{g.comment_count}</span>
+              <span className="sr-only">{t("commentCount", { count: g.comment_count })}</span>
             </span>
           )}
         </div>

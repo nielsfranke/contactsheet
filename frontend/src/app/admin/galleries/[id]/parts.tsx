@@ -62,11 +62,13 @@ export function SubGalleryCard({ child, parentId, onShare }: { child: GalleryRes
   const active = useAdminDndActive();
   const dimmed = active?.kind === "gallery" && active.galleryId === child.id;
   const setRef = (el: HTMLElement | null) => { drag.setNodeRef(el); drop.setNodeRef(el); };
+  // drag.attributes is deliberately not spread: it would add a second, dead tab stop in front of
+  // the card's real link (dnd-kit announces a draggable as a button, but no KeyboardSensor is
+  // configured — dragging is pointer-only).
   return (
     <div
       ref={setRef}
       {...drag.listeners}
-      {...drag.attributes}
       className={cn(
         "relative group/subcard rounded-lg border overflow-hidden bg-card/40 transition-colors cursor-grab active:cursor-grabbing",
         dimmed && "opacity-30",
@@ -76,8 +78,9 @@ export function SubGalleryCard({ child, parentId, onShare }: { child: GalleryRes
       <Link href={`/admin/galleries/${child.id}`} className="block">
         <div className="aspect-video bg-muted">
           {child.cover_image_url ? (
+            // alt="": the cover is decorative — the gallery name is the link text right below it.
             // eslint-disable-next-line @next/next/no-img-element
-            <img src={child.cover_image_url} alt={child.name} className="w-full h-full object-cover" />
+            <img src={child.cover_image_url} alt="" className="w-full h-full object-cover" />
           ) : (
             <CoverPlaceholder name={child.name} />
           )}
@@ -90,7 +93,8 @@ export function SubGalleryCard({ child, parentId, onShare }: { child: GalleryRes
       <button
         onClick={onShare}
         title={t("shareLink")}
-        className="absolute top-2 right-2 opacity-0 group-hover/subcard:opacity-100 transition-opacity bg-black/50 hover:bg-black/70 text-white rounded p-1"
+        aria-label={t("shareLink")}
+        className="absolute top-2 right-2 rounded bg-black/50 p-1 text-white opacity-0 outline-none transition-opacity hover:bg-black/70 focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-white group-hover/subcard:opacity-100"
       >
         <Send size={12} />
       </button>

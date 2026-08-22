@@ -199,10 +199,13 @@ function TreeNode({
 
   return (
     <div>
+      {/* drag.attributes is deliberately not spread: dnd-kit would announce the row as a focusable
+          button, but no KeyboardSensor is configured (dragging is pointer-only) and a div with
+          role="button" doesn't activate on Enter — the stop was dead. The gallery name is a real
+          link instead, so the tree is one keyboard stop per gallery. */}
       <div
         ref={setRef}
         {...drag.listeners}
-        {...drag.attributes}
         className={cn(
           "flex items-center gap-1 px-2 py-1.5 rounded-md cursor-grab active:cursor-grabbing text-sm group",
           isActive ? "bg-sidebar-accent text-sidebar-accent-foreground font-semibold" : "text-muted-foreground hover:bg-sidebar-accent/50 hover:text-sidebar-accent-foreground",
@@ -218,6 +221,7 @@ function TreeNode({
             onPointerDown={(e) => e.stopPropagation()}
             title={isExpanded ? t("collapse") : t("expand")}
             aria-label={isExpanded ? t("collapse") : t("expand")}
+            aria-expanded={isExpanded}
             className="flex items-center justify-center h-5 w-5 -ml-0.5 flex-shrink-0 rounded text-muted-foreground hover:text-foreground hover:bg-sidebar-accent"
           >
             {isExpanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
@@ -230,12 +234,20 @@ function TreeNode({
         ) : (
           <Folder size={14} className="flex-shrink-0" />
         )}
-        <span className="flex-1 truncate">{g.name}</span>
-        <span className="text-xs text-muted-foreground/70">{g.image_count}</span>
+        <Link
+          href={`/admin/galleries/${g.id}`}
+          onClick={(e) => e.stopPropagation()}
+          className="min-w-0 flex-1 truncate rounded outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        >
+          {g.name}
+        </Link>
+        <span className="text-xs text-muted-foreground/70" aria-hidden>{g.image_count}</span>
+        <span className="sr-only">{t("photoCount", { count: g.image_count })}</span>
         <button
           title={t("addSubGallery")}
+          aria-label={t("addSubGallery")}
           onClick={(e) => { e.stopPropagation(); onAddSub(g.id); }}
-          className="opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-foreground"
+          className="rounded text-muted-foreground opacity-0 outline-none hover:text-foreground focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-ring group-hover:opacity-100"
         >
           <FolderPlus size={13} />
         </button>

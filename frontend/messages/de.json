@@ -246,7 +246,8 @@
       "signOutBody": "Beende die Sitzung auf diesem Gerät, oder melde dich auf allen Geräten ab, um alle aktiven Sitzungen zu widerrufen (andere Browser, Geräte oder ein geleaktes Login).",
       "signOutThisDevice": "Dieses Gerät",
       "signOutAllDevices": "Alle Geräte",
-      "analytics": "Statistiken"
+      "analytics": "Statistiken",
+      "menu": "Menü"
     },
     "dnd": {
       "movedInto": "{name} verschoben",
@@ -308,7 +309,8 @@
       "deleteSubWarning": "Damit werden auch {count, plural, one {ihre # Untergalerie} other {ihre # Untergalerien}} und alle darin enthaltenen Fotos gelöscht.",
       "deleting": "Wird gelöscht…",
       "renamed": "Umbenannt in „{name}“",
-      "deleted": "„{name}“ gelöscht"
+      "deleted": "„{name}“ gelöscht",
+      "commentCount": "{count, plural, one {# Kommentar} other {# Kommentare}}"
     },
     "tree": {
       "showAll": "Alle Galerien anzeigen",
@@ -321,7 +323,8 @@
       "noMatch": "Keine Galerien entsprechen „{query}“",
       "collapse": "Einklappen",
       "expand": "Ausklappen",
-      "addSubGallery": "Untergalerie hinzufügen"
+      "addSubGallery": "Untergalerie hinzufügen",
+      "photoCount": "{count, plural, one {# Bild} other {# Bilder}}"
     },
     "dialogs": {
       "createGallery": "Neue Galerie erstellen",

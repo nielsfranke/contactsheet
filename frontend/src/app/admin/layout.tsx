@@ -3,7 +3,7 @@
 
 "use client";
 
-import { Suspense, useCallback, useEffect, useState } from "react";
+import { Suspense, useCallback, useEffect, useRef, useState } from "react";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { useQuery } from "@tanstack/react-query";
@@ -14,7 +14,7 @@ import { AdminThemeProvider } from "@/components/admin/AdminThemeProvider";
 import { AdminDndProvider } from "@/components/admin/AdminDnd";
 import { useAdminMobileHeader } from "@/store/adminMobileHeader";
 import { resolveOpenerFont } from "@/lib/gallery-fonts";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
@@ -23,7 +23,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { LogOut, Settings, ChevronLeft, Menu, BarChart3 } from "lucide-react";
+import { LogOut, Settings, ChevronLeft, Menu, X, BarChart3 } from "lucide-react";
 import Link from "next/link";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -72,12 +72,20 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       });
   }, [router]);
 
-  // Esc closes the mobile drawer.
+  // Drawer keyboard support (below md): focus lands on the close button when it opens (the drawer
+  // sits before its trigger in the DOM, so Tab would otherwise never reach it), Escape dismisses,
+  // and focus returns to the trigger on close — same pattern as the public tools drawer.
+  const closeRef = useRef<HTMLButtonElement>(null);
   useEffect(() => {
     if (!drawerOpen) return;
+    const trigger = document.activeElement as HTMLElement | null;
+    closeRef.current?.focus();
     const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") setDrawerOpen(false); };
     window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
+    return () => {
+      window.removeEventListener("keydown", onKey);
+      trigger?.focus?.();
+    };
   }, [drawerOpen]);
 
   const pathname = usePathname();
@@ -155,21 +163,32 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   // a mobile copy) means the detail page's portal slot below never changes identity.
   const sidebarInner = (
     <>
-      <Link
-        href="/admin/galleries"
-        title={instanceName}
-        className="flex h-16 items-center gap-2 px-4 border-b border-sidebar-border hover:bg-sidebar-accent/50 transition-colors overflow-hidden"
-      >
-        {logo}
-        {showName && (
-          <span className="flex min-w-0 flex-col leading-tight">
-            <span className="truncate font-semibold" style={nameStyle}>{instanceName}</span>
-            {tagline && (
-              <span className="truncate text-xs text-muted-foreground">{tagline}</span>
-            )}
-          </span>
-        )}
-      </Link>
+      <div className="flex h-16 shrink-0 items-center border-b border-sidebar-border">
+        <Link
+          href="/admin/galleries"
+          title={instanceName}
+          className="flex h-full min-w-0 flex-1 items-center gap-2 px-4 hover:bg-sidebar-accent/50 transition-colors overflow-hidden"
+        >
+          {logo}
+          {showName && (
+            <span className="flex min-w-0 flex-col leading-tight">
+              <span className="truncate font-semibold" style={nameStyle}>{instanceName}</span>
+              {tagline && (
+                <span className="truncate text-xs text-muted-foreground">{tagline}</span>
+              )}
+            </span>
+          )}
+        </Link>
+        <button
+          ref={closeRef}
+          type="button"
+          onClick={closeDrawer}
+          aria-label={tCommon("close")}
+          className="mr-2 shrink-0 rounded p-1 text-muted-foreground outline-none transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring md:hidden"
+        >
+          <X size={18} />
+        </button>
+      </div>
       <div className="flex-1 overflow-y-auto py-2">
         {isGalleryDetail || isSettings ? (
           <>
@@ -211,31 +230,31 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         )}
       </div>
       <div className="px-3 py-3 border-t border-sidebar-border space-y-1">
-        <Link href="/admin/analytics">
-          <Button
-            variant="ghost"
-            size="sm"
-            className={`w-full justify-start ${
-              pathname === "/admin/analytics"
-                ? "bg-sidebar-accent text-sidebar-accent-foreground"
-                : "text-muted-foreground hover:text-foreground"
-            }`}
-          >
-            <BarChart3 size={16} className="mr-2" /> {tShell("analytics")}
-          </Button>
+        {/* Links styled as buttons (buttonVariants), not <Link><Button>> — nesting a button inside
+            an anchor is invalid and gives keyboard users two stops per row. */}
+        <Link
+          href="/admin/analytics"
+          className={cn(
+            buttonVariants({ variant: "ghost", size: "sm" }),
+            "w-full justify-start",
+            pathname === "/admin/analytics"
+              ? "bg-sidebar-accent text-sidebar-accent-foreground"
+              : "text-muted-foreground hover:text-foreground",
+          )}
+        >
+          <BarChart3 size={16} className="mr-2" /> {tShell("analytics")}
         </Link>
-        <Link href="/admin/settings">
-          <Button
-            variant="ghost"
-            size="sm"
-            className={`w-full justify-start ${
-              isSettings
-                ? "bg-sidebar-accent text-sidebar-accent-foreground"
-                : "text-muted-foreground hover:text-foreground"
-            }`}
-          >
-            <Settings size={16} className="mr-2" /> {tShell("settings")}
-          </Button>
+        <Link
+          href="/admin/settings"
+          className={cn(
+            buttonVariants({ variant: "ghost", size: "sm" }),
+            "w-full justify-start",
+            isSettings
+              ? "bg-sidebar-accent text-sidebar-accent-foreground"
+              : "text-muted-foreground hover:text-foreground",
+          )}
+        >
+          <Settings size={16} className="mr-2" /> {tShell("settings")}
         </Link>
         <Button
           variant="ghost"
@@ -277,8 +296,15 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       <aside
         className={cn(
           "flex w-72 flex-shrink-0 flex-col border-r border-sidebar-border bg-sidebar text-sidebar-foreground",
-          "max-md:fixed max-md:inset-y-0 max-md:left-0 max-md:z-50 max-md:max-w-[84vw] max-md:shadow-xl max-md:transition-transform max-md:duration-200",
-          drawerOpen ? "max-md:translate-x-0" : "max-md:-translate-x-full",
+          "max-md:fixed max-md:inset-y-0 max-md:left-0 max-md:z-50 max-md:max-w-[84vw] max-md:shadow-xl",
+          // `invisible` (not just the off-screen slide) so the closed drawer leaves the tab order
+          // and the screen-reader tree. Visibility must flip to visible *instantly* on open — the
+          // open effect focuses the close button, and a still-hidden element refuses focus — so
+          // only the closed state delays it (by the slide duration, keeping the slide-out on
+          // screen); the open state transitions the translate alone.
+          drawerOpen
+            ? "max-md:translate-x-0 max-md:transition-[translate] max-md:duration-200"
+            : "max-md:invisible max-md:-translate-x-full max-md:[transition:translate_200ms,visibility_0s_200ms]",
         )}
       >
         {sidebarInner}
@@ -297,7 +323,13 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       <div className="flex flex-1 flex-col min-w-0 overflow-hidden">
         {/* Mobile top bar */}
         <header className="flex h-14 flex-shrink-0 items-center gap-2 border-b border-sidebar-border bg-sidebar px-2 text-sidebar-foreground md:hidden">
-          <Button variant="ghost" size="icon" aria-label="Open menu" onClick={() => setDrawerOpen(true)}>
+          <Button
+            variant="ghost"
+            size="icon"
+            aria-label={tShell("menu")}
+            aria-expanded={drawerOpen}
+            onClick={() => setDrawerOpen(true)}
+          >
             <Menu size={20} />
           </Button>
           {mobileHeaderNav ? (

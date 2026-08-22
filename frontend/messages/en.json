@@ -246,7 +246,8 @@
       "signOutBody": "End your session on this device, or sign out on all devices to revoke every active session (other browsers, devices, or a leaked login).",
       "signOutThisDevice": "This device",
       "signOutAllDevices": "All devices",
-      "analytics": "Analytics"
+      "analytics": "Analytics",
+      "menu": "Menu"
     },
     "dnd": {
       "movedInto": "Moved {name}",
@@ -308,7 +309,8 @@
       "deleteSubWarning": "This also deletes {count, plural, one {its # sub-gallery} other {its # sub-galleries}} and all photos inside.",
       "deleting": "Deleting…",
       "renamed": "Renamed to “{name}”",
-      "deleted": "Deleted “{name}”"
+      "deleted": "Deleted “{name}”",
+      "commentCount": "{count, plural, one {# comment} other {# comments}}"
     },
     "tree": {
       "showAll": "Show all galleries",
@@ -321,7 +323,8 @@
       "noMatch": "No galleries match “{query}”",
       "collapse": "Collapse",
       "expand": "Expand",
-      "addSubGallery": "Add sub-gallery"
+      "addSubGallery": "Add sub-gallery",
+      "photoCount": "{count, plural, one {# image} other {# images}}"
     },
     "dialogs": {
       "createGallery": "Create New Gallery",

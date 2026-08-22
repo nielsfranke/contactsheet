@@ -3,7 +3,7 @@
 
 "use client";
 
-import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { useQuery, useQueries, useMutation, useQueryClient } from "@tanstack/react-query";
 import { type DragEndEvent } from "@dnd-kit/core";
@@ -34,7 +34,13 @@ export function useGalleryDetail(id: string) {
   const qc = useQueryClient();
   const t = useTranslations("admin.detail");
   const tf = useTranslations("gallery.flags");
+  const tfl = useTranslations("gallery.lightbox.flagLabels");
   const ts = useTranslations("gallery.stars");
+  // One flag vocabulary everywhere: semantic names for the colours, "Unflagged" for none.
+  const flagName = useCallback(
+    (v: string) => (v === "none" ? tf("none") : tfl(v)),
+    [tf, tfl],
+  );
 
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [settingsTab, setSettingsTab] = useState<SettingsTab>("general");
@@ -491,7 +497,7 @@ export function useGalleryDetail(id: string) {
   const startGalleryFromFilter = () => {
     const single =
       arrange.flagFilters.size === 1 && !arrange.filterName.trim() && !arrange.commentsOnly
-        ? tf([...arrange.flagFilters][0])
+        ? flagName([...arrange.flagFilters][0])
         : "";
     setDeriveState({ imageIds: visibleIds, defaultName: single, collectionId: null, nonce: Date.now() });
   };
@@ -505,7 +511,7 @@ export function useGalleryDetail(id: string) {
       return FLAG_GROUP_ORDER
         .map((value) => ({
           key: value as string,
-          label: tf(value),
+          label: flagName(value),
           images: filteredSorted.filter((img: ImageResponse) => img.color_flag === value),
         }))
         .filter((g) => g.images.length > 0);
@@ -520,7 +526,7 @@ export function useGalleryDetail(id: string) {
         .filter((g) => g.images.length > 0);
     }
     return undefined;
-  }, [filteredSorted, arrange.groupKey, tf, ts, searchActive]);
+  }, [filteredSorted, arrange.groupKey, flagName, ts, searchActive]);
 
   // Admin photo-grid look: mirror the gallery's client settings (WYSIWYG), unless the instance is
   // set to a custom admin-view override, in which case use that (per-field built-in fallback).
