@@ -12,6 +12,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.9.4] - 2026-08-23
+
+An accessibility and polish release: a full keyboard/screen-reader pass over both surfaces, real
+states for the dead-end share-link screens, and a working realtime layer under `next dev`.
+
 ### Security
 
 - **Next.js bumped 16.2.12 → 16.3.0**, which clears every advisory the frontend audit was carrying:
@@ -23,6 +28,40 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   size. Not reachable here — nothing passes a caller-controlled size — but the fix is free.
 - The npm audit allowlist in `frontend/scripts/audit-prod.mjs` is now **empty**, and the job still
   fails on any new high/critical advisory. Nothing is being suppressed.
+
+### Accessibility
+
+- **The public client path works end-to-end with a keyboard and screen reader.** The mobile tools
+  drawer manages focus properly (focus moves in on open, Escape closes, focus returns to the
+  trigger), photo-tile hover controls reveal on keyboard focus so tab never lands on invisible
+  buttons, like/comment/annotate buttons carry real accessible names (like also exposes
+  `aria-pressed`), and one semantic flag vocabulary (Select/Reject/Maybe/Favourite) is used across
+  grid, toolbar chips, group headers and lightbox. Container galleries report "2 galleries" instead
+  of a misleading "No photos", and the dark-header count color now clears AA.
+- **The admin path got the same pass**: one keyboard stop per gallery (a real link on the name
+  instead of dead dnd-kit stops; drag stays pointer-only), `aria-label`s on every icon-only
+  control, `aria-expanded` on tree/drawer toggles, focus-visible rings on hover-revealed actions,
+  and a mobile drawer with real focus management that leaves the tab order while closed.
+
+### Fixed
+
+- **A bad or expired share link is no longer a dead end.** The not-found state was a lone
+  "Gallery not found." line on black. The three pre-gallery screens (password gate, expired,
+  not found) now share one status-screen scaffold: icon, title, recovery guidance ("check the
+  link, or ask the photographer for a new one"), and the legal strip pinned at the bottom — the
+  Impressum and AGPL §13 source offer stay one click away exactly where a confused visitor lands.
+- **Realtime updates were silently dead under `next dev`**, twice over: the WebSocket URL
+  hardcoded port 8000 (ignoring `NEXT_PUBLIC_API_BASE`), and the CSP's `connect-src 'self'`
+  blocked the direct-to-backend dev socket even on the default port (the dev proxy rewrites HTTP
+  but can't upgrade WS). The WS base now mirrors the proxy target and the CSP names that origin
+  in development only; production stays same-origin behind nginx.
+- **The instance analytics page explains the dimmed Views metric** the way the per-gallery panel
+  always did: "Visitor views aren't being recorded" plus an Enable IP logging link, instead of an
+  unexplained "—".
+- **`/uploads/` and `/branding/` no longer send two competing `Cache-Control` headers** (`expires`
+  + `add_header` both emitted one; the max-age is folded into a single header, and a 404 under
+  these mounts no longer picks up a 30-day cache), and the `/branding/` CSP now also rides error
+  responses.
 
 ## [1.9.3] - 2026-07-27
 
@@ -1038,7 +1077,8 @@ contract are considered stable as of this release.
   caps (stricter for public uploads).
 - Docker Compose deployment (backend + frontend + nginx); SQLite + local filesystem.
 
-[Unreleased]: https://github.com/nielsfranke/contactsheet/compare/v1.9.3...HEAD
+[Unreleased]: https://github.com/nielsfranke/contactsheet/compare/v1.9.4...HEAD
+[1.9.4]: https://github.com/nielsfranke/contactsheet/compare/v1.9.3...v1.9.4
 [1.9.3]: https://github.com/nielsfranke/contactsheet/compare/v1.9.2...v1.9.3
 [1.9.2]: https://github.com/nielsfranke/contactsheet/compare/v1.9.1...v1.9.2
 [1.9.1]: https://github.com/nielsfranke/contactsheet/compare/v1.9.0...v1.9.1
