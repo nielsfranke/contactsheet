@@ -22,8 +22,10 @@ Images are built by CI (`.github/workflows/release.yml`) — you only cut the ta
    ```
 
 The tag reaches GitHub via the push-mirror, which fires the workflow. It builds the multi-arch
-(`linux/amd64` + `linux/arm64`) **backend** and **frontend** images and pushes
-`ghcr.io/nielsfranke/contactsheet-{backend,frontend}:X.Y.Z` (+ `:latest`).
+(`linux/amd64` + `linux/arm64`) **backend**, **frontend** and **ml** images and pushes
+`ghcr.io/nielsfranke/contactsheet-{backend,frontend,ml}:X.Y.Z` (+ `:latest`). The ml sidecar
+builds from its own `ml/Dockerfile` and is rebuilt on every release even without `ml/` changes
+(fresh base layers) — a deploy that runs the `ml` profile should pull all three images.
 
 `:latest` only moves for final releases; a prerelease tag like `vX.Y.Z-rc1` publishes the version
 tag only. Watch the run under the repo's **Actions** tab on GitHub.
@@ -36,9 +38,9 @@ compare link, and the title is the annotated tag's subject (`ContactSheet vX.Y.Z
 
 ## One-time setup
 
-**GHCR (required).** The workflow pushes with the built-in `GITHUB_TOKEN`. Because the two GHCR
+**GHCR (required).** The workflow pushes with the built-in `GITHUB_TOKEN`. Because the GHCR
 packages were first created from a local push, grant the repo write access once:
-GitHub → each package (`contactsheet-backend`, `contactsheet-frontend`) → **Package settings** →
+GitHub → each package (`contactsheet-backend`, `contactsheet-frontend`, `contactsheet-ml`) → **Package settings** →
 *Manage Actions access* → add `nielsfranke/contactsheet` with the **Write** role. Without this the
 first CI push fails with `denied: permission_denied`.
 
@@ -50,5 +52,5 @@ If CI is unavailable, build and push locally with the `cs-builder` buildx builde
 docker buildx build --builder cs-builder --platform linux/amd64,linux/arm64 --target backend \
   -t ghcr.io/nielsfranke/contactsheet-backend:X.Y.Z -t ghcr.io/nielsfranke/contactsheet-backend:latest \
   --push .
-# repeat with --target frontend
+# repeat with --target frontend; for ml add: -f ml/Dockerfile --target ml
 ```
