@@ -341,3 +341,8 @@ Key non-obvious constraints — full details in `docs/architecture/`.
 - **Pure read-model over `activities`** — no migration, no new writes. `analytics_repo` (aggregation SQL) → `analytics_service` (zero-fill, totals mapping, hydrate top photos via the normal `image_service` serializer) → `analytics.py` router. Admin-only: `GET /api/galleries/{id}/analytics` (per-gallery) + `GET /api/admin/analytics` (instance rollup).
 - **Two data honesty constraints** drive the UI: (1) `viewed` rows exist **only when `activity_ip_logging` is on** → `views_available=false` dims views and shows an enable-prompt rather than a fake zero; (2) `downloaded` is a **gallery-level** ZIP event (no per-image download) → "Top photos" ranks by **per-image engagement** (flags/likes/ratings/votes/comments/annotations), not downloads.
 - Frontend: hand-rolled SVG/CSS charts (no chart dep) in `components/admin/analytics/` (`BarTimeseries`, `StatTile`, scaling helper `lib/analytics.ts`). Per-gallery shows in the gallery Insights dialog (Analytics · Activity tabs); instance page at `/admin/analytics`. See `docs/architecture/photographer-analytics.md`.
+
+## Error Logging
+- Log mistakes in MISTAKES.md (what happened, root cause, prevention). Newest first.
+- Before fixing a bug, check MISTAKES.md for related entries and follow the prevention rules.
+- When the same mistake recurs 4-5 times, promote it to a hard rule in CLAUDE.md.
