@@ -12,6 +12,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { BarTimeseries } from "@/components/admin/analytics/BarTimeseries";
 import { TotalsRow } from "@/components/admin/analytics/TotalsRow";
 import { RangeToggle } from "@/components/admin/analytics/RangeToggle";
+import { ViewsDisabledNote } from "@/components/admin/analytics/ViewsDisabledNote";
 
 export default function InstanceAnalyticsPage() {
   const t = useTranslations("admin.analytics");
@@ -41,6 +42,8 @@ export default function InstanceAnalyticsPage() {
       ) : (
         <div className="space-y-6">
           <TotalsRow totals={data.totals} viewsAvailable={data.views_available} />
+
+          {!data.views_available && <ViewsDisabledNote />}
 
           <div className="grid gap-3 sm:grid-cols-2">
             {data.views_available && (

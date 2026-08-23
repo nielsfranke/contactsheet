@@ -6,13 +6,13 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
-import Link from "next/link";
-import { Eye, Heart, Flag, MessageCircle, Star, Info } from "lucide-react";
+import { Eye, Heart, Flag, MessageCircle, Star } from "lucide-react";
 import { api } from "@/lib/api";
 import { Skeleton } from "@/components/ui/skeleton";
 import { BarTimeseries } from "./BarTimeseries";
 import { TotalsRow } from "./TotalsRow";
 import { RangeToggle } from "./RangeToggle";
+import { ViewsDisabledNote } from "./ViewsDisabledNote";
 import type { TopImage } from "@/lib/types";
 
 const BREAKDOWN_ICONS: Record<string, React.ReactNode> = {
@@ -71,17 +71,7 @@ export function GalleryAnalyticsPanel({ galleryId }: { galleryId: string }) {
 
       <TotalsRow totals={data.totals} viewsAvailable={data.views_available} />
 
-      {!data.views_available && (
-        <div className="flex items-start gap-2 rounded-lg border border-border bg-muted/40 p-3 text-xs text-muted-foreground">
-          <Info size={14} className="mt-0.5 flex-shrink-0" />
-          <span>
-            {t("viewsDisabled")}{" "}
-            <Link href="/admin/settings/general" className="underline hover:text-foreground">
-              {t("viewsDisabledLink")}
-            </Link>
-          </span>
-        </div>
-      )}
+      {!data.views_available && <ViewsDisabledNote />}
 
       <div className="grid gap-3 sm:grid-cols-2">
         {data.views_available && (
