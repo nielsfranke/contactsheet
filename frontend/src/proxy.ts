@@ -25,13 +25,24 @@ export function proxy(request: NextRequest) {
   //   elements at runtime via the CSSOM, which can't carry our per-request nonce — and CSP3 ignores
   //   'unsafe-inline' whenever a nonce is also present, so a nonced style-src would break their
   //   styling. Inline styles can't execute JS, so this is the standard, low-risk compromise.
+  // Dev only: the realtime WebSocket connects straight to the FastAPI backend (Next's dev proxy
+  // rewrites HTTP but can't upgrade WS — see lib/realtime.ts), so connect-src must name that
+  // origin. Mirrors wsBase(): NEXT_PUBLIC_API_BASE when set, else :8000 on either local hostname.
+  // Production stays same-origin ('self') — nginx proxies the WS upgrade.
+  const apiBase = process.env.NEXT_PUBLIC_API_BASE;
+  const devWsOrigins = isDev
+    ? apiBase
+      ? ` ws://${new URL(apiBase).host}`
+      : " ws://localhost:8000 ws://127.0.0.1:8000"
+    : "";
+
   const csp = [
     `default-src 'self'`,
     `script-src 'self' 'nonce-${nonce}' 'strict-dynamic'${isDev ? " 'unsafe-eval'" : ""}`,
     `style-src 'self' 'unsafe-inline'`,
     `img-src 'self' blob: data:`,
     `font-src 'self'`,
-    `connect-src 'self'`, // same-origin REST + realtime WebSocket (ws/wss to 'self' is covered)
+    `connect-src 'self'${devWsOrigins}`, // same-origin REST + realtime WebSocket (ws/wss to 'self' is covered)
     `object-src 'none'`,
     `base-uri 'self'`,
     `form-action 'self'`,

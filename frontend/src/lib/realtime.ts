@@ -29,8 +29,12 @@ export interface RealtimeEvent {
 function wsBase(): string {
   if (typeof window === "undefined") return "";
   // Next dev rewrites proxy plain HTTP but not WebSocket upgrades, so in development we talk to the
-  // FastAPI backend directly. In production everything is same-origin behind nginx.
+  // FastAPI backend directly — at NEXT_PUBLIC_API_BASE when set (mirroring next.config.ts's proxy
+  // target, e.g. the demo stack's :8199), else the default :8000. In production everything is
+  // same-origin behind nginx.
   if (process.env.NODE_ENV === "development") {
+    const apiBase = process.env.NEXT_PUBLIC_API_BASE;
+    if (apiBase) return apiBase.replace(/^http/, "ws");
     return `ws://${window.location.hostname}:8000`;
   }
   const proto = window.location.protocol === "https:" ? "wss:" : "ws:";
