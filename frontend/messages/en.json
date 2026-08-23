@@ -10,7 +10,10 @@
     "clear": "Clear"
   },
   "gallery": {
-    "notFound": "Gallery not found.",
+    "notFound": {
+      "title": "This gallery isn't available",
+      "body": "The link may be incomplete, or the gallery may have been moved or removed. Check the link, or ask the photographer for a new one."
+    },
     "expired": {
       "title": "This gallery has expired",
       "body": "The photographer has set an expiration date on this gallery. Contact them if you need access."

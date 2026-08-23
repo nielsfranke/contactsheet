@@ -10,7 +10,10 @@
     "clear": "Leeren"
   },
   "gallery": {
-    "notFound": "Galerie nicht gefunden.",
+    "notFound": {
+      "title": "Diese Galerie ist nicht verfügbar",
+      "body": "Der Link ist möglicherweise unvollständig, oder die Galerie wurde verschoben oder gelöscht. Prüfen Sie den Link oder fragen Sie den Fotografen nach einem neuen."
+    },
     "expired": {
       "title": "Diese Galerie ist abgelaufen",
       "body": "Der Fotograf hat ein Ablaufdatum für diese Galerie festgelegt. Kontaktieren Sie ihn, wenn Sie Zugriff benötigen."

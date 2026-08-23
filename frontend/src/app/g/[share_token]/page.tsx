@@ -12,7 +12,8 @@ import { requiresPassword } from "@/lib/types";
 import { PasswordGate } from "@/components/gallery/PasswordGate";
 import { GalleryView } from "@/components/gallery/GalleryView";
 import { GalleryExpired } from "@/components/gallery/GalleryExpired";
-import { Loader2 } from "lucide-react";
+import { GalleryStatusScreen } from "@/components/gallery/GalleryStatusScreen";
+import { ImageOff, Loader2 } from "lucide-react";
 import { useTranslations } from "next-intl";
 
 export default function PublicGalleryPage() {
@@ -55,9 +56,15 @@ export default function PublicGalleryPage() {
 
   if (!data) {
     return (
-      <div className="min-h-screen bg-zinc-950 flex items-center justify-center">
-        <p className="text-zinc-400">{t("notFound")}</p>
-      </div>
+      <GalleryStatusScreen>
+        <div className="text-center space-y-4">
+          <div className="flex justify-center">
+            <ImageOff size={48} className="text-zinc-600" />
+          </div>
+          <h1 className="text-xl font-semibold text-zinc-200">{t("notFound.title")}</h1>
+          <p className="text-zinc-500 text-sm max-w-xs">{t("notFound.body")}</p>
+        </div>
+      </GalleryStatusScreen>
     );
   }
 

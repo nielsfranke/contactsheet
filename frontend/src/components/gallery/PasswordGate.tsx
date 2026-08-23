@@ -12,6 +12,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Lock } from "lucide-react";
 import { toast } from "sonner";
 import { useTranslations } from "next-intl";
+import { GalleryStatusScreen } from "./GalleryStatusScreen";
 
 interface Props {
   shareToken: string;
@@ -41,7 +42,7 @@ export function PasswordGate({ shareToken, onSuccess }: Props) {
   }
 
   return (
-    <div className="min-h-screen bg-zinc-950 flex items-center justify-center">
+    <GalleryStatusScreen>
       <Card className="w-full max-w-sm bg-zinc-900 border-zinc-800 text-zinc-100">
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-lg">
@@ -69,6 +70,6 @@ export function PasswordGate({ shareToken, onSuccess }: Props) {
           </form>
         </CardContent>
       </Card>
-    </div>
+    </GalleryStatusScreen>
   );
 }
