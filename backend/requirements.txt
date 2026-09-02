@@ -13,7 +13,7 @@ python-multipart==0.0.32
 Pillow==12.3.0
 # Camera-RAW preview extraction (rawpy.extract_thumb pulls the embedded JPEG — no full demosaic).
 # Wheels bundle libraw, so no system packages are needed. NumPy (below) covers the bitmap-thumb path.
-rawpy==0.27.0
+rawpy==0.27.1
 slowapi==0.1.10
 apprise==1.11.0
 # Streaming ZIP downloads: generates the archive on the fly (no temp file) and, in sized mode with
