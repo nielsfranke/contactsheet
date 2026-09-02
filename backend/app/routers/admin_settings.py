@@ -18,7 +18,7 @@ from app.notifications import presets, url_guard
 from app.rate_limit import limiter
 from app.repositories import backup_job_repo, settings_repo
 from app.schemas.backup import BackupJobResponse, BackupRequest
-from app.schemas.notifications import mask_settings, merge_incoming
+from app.schemas.notifications import _MASK, mask_settings, merge_incoming
 from app.schemas.settings import AppSettingsResponse, AppSettingsUpdate, ResetRequest
 from app.tasks.backup_task import build_backup
 from app.version import __version__
@@ -213,9 +213,13 @@ def test_notification(
     generic send failure."""
     url = ""
     if body.type or body.url:
-        url = presets.build_url(body.type or "custom", body.params, (body.url or "").strip())
-        if url and "••" in url:  # masked secrets slipped through — fall back to the stored channel
-            url = ""
+        # Masked secrets slipped through (the UI echoes them back as `••••`) — fall back to the
+        # stored channel. Checked on the raw params: build_url percent-encodes the mask.
+        masked = _MASK in (body.url or "") or any(
+            _MASK in str((body.params or {}).get(k, "")) for k in presets.secret_keys(body.type or "custom")
+        )
+        if not masked:
+            url = presets.build_url(body.type or "custom", body.params, (body.url or "").strip())
     if not url and body.channel_id:
         stored = (settings_repo.get(db).notifications or {}).get("channels", [])
         match = next((c for c in stored if c.get("id") == body.channel_id), None)

@@ -87,12 +87,17 @@ def test_scrub_event_redacts_bodies_and_auth():
             "data": {"password": "supersecret"},
             "cookies": {"access_token": "jwt"},
             "headers": {"Authorization": "Bearer x", "Cookie": "access_token=jwt", "Accept": "*/*"},
+            # The gallery JWT rides in ?token= on the ZIP stream / media proxy / public WS.
+            "query_string": "token=eyJhbGciOi.gallery.jwt",
+            "url": "https://studio.example/api/public/g/abc/zip/stream?token=eyJhbGciOi.gallery.jwt",
         }
     }
     scrubbed = observability._scrub_event(event, {})
     req = scrubbed["request"]
     assert "data" not in req
     assert "cookies" not in req
+    assert "query_string" not in req
+    assert req["url"] == "https://studio.example/api/public/g/abc/zip/stream"
     assert req["headers"]["Authorization"] == "[redacted]"
     assert req["headers"]["Cookie"] == "[redacted]"
     assert req["headers"]["Accept"] == "*/*"  # non-sensitive header preserved

@@ -115,6 +115,8 @@ def search(
                 if norm > 0:
                     q = q / norm
                 return vector_index.search_global(db, q.tolist(), limit)
+            except vector_index.IndexNotReady:
+                logger.info("sqlite-vec index not built yet; using the NumPy scan")
             except Exception:
                 logger.warning("sqlite-vec search failed; falling back to NumPy", exc_info=True)
 

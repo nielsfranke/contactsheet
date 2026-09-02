@@ -50,7 +50,11 @@ def _apply_image_watermark(base: PILImage.Image, ws: WatermarkSettings, gallery_
     if not ws.filename or not os.path.exists(wm_path):
         return base
 
-    with PILImage.open(wm_path).convert("RGBA") as wm:
+    with PILImage.open(wm_path) as wm_src:
+        # Header-dimension guard before any pixel buffer exists (Pillow only raises at 2x its limit).
+        if wm_src.width * wm_src.height > settings.max_image_pixels:
+            return base
+        wm = wm_src.convert("RGBA")
         bw, _bh = base.size
         target_w = int(bw * _SIZE_PCT.get(ws.size, 0.25))
         ratio = target_w / wm.width

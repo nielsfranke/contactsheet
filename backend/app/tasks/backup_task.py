@@ -30,6 +30,7 @@ from app.backup_format import (
     RENDITION_DIR_NAMES,
     RENDITION_DIR_SUFFIX,
 )
+from app import maintenance
 from app.config import settings
 from app.database import SessionLocal
 from app.migrations import revision_of_db, sqlite_path
@@ -85,9 +86,11 @@ def _counts() -> dict[str, int]:
         db.close()
 
 
+@maintenance.tracked
 def build_backup(job_id: str, scope: str, include_renditions: bool) -> None:
     db = SessionLocal()
     snapshot_path: str | None = None
+    part_path: str | None = None
     try:
         job = backup_job_repo.get(db, job_id)
         if not job:
@@ -114,7 +117,10 @@ def build_backup(job_id: str, scope: str, include_renditions: bool) -> None:
                 return None
             return info
 
-        with tarfile.open(archive_path, "w:gz" if gzip else "w") as tar:
+        # Build under a `.part` name and publish with os.replace: a failure mid-walk (an image
+        # deleted while tar streams it) must not leave a multi-GB half-archive that nothing purges.
+        part_path = archive_path + ".part"
+        with tarfile.open(part_path, "w:gz" if gzip else "w") as tar:
             # Add media before snapshotting the DB.
             for attr, arcname in include_dirs.items():
                 root = getattr(settings, attr)
@@ -138,6 +144,7 @@ def build_backup(job_id: str, scope: str, include_renditions: bool) -> None:
             mi.size = len(manifest_bytes)
             tar.addfile(mi, io.BytesIO(manifest_bytes))
             tar.add(snapshot_path, arcname=DB_MEMBER)
+        os.replace(part_path, archive_path)
 
         size = os.path.getsize(archive_path)
         backup_job_repo.update_status(db, job, "ready", file_path=archive_path, size_bytes=size)
@@ -145,6 +152,11 @@ def build_backup(job_id: str, scope: str, include_renditions: bool) -> None:
 
     except Exception as exc:
         logger.error("Backup build failed for job %s: %s", job_id, exc)
+        if part_path and os.path.exists(part_path):
+            try:
+                os.remove(part_path)
+            except OSError:
+                pass
         try:
             job = backup_job_repo.get(db, job_id)
             if job:

@@ -428,7 +428,10 @@ def upload_images(
 
         _CHUNK = 1024 * 1024
         file_size = 0
-        tmp_fd, tmp_path = tempfile.mkstemp()
+        # Spool on the data volume (exports_dir is never backed up), not the container's /tmp:
+        # that may be a small tmpfs, and an 8 GB PSB shouldn't have to fit there first.
+        os.makedirs(settings.exports_dir, exist_ok=True)
+        tmp_fd, tmp_path = tempfile.mkstemp(dir=settings.exports_dir, prefix=".upload-")
         try:
             with os.fdopen(tmp_fd, "wb") as out:
                 while chunk := file.file.read(_CHUNK):

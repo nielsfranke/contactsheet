@@ -10,6 +10,7 @@ from collections import defaultdict
 from sqlalchemy.orm import Session
 from zipstream import ZipStream
 
+from app import maintenance
 from app.config import settings
 from app.repositories import image_repo, zip_job_repo
 from app.database import SessionLocal
@@ -89,6 +90,7 @@ def _fail(db: Session, job_id: str, message: str) -> None:
         zip_job_repo.update_status(db, job, "error", error_message=message)
 
 
+@maintenance.tracked
 def build_zip_for_images(
     job_id: str, gallery_id: str, image_ids: list[str], only_approved: bool = False
 ) -> None:
@@ -121,6 +123,7 @@ def build_zip_for_images(
         db.close()
 
 
+@maintenance.tracked
 def build_zip_multi(
     job_id: str, entries: list[tuple[str, str]], only_approved: bool = False
 ) -> None:
@@ -152,6 +155,7 @@ def build_zip_multi(
         db.close()
 
 
+@maintenance.tracked
 def build_zip(job_id: str, gallery_id: str, filter_type: str) -> None:
     """Admin export of one gallery, optionally filtered by colour flag."""
     db: Session = SessionLocal()

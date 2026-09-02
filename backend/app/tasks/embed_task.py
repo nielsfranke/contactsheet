@@ -15,6 +15,7 @@ import logging
 import os
 from concurrent.futures import ThreadPoolExecutor
 
+from app import maintenance
 from app.config import settings
 from app.database import SessionLocal
 from app.ml import embedder
@@ -87,6 +88,22 @@ def _plan(image_id: str) -> tuple[str, str] | None:
         db.close()
 
 
+def _embed_with_fallback(image_id: str, path: str, model: str):
+    """Embed `path`; if that was the *original* and the sidecar can't decode it (plain Pillow
+    refuses anything past its ~90 MP decompression-bomb limit, while the backend accepts 250 MP),
+    retry from the `medium` rendition rather than stranding the image in `error`."""
+    try:
+        return embedder.embed_image(path, model)
+    except embedder.EmbedderError:
+        head, name = os.path.split(path)
+        gallery_dir, variant = os.path.split(head)
+        medium = os.path.join(gallery_dir, "medium", name)
+        if variant != "original" or not os.path.exists(medium):
+            raise
+        logger.info("Sidecar could not embed the original of %s; retrying from medium", image_id)
+        return embedder.embed_image(medium, model)
+
+
 def _record_status(image_id: str, status: str) -> None:
     """Best-effort `embedding_status` write on its own short-lived session."""
     try:
@@ -118,7 +135,7 @@ def embed_one(image_id: str) -> None:
 
     # No DB session held here — the slow part (model inference in the sidecar) runs pool-free.
     try:
-        vector = embedder.embed_image(path, model)
+        vector = _embed_with_fallback(image_id, path, model)
     except embedder.EmbedderError as exc:
         logger.warning("Embedding failed for image %s: %s", image_id, exc)
         _record_status(image_id, "error")
@@ -142,11 +159,9 @@ def embed_one(image_id: str) -> None:
 
 def submit(image_id: str) -> None:
     """Enqueue one image for indexing (returns immediately). No-op if the pool can't take it."""
-    try:
-        _executor.submit(embed_one, image_id)
-    except RuntimeError:
-        # Pool shut down (e.g. during tests/teardown) — drop silently.
-        pass
+    # Counted from enqueue (see app/maintenance.py); a shut-down pool or a restore in progress
+    # drops the job silently — the backfill picks it up again.
+    maintenance.submit(_executor, embed_one, image_id)
 
 
 def run_backfill() -> None:

@@ -141,6 +141,12 @@ def _scrub_event(event: dict, _hint: dict) -> dict:
     if isinstance(req, dict):
         req.pop("data", None)
         req.pop("cookies", None)
+        # Gallery JWTs travel as `?token=` (ZIP stream, media proxy, public WS) — never ship the
+        # query string, and cut it off the URL too.
+        req.pop("query_string", None)
+        url = req.get("url")
+        if isinstance(url, str) and "?" in url:
+            req["url"] = url.split("?", 1)[0]
         headers = req.get("headers")
         if isinstance(headers, dict):
             for name in list(headers):

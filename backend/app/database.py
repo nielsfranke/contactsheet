@@ -81,8 +81,19 @@ class Base(DeclarativeBase):
 
 
 def get_db():
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
+    # A restore is swapping the database file: no request may open a session until it's done
+    # (see app/maintenance.py). 503 + Retry-After so clients simply try again in a moment.
+    from app import maintenance
+    from app.errors import CodedHTTPException
+
+    if maintenance.restore_in_progress.is_set():
+        raise CodedHTTPException(
+            status_code=503, code="maintenance", detail="Restore in progress — try again shortly",
+            headers={"Retry-After": "10"},
+        )
+    with maintenance.request_session():
+        db = SessionLocal()
+        try:
+            yield db
+        finally:
+            db.close()

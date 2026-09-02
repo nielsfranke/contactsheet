@@ -32,6 +32,10 @@ from app.config import settings
 
 logger = logging.getLogger(__name__)
 
+class IndexNotReady(RuntimeError):
+    """The vec0 index doesn't exist (yet); callers fall back to the BLOB table."""
+
+
 _VEC_TABLE = "vec_image_embeddings"
 _META_TABLE = "vec_index_meta"
 
@@ -147,7 +151,10 @@ def search_global(db: Session, query, limit: int) -> list[tuple[str, float]]:
     Returns (image_id, cosine_score) sorted by descending similarity. Over-fetches a little so
     soft-deleted vectors (still present in the index) don't shrink the result below `limit`."""
     if _current_dim(db) is None:
-        return []
+        # No index built yet (flag flipped on an instance that already had vectors, or a failed
+        # rebuild). Signal "not ready" so the caller falls back to the NumPy scan — returning []
+        # here would silently blank instance-wide search.
+        raise IndexNotReady("sqlite-vec index has not been built")
     k = min(limit * 2 + 16, 4096)
     rows = db.execute(
         text(

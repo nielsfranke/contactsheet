@@ -30,24 +30,26 @@ from app.config import settings
 
 _log = logging.getLogger(__name__)
 
-# Schemes whose netloc is an operator-controlled host we should vet. Apprise generic webhooks
-# (json/xml/form, + their TLS variants), SMTP (mailto), and ntfy all connect to that host.
-_HOST_SCHEMES = {
-    "json", "jsons", "xml", "xmls", "form", "forms",
-    "mailto", "mailtos", "ntfy", "ntfys", "http", "https",
+# Schemes whose netloc holds *credentials* for a fixed public SaaS endpoint, not a host the
+# operator picks (the presets in presets.py). Everything else — the generic webhooks, SMTP, ntfy,
+# and the long tail of self-hostable Apprise services (gotify, matrix, mqtt, rocket.chat, xmpp,
+# nextcloud, …) — connects to whatever host is in the URL, so it is vetted. An allow-list rather
+# than a deny-list: a scheme we haven't heard of is treated as host-controlled.
+_CREDENTIAL_SCHEMES = {
+    "pover", "discord", "tgram", "slack",
 }
 
 
 def _host_of(url: str) -> str | None:
-    """The connect host for a host-controlled scheme, or None when the scheme isn't one we vet
-    (SaaS preset) or the URL can't be parsed."""
+    """The connect host for a host-controlled scheme, or None when the scheme is a credential-only
+    SaaS preset or the URL can't be parsed."""
     try:
         parts = urlsplit(url)
     except ValueError:
         return None
     scheme = (parts.scheme or "").lower()
-    if scheme not in _HOST_SCHEMES:
-        return None  # SaaS preset or unknown — host isn't operator-controlled, leave it alone
+    if scheme in _CREDENTIAL_SCHEMES:
+        return None  # SaaS preset — netloc is a token, not a host
     host = parts.hostname  # already strips userinfo + port, unbrackets IPv6
     return host or None
 

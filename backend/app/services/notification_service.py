@@ -11,11 +11,13 @@ message per channel through Apprise. No cron, no external worker.
 import asyncio
 import json
 import logging
+import string
 from collections import defaultdict
 from datetime import datetime, timedelta, timezone
 
 from sqlalchemy.orm import Session
 
+from app import maintenance
 from app.database import SessionLocal
 from app.notifications import apprise_client, presets, url_guard
 from app.repositories import gallery_repo, notification_repo, settings_repo
@@ -79,11 +81,28 @@ class _Safe(dict):
         return ""
 
 
+class _PlainFormatter(string.Formatter):
+    """`{name}` substitution only. `str.format` would also honour `{gallery.__class__…}` /
+    `{x[0]}` attribute and index traversal — on an admin-authored template that's a way to dump
+    module globals into a notification body, so field names are restricted to plain keys."""
+
+    def get_field(self, field_name, args, kwargs):
+        if not field_name.isidentifier():
+            raise ValueError(f"unsupported placeholder {{{field_name}}}")
+        return self.get_value(field_name, args, kwargs), field_name
+
+    def get_value(self, key, args, kwargs):
+        return kwargs.get(key, "") if isinstance(key, str) else ""
+
+
+_formatter = _PlainFormatter()
+
+
 def _render(template: str, ctx: dict) -> str:
     """Substitute a custom template against ``ctx``. Returns "" on any error so the caller can
     fall back to the built-in default — a malformed template must never break delivery."""
     try:
-        return template.format_map(_Safe(ctx)).strip()
+        return _formatter.vformat(template, (), ctx).strip()
     except Exception:
         return ""
 
@@ -158,6 +177,14 @@ def _build_summary(
 
 def _flush_once() -> int:
     """Drain pending rows once. Returns the next sleep interval (seconds)."""
+    # A restore is swapping the DB file — sit this tick out rather than write into the old inode.
+    if maintenance.restore_in_progress.is_set():
+        return 15
+    with maintenance.background_work():
+        return _flush_tick()
+
+
+def _flush_tick() -> int:
     db = SessionLocal()
     try:
         app = settings_repo.get(db)

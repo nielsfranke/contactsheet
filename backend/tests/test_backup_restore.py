@@ -13,13 +13,15 @@ surface + guardrails."""
 import io
 import json
 import os
+import sqlite3
 import tarfile
 import tempfile
 
 import pytest
 from fastapi.testclient import TestClient
 
-from app import migrations
+from app import maintenance, migrations
+from app.backup_format import DB_MEMBER
 from app.config import settings as cfg
 from app.main import app
 from app.services import restore_service
@@ -158,18 +160,31 @@ def test_restore_refuses_newer_schema(admin_client):
     status = _build_backup(admin_client, "metadata")
     archive = _download(admin_client, status["id"])
 
-    # Rewrite the manifest to claim a revision this binary doesn't know.
+    # Stamp the *snapshot* with a revision this binary doesn't know. The gate reads the revision
+    # from the DB file (that's what would be migrated), not from the editable manifest — so the
+    # manifest is left claiming the old, known revision to prove it isn't trusted.
     buf_in = io.BytesIO(archive)
     out = io.BytesIO()
     with tarfile.open(fileobj=buf_in) as src, tarfile.open(fileobj=out, mode="w:gz") as dst:
         for member in src.getmembers():
             if member.name == "manifest.json":
                 manifest = json.loads(src.extractfile(member).read())
-                manifest["alembic_revision"] = "9999"
                 manifest.pop("db_sha256", None)
                 payload = json.dumps(manifest).encode()
                 member.size = len(payload)
                 dst.addfile(member, io.BytesIO(payload))
+            elif member.name == DB_MEMBER:
+                fd, snap = tempfile.mkstemp(suffix=".db")
+                os.write(fd, src.extractfile(member).read())
+                os.close(fd)
+                con = sqlite3.connect(snap)
+                con.execute("UPDATE alembic_version SET version_num = '9999'")
+                con.commit()
+                con.close()
+                member.size = os.path.getsize(snap)
+                with open(snap, "rb") as f:
+                    dst.addfile(member, f)
+                os.remove(snap)
             else:
                 dst.addfile(member, src.extractfile(member))
     out.seek(0)
@@ -424,3 +439,88 @@ def test_full_restore_replaces_whole_instance(admin_client, monkeypatch):
     assert admin_client.get(f"/api/galleries/{kept['id']}").status_code == 200
     assert admin_client.get(f"/api/galleries/{later['id']}").status_code == 404
     assert not os.path.exists(later_dir), "uploads dir was merged, not replaced"
+
+
+# --- restore quiesces the instance ----------------------------------------------------------
+
+def test_restore_refuses_while_background_work_is_running(admin_client, monkeypatch):
+    """SQLite's WAL is bound to the DB by name: swapping the file under a live writer would let
+    it append old-layout frames into the new database. A busy instance is refused, not swapped."""
+    _stamp_revision()
+    status = _build_backup(admin_client, "metadata")
+    archive = _download(admin_client, status["id"])
+    fd, path = tempfile.mkstemp(suffix=".tar.gz")
+    os.write(fd, archive)
+    os.close(fd)
+    monkeypatch.setattr(restore_service, "QUIESCE_TIMEOUT_S", 0.2)
+
+    with maintenance.background_work():  # e.g. a rendition job still on the pool
+        with pytest.raises(restore_service.CodedHTTPException) as exc:
+            restore_service.restore(path, password=None, verify_admin=False)
+    assert exc.value.status_code == 409 and exc.value.code == "instance_busy"
+    # The flag is lowered again — the instance serves normally.
+    assert not maintenance.restore_in_progress.is_set()
+    assert admin_client.get("/api/galleries").status_code == 200
+
+
+def test_requests_get_503_while_restore_swaps_files(admin_client):
+    maintenance.restore_in_progress.set()
+    try:
+        r = admin_client.get("/api/galleries")
+        assert r.status_code == 503 and r.json()["code"] == "maintenance"
+        assert r.headers["retry-after"]
+    finally:
+        maintenance.restore_in_progress.clear()
+
+
+def test_pool_submit_is_refused_during_restore():
+    from concurrent.futures import ThreadPoolExecutor
+    ran = []
+    pool = ThreadPoolExecutor(max_workers=1)
+    maintenance.restore_in_progress.set()
+    try:
+        assert maintenance.submit(pool, ran.append, 1) is False
+    finally:
+        maintenance.restore_in_progress.clear()
+    assert maintenance.submit(pool, ran.append, 2) is True
+    pool.shutdown(wait=True)
+    assert ran == [2] and maintenance.counts() == (0, 0)
+
+
+def test_rollback_keeps_writes_committed_after_the_backup(admin_client, monkeypatch):
+    """The rollback snapshot must be WAL-aware: a commit that only lives in `-wal` at swap time
+    (`After` below) has to survive a failed restore."""
+    _stamp_revision()
+    status = _build_backup(admin_client, "metadata")
+    archive = _download(admin_client, status["id"])
+    after = make_gallery(admin_client, "After")
+
+    def boom():
+        raise RuntimeError("migration blew up")
+
+    monkeypatch.setattr(migrations, "upgrade_to_head", boom)
+    fd, path = tempfile.mkstemp(suffix=".tar.gz")
+    os.write(fd, archive)
+    os.close(fd)
+    with pytest.raises(RuntimeError):
+        restore_service.restore(path, password=None, verify_admin=False)
+    assert admin_client.get(f"/api/galleries/{after['id']}").json()["name"] == "After"
+    live = migrations.sqlite_path()
+    assert not os.path.exists(live + ".bak") and not os.path.exists(live + ".restore")
+
+
+def test_failed_backup_leaves_no_partial_archive(admin_client, monkeypatch):
+    """A build that dies mid-tar must not strand a half-written archive that nothing purges."""
+    from app.tasks import backup_task
+
+    def boom(_dest):
+        raise RuntimeError("snapshot failed")
+
+    monkeypatch.setattr(backup_task, "_vacuum_snapshot", boom)
+    job = admin_client.post(BACKUP, json={"scope": "metadata", "include_renditions": False})
+    assert job.status_code == 202
+    status = admin_client.get(f"{BACKUP}/{job.json()['id']}").json()
+    assert status["status"] == "error"
+    backups_dir = os.path.join(cfg.exports_dir, "backups")
+    leftovers = [n for n in os.listdir(backups_dir) if job.json()["id"][:8] in n] if os.path.isdir(backups_dir) else []
+    assert leftovers == []

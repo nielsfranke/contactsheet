@@ -13,6 +13,7 @@ import json
 import logging
 import os
 import shutil
+import sqlite3
 import tarfile
 import tempfile
 
@@ -92,7 +93,11 @@ def _read_manifest(extract_dir: str) -> dict:
 
 
 def _validate(manifest: dict, extract_dir: str) -> None:
-    if manifest.get("format_version", 0) > FORMAT_VERSION:
+    try:
+        format_version = int(manifest.get("format_version", 0))
+    except (TypeError, ValueError):
+        raise _coded("backup_invalid", "Archive manifest is unreadable")
+    if format_version > FORMAT_VERSION:
         raise _coded(
             "backup_format_unsupported",
             "This backup was created by a newer ContactSheet. Upgrade before restoring.",
@@ -103,7 +108,9 @@ def _validate(manifest: dict, extract_dir: str) -> None:
     expected = manifest.get("db_sha256")
     if expected and _sha256(db_src) != expected:
         raise _coded("backup_corrupt", "Database snapshot failed its integrity check")
-    revision = manifest.get("alembic_revision")
+    # The forward-only gate reads the revision from the snapshot itself, not from the (editable)
+    # manifest — the snapshot is what actually gets migrated.
+    revision = migrations.revision_of_db(db_src) or manifest.get("alembic_revision")
     if not migrations.is_known_revision(revision):
         raise _coded(
             "backup_schema_newer",
@@ -117,72 +124,138 @@ def _remove_wal_sidecars(live_db: str) -> None:
             os.remove(sidecar)
 
 
+def _checkpoint(live_db: str) -> None:
+    """Fold the WAL into the main file and truncate it. Run with no other connection open, so
+    the swap that follows can't leave a stale ``-wal`` behind for the *new* file to replay."""
+    con = sqlite3.connect(live_db)
+    try:
+        con.execute("PRAGMA wal_checkpoint(TRUNCATE)")
+    finally:
+        con.close()
+
+
+def _vacuum_into(src_db: str, dest: str) -> None:
+    """Consistent single-file snapshot (committed WAL frames included) — the same primitive the
+    backup builder uses. A plain file copy of a WAL-mode DB would miss un-checkpointed commits."""
+    if os.path.exists(dest):
+        os.remove(dest)
+    con = sqlite3.connect(src_db)
+    try:
+        con.execute("VACUUM INTO ?", (dest,))
+    finally:
+        con.close()
+
+
 def _reload_runtime() -> None:
-    """Reload the runtime secret key + token generation from the (restored) settings;
-    this invalidates the caller's session, forcing a fresh login."""
+    """Reload the token generation (and, unless the operator pins ``SECRET_KEY`` in the
+    environment, the secret key) from the restored settings; this invalidates the caller's
+    session, forcing a fresh login. Env wins over the DB exactly as at startup (app/main.py) —
+    otherwise sessions would be signed with the DB key until the next restart flips it back."""
     from app.database import SessionLocal
     from app.repositories import settings_repo
 
     db = SessionLocal()
     try:
         s = settings_repo.get(db)
-        if s.secret_key:
+        if settings.secret_key:
+            set_secret_key(settings.secret_key)
+        elif s.secret_key:
             set_secret_key(s.secret_key)
         set_token_version(s.token_version)
     finally:
         db.close()
 
 
-def _swap_in(extract_dir: str, manifest: dict) -> None:
-    """Replace the live DB + media dirs with the archive's, in two phases.
+# How long the web restore waits for in-flight requests / background jobs to finish before giving
+# up. Renditions of a bulk upload can take a while; a client hitting the API keeps only one short
+# session per request. Past this we refuse rather than swap under a live writer.
+QUIESCE_TIMEOUT_S = 30.0
 
-    Phase 1 (DB) is **reversible**: it keeps a ``.bak`` of the live DB and, if the swap or
-    forward-migration fails, rolls the DB back and leaves media untouched — so the instance
-    is exactly as before. Phase 2 (media) is the **point of no return**: it runs only after
-    the DB is committed, because media can't be rolled back transactionally. A failure mid-
-    media leaves the restored DB with partially-swapped media, which a re-run (CLI) finishes
-    — strictly better than a half-migrated DB stranded next to swapped media."""
+
+def _swap_db(extract_dir: str) -> None:
+    """Phase 1 — swap the database file, reversibly.
+
+    Runs quiesced (no request or worker holds a connection — see app/maintenance.py): SQLite's
+    WAL is bound to the DB by *name*, so a straggling writer on the old inode would append frames
+    into ``<db>-wal`` that the restored file then replays. Steps:
+
+    1. checkpoint + drop the live WAL (nothing may re-create it — hence the quiescence);
+    2. take the rollback snapshot with ``VACUUM INTO`` (a raw copy would miss WAL commits);
+    3. stage the archive's snapshot next to the live file and ``os.replace`` it in (atomic on
+       the same filesystem; any handle that somehow survived keeps the *old* inode);
+    4. migrate forward + reload the runtime key.
+
+    On any failure the snapshot is swapped back the same way and the exception propagates.
+    """
     from app.database import engine
 
     live_db = migrations.sqlite_path()
     db_src = os.path.join(extract_dir, DB_MEMBER)
     backup_db = live_db + ".bak"
+    staged = live_db + ".restore"
 
+    os.makedirs(os.path.dirname(live_db), exist_ok=True)
     # Drop pooled connections so nothing holds the old DB file open across the swap.
     engine.dispose()
 
-    if os.path.exists(live_db):
-        shutil.copy2(live_db, backup_db)
-
-    # --- Phase 1: database (reversible) ---
-    try:
-        os.makedirs(os.path.dirname(live_db), exist_ok=True)
-        shutil.copy2(db_src, live_db)
+    have_live = os.path.exists(live_db)
+    if have_live:
+        _checkpoint(live_db)
         _remove_wal_sidecars(live_db)
+        _vacuum_into(live_db, backup_db)
+
+    try:
+        shutil.copy2(db_src, staged)
+        os.replace(staged, live_db)
         migrations.upgrade_to_head()  # migrate the restored snapshot forward
         _reload_runtime()
     except Exception:
         # Roll the DB back so a failed restore doesn't brick the instance. No media has
         # been touched yet, so this returns the instance to its pre-restore state.
-        if os.path.exists(backup_db):
-            engine.dispose()
-            shutil.copy2(backup_db, live_db)
+        engine.dispose()
+        if have_live and os.path.exists(backup_db):
             _remove_wal_sidecars(live_db)
+            os.replace(backup_db, live_db)
         raise
     finally:
-        if os.path.exists(backup_db):
-            try:
-                os.remove(backup_db)
-            except OSError:
-                pass
+        for leftover in (backup_db, staged):
+            if os.path.exists(leftover):
+                try:
+                    os.remove(leftover)
+                except OSError:
+                    pass
 
-    # --- Phase 2: media (point of no return; DB already committed) ---
-    # Only dirs actually present in the archive (metadata-only backups omit uploads, so a
-    # metadata restore leaves existing originals untouched).
-    for attr, arcname in MEDIA_DIRS.items():
-        src = os.path.join(extract_dir, arcname)
-        if os.path.isdir(src):
-            _replace_dir_contents(getattr(settings, attr), src)
+
+def _swap_in(extract_dir: str, manifest: dict) -> None:
+    """Replace the live DB + media dirs with the archive's, in two phases, with the instance
+    quiesced for the duration (requests get a 503, workers are drained first — a busy instance
+    is refused with 409 rather than swapped under a live writer).
+
+    Phase 1 (DB, `_swap_db`) is **reversible**. Phase 2 (media) is the **point of no return**:
+    it runs only after the DB is committed, because media can't be rolled back transactionally.
+    A failure mid-media leaves the restored DB with partially-swapped media, which a re-run
+    (CLI) finishes — strictly better than a half-migrated DB stranded next to swapped media."""
+    from app import maintenance
+
+    with maintenance.quiesce(QUIESCE_TIMEOUT_S) as idle:
+        if not idle:
+            requests, jobs = maintenance.counts()
+            raise _coded(
+                "instance_busy",
+                f"Instance is busy ({requests} request(s), {jobs} background job(s) still running) — "
+                "wait for uploads and exports to finish, then retry",
+                status.HTTP_409_CONFLICT,
+            )
+
+        _swap_db(extract_dir)
+
+        # --- Phase 2: media (point of no return; DB already committed) ---
+        # Only dirs actually present in the archive (metadata-only backups omit uploads, so a
+        # metadata restore leaves existing originals untouched).
+        for attr, arcname in MEDIA_DIRS.items():
+            src = os.path.join(extract_dir, arcname)
+            if os.path.isdir(src):
+                _replace_dir_contents(getattr(settings, attr), src)
 
 
 def _regenerate_previews(blocking: bool) -> None:

@@ -41,6 +41,10 @@ def test_guard_off_by_default_allows_internal():
         "json://192.168.1.10/x",            # RFC1918
         "mailtos://user:pw@localhost/?to=a@b.com",  # loopback via hostname + userinfo
         "ntfys://0.0.0.0/topic",            # unspecified
+        "gotify://192.168.1.20/token",      # self-hostable Apprise service — host is operator-picked
+        "matrix://user:pw@10.0.0.9/",       # likewise
+        "mqtt://127.0.0.1/topic",           # likewise
+        "nosuchscheme://10.0.0.1/x",        # unknown scheme → treated as host-controlled
     ],
 )
 def test_guard_blocks_internal_when_enabled(guard_on, url):
@@ -151,3 +155,14 @@ def test_test_endpoint_rate_limited(admin_client, monkeypatch):
         limiter.enabled = False
     assert codes[:5] == [200, 200, 200, 200, 200]  # 5/minute allowed
     assert codes[5] == 429  # 6th is throttled
+
+
+def test_custom_template_cannot_traverse_attributes():
+    """`str.format` field syntax allows `{obj.__class__…}` / `{x[0]}` — an admin-authored template
+    must be plain `{name}` substitution only, never a way to read module globals."""
+    from app.services.notification_service import _render
+    ctx = {"gallery": "Wedding", "count": 3}
+    assert _render("{gallery}: {count} new", ctx) == "Wedding: 3 new"
+    assert _render("{gallery.__class__.__mro__}", ctx) == ""
+    assert _render("{gallery[0]}", ctx) == ""
+    assert _render("{missing} x", ctx) == "x"

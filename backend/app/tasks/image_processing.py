@@ -11,6 +11,7 @@ from PIL import IptcImagePlugin
 from PIL import Image as PilImage
 from PIL.ExifTags import IFD, TAGS
 
+from app import maintenance
 from app.config import settings
 from app.storage import format_detect, psd_thumbnail
 
@@ -246,6 +247,11 @@ def resize_bytes(data: bytes, max_px: int, quality: int) -> bytes:
     serves a multi-MB original. EXIF is dropped (Pillow doesn't carry it without `exif=`). The
     module-level MAX_IMAGE_PIXELS ceiling guards against a decompression bomb on open."""
     with PilImage.open(io.BytesIO(data)) as img:
+        # Same header-dimension guard as process_image: Pillow's MAX_IMAGE_PIXELS only *warns* at
+        # the limit and raises at 2x, so without this a 480 MP PNG allocates ~1.4 GB in copy().
+        w, h = img.size
+        if w * h > settings.max_image_pixels:
+            raise ValueError(f"Image exceeds the {settings.max_image_pixels}px area limit ({w}x{h})")
         # Colour-convert before flattening: a CMYK source must go through ICC, not a naive convert.
         rgb = _flatten_to_rgb(_to_srgb(img, img.info.get("icc_profile")))
         return _encode_jpeg(rgb, max_px, quality)
@@ -258,8 +264,17 @@ def _save_resized(
     quality: int,
 ) -> None:
     os.makedirs(os.path.dirname(dest_path), exist_ok=True)
-    with open(dest_path, "wb") as f:
-        f.write(_encode_jpeg(_flatten_to_rgb(img), max_px, quality))
+    # Write-then-rename: preview_upgrade rewrites renditions that are *already being served*, and
+    # nginx would otherwise hand a browser the truncated file mid-write (or a crash would leave a
+    # corrupt one behind until the next sync happens to notice).
+    tmp_path = f"{dest_path}.{os.getpid()}.tmp"
+    try:
+        with open(tmp_path, "wb") as f:
+            f.write(_encode_jpeg(_flatten_to_rgb(img), max_px, quality))
+        os.replace(tmp_path, dest_path)
+    finally:
+        if os.path.exists(tmp_path):
+            os.remove(tmp_path)
 
 
 # Shared pool for rendition generation. Replaces FastAPI BackgroundTasks (which run serially in the
@@ -270,8 +285,9 @@ _executor = ThreadPoolExecutor(max_workers=settings.image_workers, thread_name_p
 
 
 def submit_image_processing(image_id: str, gallery_id: str, stored_filename: str) -> None:
-    """Enqueue thumb/small/medium generation on the worker pool (returns immediately)."""
-    _executor.submit(process_image, image_id, gallery_id, stored_filename)
+    """Enqueue thumb/small/medium generation on the worker pool (returns immediately). Counted as
+    background work from enqueue so a restore waits for (or refuses on) queued renditions."""
+    maintenance.submit(_executor, process_image, image_id, gallery_id, stored_filename)
 
 
 def process_image(image_id: str, gallery_id: str, stored_filename: str) -> None:
@@ -383,6 +399,12 @@ def process_image(image_id: str, gallery_id: str, stored_filename: str) -> None:
             submit_embedding(image_id)
     except Exception:
         logger.exception("Failed to process image %s", image_id)
-        image_repo.set_processing_error(db, image_id)
+        # If the failure *was* a DB error the session is in a failed transaction — roll it back
+        # first, or the status write raises too and the row is stranded in "pending".
+        try:
+            db.rollback()
+            image_repo.set_processing_error(db, image_id)
+        except Exception:
+            logger.exception("Could not record processing error for image %s", image_id)
     finally:
         db.close()
