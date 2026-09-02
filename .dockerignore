@@ -3,6 +3,13 @@ uploads/
 backend/.venv/
 frontend/node_modules/
 frontend/.next/
+# Never part of a runtime image.
+backend/tests/
+e2e/
+demo/
+docs/
+.github/
+.playwright-mcp/
 .git/
 *.md
 .env

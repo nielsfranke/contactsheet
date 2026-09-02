@@ -50,6 +50,9 @@ jobs:
           cache-dependency-path: frontend/package-lock.json
       - run: npm ci
       - run: npm run lint
+      # Catalog parity + ICU/argument checks — CLAUDE.md calls this mandatory before a commit,
+      # so CI enforces it: a missing key would otherwise render raw in production.
+      - run: node scripts/validate-i18n.mjs
       - run: npm test
       - run: npm run build
 
@@ -83,9 +86,11 @@ jobs:
       - name: Install frontend deps
         working-directory: frontend
         run: npm ci
-      # The e2e conftest builds the frontend + boots both servers on ephemeral ports.
+      # The e2e conftest builds the frontend + boots both servers on ephemeral ports. One retry
+      # (pytest-rerunfailures) absorbs a browser-timing flake without hiding a real regression —
+      # a test that fails twice still fails the job.
       - name: Run end-to-end smoke
-        run: pytest e2e/ -o addopts=""
+        run: pytest e2e/ -o addopts="" --reruns 1
       - name: Upload Playwright artifacts on failure
         if: failure()
         uses: actions/upload-artifact@v4

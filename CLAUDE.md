@@ -184,6 +184,7 @@ Migrations live in `backend/alembic/versions/`. Always create a new file — nev
 0045 — per-container sub-gallery presets: galleries.subgallery_presets JSON (per-mode look & behaviour templates for new sub-galleries)
 0046 — optional auto-fill header: app_settings.auto_header_enabled (display-time fallback, off by default)
 0047 — legal pages + support link: app_settings.impressum / privacy / support_link_enabled
+0048 — galleries.header_focus_x/y NOT NULL (aligns 0012 with the model; drift caught by tests/test_migrations_match_models.py)
 ```
 
 ## Feature invariants

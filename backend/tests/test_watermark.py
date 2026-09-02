@@ -118,3 +118,38 @@ def test_image_watermark_filename_is_confined_to_the_gallery_dir(tmp_path, monke
     out = watermark_service._apply_image_watermark(base, ws, "gid")
     assert out is base  # untouched: the traversal was refused, not followed
     assert not os.path.exists(tmp_path / "gid")
+
+
+def test_active_text_watermark_changes_the_served_pixels(admin_client, db):
+    """`is_active` is the only gate between clean previews and composited ones — prove the proxy
+    actually serves different bytes than the file on disk when the watermark is on."""
+    import os
+    from app.config import settings as cfg
+    from fastapi.testclient import TestClient
+    from app.main import app
+    from .helpers import png_bytes
+
+    g = make_gallery(admin_client, "WM")
+    r = admin_client.post(
+        f"/api/galleries/{g['id']}/images",
+        files=[("files", ("p.png", png_bytes(color=(200, 30, 30), size=(400, 300)), "image/png"))],
+    )
+    img = r.json()[0]
+    from app.repositories import image_repo
+    stored = image_repo.get_by_id(db, img["id"]).stored_filename
+    on_disk = open(os.path.join(cfg.upload_dir, g["id"], "thumb", stored), "rb").read()
+
+    ws = {"enabled": True, "mode": "text", "text": "© Studio", "opacity": 90, "size": "large", "position": "center"}
+    admin_client.patch(f"/api/galleries/{g['id']}", json={"watermark_settings": json.dumps(ws)})
+    pub = TestClient(app)
+    listing = pub.get(f"/api/public/g/{g['share_token']}/images").json()[0]
+    assert listing["thumb_url"].startswith("/api/public/") and listing["original_url"] is None
+    served = pub.get(listing["thumb_url"])
+    assert served.status_code == 200 and served.content != on_disk
+
+    admin_client.patch(f"/api/galleries/{g['id']}", json={"watermark_settings": json.dumps({**ws, "enabled": False})})
+    listing = pub.get(f"/api/public/g/{g['share_token']}/images").json()[0]
+    assert listing["thumb_url"].startswith("/uploads/") and listing["original_url"]
+    # The static mount (nginx in production) serves the untouched rendition.
+    assert open(os.path.join(cfg.upload_dir, g["id"], "thumb", stored), "rb").read() == on_disk
+    assert img["id"]

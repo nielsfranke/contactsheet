@@ -1,0 +1,37 @@
+# SPDX-FileCopyrightText: 2026 Niels Franke
+# SPDX-License-Identifier: AGPL-3.0-or-later
+#
+# Keeps the three dependency surfaces current with review-able PRs: the GitHub Actions in the
+# workflows (pinned by major tag today — Dependabot proposes bumps and, with `groups`, keeps them
+# to one PR), the backend's pinned Python wheels and the frontend's npm lockfile. Base images in
+# the Dockerfiles are covered by the `docker` ecosystem.
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    groups:
+      actions:
+        patterns: ["*"]
+  - package-ecosystem: pip
+    directory: /backend
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+  - package-ecosystem: npm
+    directory: /frontend
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+    groups:
+      minor-and-patch:
+        update-types: ["minor", "patch"]
+  - package-ecosystem: docker
+    directory: /
+    schedule:
+      interval: weekly
+  - package-ecosystem: docker
+    directory: /ml
+    schedule:
+      interval: weekly

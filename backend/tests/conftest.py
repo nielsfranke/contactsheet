@@ -10,6 +10,7 @@ the very top, before importing the application.
 """
 
 import os
+import shutil
 import tempfile
 
 # --- Isolate config BEFORE importing the app -------------------------------------------------
@@ -53,9 +54,15 @@ ADMIN_PASSWORD = "supersecret123"
 
 @pytest.fixture(autouse=True)
 def _fresh_db():
-    """Drop + recreate every table around each test for full isolation."""
+    """Drop + recreate every table around each test for full isolation — and empty the media dirs,
+    so a test that writes real files (uploads, watermark caches, backups) can't leak into the next
+    one through a fixed id or filename."""
     Base.metadata.drop_all(bind=engine)
     Base.metadata.create_all(bind=engine)
+    for _d in ("UPLOAD_DIR", "EXPORTS_DIR", "BRANDING_DIR", "WATERMARKS_DIR"):
+        root = os.environ[_d]
+        for entry in os.scandir(root):
+            shutil.rmtree(entry.path, ignore_errors=True) if entry.is_dir() else os.remove(entry.path)
     # Factory-reset tests rotate the runtime secret/token-version; restore deterministic values.
     set_secret_key(os.environ["SECRET_KEY"])
     set_token_version(1)

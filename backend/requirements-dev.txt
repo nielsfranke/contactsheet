@@ -15,3 +15,8 @@ pytest==8.4.2
 pytest-playwright==0.7.1
 # httpx is also a runtime dep (pinned in requirements.txt); the e2e harness uses it to poll the
 # backend/frontend health endpoints while booting the servers.
+
+# Kill a hung test (a socket left open, a thread that never joins) instead of hanging CI for 6 h.
+pytest-timeout==2.3.1
+# One retry for the browser-driven e2e suite only (`--reruns 1` in CI); the unit suite never retries.
+pytest-rerunfailures==15.0

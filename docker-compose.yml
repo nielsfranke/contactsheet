@@ -1,3 +1,12 @@
+# Every service: rotate the JSON log driver's files (unbounded by default — a chatty instance
+# would fill the host disk over months) and cap memory so one runaway decode can't OOM the *host*
+# instead of the container. The limits are generous ceilings, overridable per service in .env.
+x-logging: &logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
 services:
   backend:
     # Pre-built image from the container registry (use `docker compose pull`).
@@ -43,6 +52,13 @@ services:
       # ADMIN_USERNAME: "${ADMIN_USERNAME:-admin}"
       # ADMIN_PASSWORD: "${ADMIN_PASSWORD:-}"
     restart: unless-stopped
+    logging: *logging
+    # Pillow decodes up to 250 MP originals (~1 GB RGB) on a pool of image workers, so keep this
+    # roomy; raise it for very large working documents (PSB/TIFF).
+    deploy:
+      resources:
+        limits:
+          memory: ${BACKEND_MEMORY_LIMIT:-6g}
     healthcheck:
       # curl is installed in the backend image; /api/health is a cheap liveness probe.
       test: ["CMD", "curl", "-fsS", "http://localhost:8000/api/health"]
@@ -60,6 +76,11 @@ services:
       backend:
         condition: service_healthy
     restart: unless-stopped
+    logging: *logging
+    deploy:
+      resources:
+        limits:
+          memory: ${FRONTEND_MEMORY_LIMIT:-1g}
     environment:
       # The Next server fetches per-gallery Open Graph metadata directly from the backend
       # (container-to-container, not via nginx) for link-preview unfurls.
@@ -93,6 +114,12 @@ services:
       # CPU threads for inference. Keep below the host core count so indexing can't starve serving.
       ORT_INTRA_THREADS: "${ML_THREADS:-4}"
     restart: unless-stopped
+    logging: *logging
+    # ONNX weights + a decoded image per request; INT8 graphs keep this well under the ceiling.
+    deploy:
+      resources:
+        limits:
+          memory: ${ML_MEMORY_LIMIT:-4g}
     healthcheck:
       test: ["CMD", "curl", "-fsS", "http://localhost:8001/health"]
       interval: 30s
@@ -116,6 +143,11 @@ services:
       frontend:
         condition: service_healthy
     restart: unless-stopped
+    logging: *logging
+    deploy:
+      resources:
+        limits:
+          memory: ${NGINX_MEMORY_LIMIT:-512m}
     healthcheck:
       # busybox wget ships in the alpine image; /api/health exercises nginx AND its route to the
       # backend (which is already gated healthy by depends_on before nginx starts).
