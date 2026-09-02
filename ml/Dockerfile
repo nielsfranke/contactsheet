@@ -4,7 +4,7 @@
 # ContactSheet ML sidecar: CPU-only ONNX embedding service for semantic search.
 # Built and shipped separately from the main backend so the default deploy stays lean — only
 # operators who enable Content Search pull this image.
-FROM python:3.12-slim AS ml
+FROM python:3.14-slim AS ml
 
 WORKDIR /app
 
