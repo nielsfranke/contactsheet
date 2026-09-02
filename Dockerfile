@@ -13,7 +13,7 @@ RUN npm run build
 # =============================================================================
 # Stage 2: Python / FastAPI backend
 # =============================================================================
-FROM python:3.12-slim AS backend
+FROM python:3.14-slim AS backend
 WORKDIR /app
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
