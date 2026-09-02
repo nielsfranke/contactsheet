@@ -199,6 +199,8 @@ Key non-obvious constraints — full details in `docs/architecture/`.
 - Stateless JWT in an `httponly samesite=strict` cookie. No server-side session store.
 - `app_settings.token_version` is embedded in every token; bumping it ("sign out everywhere") invalidates all previously issued tokens. Change password also bumps it (signs out all other devices) but reissues a fresh cookie for the current browser.
 - `POST /api/auth/logout-all` bumps `token_version`; `POST /api/auth/logout` clears only this browser's cookie.
+- Factory reset sets a **random** `token_version` (not 1): with `SECRET_KEY` pinned in the env the rotated DB key is overridden again at the next start, so only the generation keeps pre-reset cookies out.
+- **Gallery tokens carry a `pw` tag** of the password hash (`jwt.password_tag`); `GalleryAccess.unlocks(gallery)` is the check (REST `_require_gallery_access` and the public WS). Changing the password invalidates outstanding tokens; removing it reopens the gallery.
 
 ### Gallery settings modal & autosave
 - Look & behaviour controls save **immediately** (toggles/selects on change, text/date fields on blur) via `useGallerySettingsAutosave`. No Save button.
@@ -286,6 +288,7 @@ Key non-obvious constraints — full details in `docs/architecture/`.
 - **Color flags** (`color_flags_enabled`) — one shared flag per photo, anyone overwrites it.
 - **Likes** (`likes_enabled`) — per-reviewer, one like per person (`image_likes` table).
 - **Team voting** (`enable_team_voting`) — per-reviewer flags in `image_votes`. Depends on Color flags (nested/disabled without it). With team voting on, likes are hidden.
+- **Every client write is gated by `gallery_service.review_active`** — flags, ratings, likes, comments, *and* per-reviewer votes and public collections. The feature toggles cascade to sub-galleries while `mode` doesn't, so a toggle alone must never open an endpoint on a Showcase child.
 
 ### Rating style: flags, stars, or both (`app_settings.rating_mode`)
 - Instance-wide switch — `"flags"` (default) shows color flags, `"stars"` shows 1–5 stars, `"both"` shows the two side by side (independent values, Lightroom-style). `color_flags_enabled` is the generic per-gallery "ratings enabled" gate in every mode (kept its name to avoid churning the cascade/preset field lists).
@@ -313,6 +316,7 @@ Key non-obvious constraints — full details in `docs/architecture/`.
 - **Full-instance** backup/restore (not per-gallery). Backup is an async job like ZIP export (`backup_jobs` table, `tasks/backup_task.py`) → tar under `exports_dir/backups/`; endpoints under `/api/admin/settings/backup…`. Restore is `POST /api/admin/settings/restore` (web) or `python -m app.restore <archive>` (CLI, blessed for large instances).
 - **DB captured via `VACUUM INTO`** (never tar the live WAL `.db`); media copied **before** the DB snapshot so the snapshot never references a missing file. `exports_dir` is never backed up (regenerable). Scopes: `full` (DB + uploads + branding + watermarks) vs `metadata` (no uploads); full can drop renditions.
 - **Forward-only restore gate:** `manifest.json` records `alembic_revision`; restore refuses a backup from a *newer* binary (unknown revision) and runs `alembic upgrade head` on older ones. Manifest also carries `db_sha256` (integrity). Restore swaps files, keeps a `.db.bak` for rollback, and reloads the runtime key from restored settings → forces re-login.
+- **Restore runs on a quiesced instance** (`app/maintenance.py`): `get_db` counts request sessions, the pools/BackgroundTasks/flusher count background work (from *enqueue*), and `restore_service._swap_in` raises `restore_in_progress` (requests → 503 `maintenance` + `Retry-After`, pools refuse, flusher skips), drains, and refuses with 409 `instance_busy` after 30 s. SQLite's WAL is bound to the DB *by file name* — a straggling writer on the old inode would append frames the restored file replays — so the swap is checkpoint → `VACUUM INTO` rollback snapshot → stage + `os.replace`, never an in-place copy.
 - **No encryption / no scheduling yet** — archives are plaintext (they hold the password hash + secret key; the UI warns). Both are documented follow-ups. See `docs/architecture/backup-restore.md`.
 
 ### Legal strip (Impressum / privacy / source / support)

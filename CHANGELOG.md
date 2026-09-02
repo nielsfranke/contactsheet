@@ -12,6 +12,122 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.10.0] - 2026-09-02
+
+A hardening release from a full-codebase review: the public surface stops leaking around the
+gallery gates, the in-place restore can no longer corrupt a live database, and the admin app gets
+a long list of correctness fixes. **A migration (0048) runs on upgrade; no action needed.**
+
+### Security
+
+- **Password-protected and expiring galleries no longer hand out static `/uploads/…` URLs.**
+  nginx serves that mount with no authentication and a 30-day immutable cache, so any once-seen
+  rendition or original link (shared, cached, logged) opened the photo without the password and
+  kept working past the expiry date. `gallery_service.variants_protected` is now the single gate
+  (downloads off / watermark / password / expiry) and every public serializer routes such media
+  through the access-checked `/api/public/g/{token}/images/{id}/{thumb|small|medium|original}`
+  proxy. The new `/original` proxy carries the per-photo download and `<video>` source for
+  protected galleries (Range-capable, `Cache-Control: private`).
+- **A parent gallery's ZIP no longer bundles children the viewer couldn't open.** Both the job and
+  the streaming download accepted any direct child named by share token — including a
+  password-protected child, one with downloads off, or an expired one — turning the parent's link
+  into a skeleton key for the child's originals. A child's own gates now apply.
+- **EXIF (with GPS coordinates) and IPTC are stripped server-side** unless `show_exif` /
+  `show_iptc` is on; previously only the UI hid them and the public API returned the location of
+  every frame to anyone with the link.
+- **Gallery tokens are bound to the password they were issued against.** Changing the password
+  invalidates outstanding 12-hour tokens (REST and WebSocket); removing it reopens the gallery.
+- **Every client write goes through `review_active`.** Per-reviewer votes and public collections
+  only checked their feature toggle, which cascades onto Showcase sub-galleries while `mode` does
+  not — a Showcase child of a Review container accepted votes and collections. Public collections
+  also refuse pending (unmoderated) uploads, and the public ZIP job download re-checks
+  `downloads_enabled`.
+- **Anonymous client uploads accept JPEG, PNG and WebP only.** The TIFF/PSD/RAW decoders (Pillow
+  plugins, LibRaw) stay admin-only.
+- **Factory reset sets a random token generation.** With `SECRET_KEY` pinned in the environment the
+  rotated database key was overridden again at the next start, and a pre-reset "remember me"
+  cookie was valid again on the not-yet-set-up instance.
+- **Gallery JWTs no longer reach the logs or Sentry.** The `?token=` query string (media proxy, ZIP
+  stream, public WebSocket) is dropped from nginx's access log and from Sentry events.
+- The notification SSRF guard is now an allow-list of credential-only SaaS schemes; every other
+  Apprise netloc (gotify, matrix, mqtt, unknown schemes…) is vetted. Custom notification templates
+  can no longer traverse attributes through `str.format` (`{x.__class__…}`). Header/cover uploads
+  and the watermark PNG get the same decompression-bomb guard as photo uploads (Pillow only raises
+  at *twice* `MAX_IMAGE_PIXELS`). The watermark file name is confined to the gallery's directory.
+  `/api/health/ready` is cached for 5 s so it can't be used as an amplifier.
+- nginx honours the fronting proxy's `X-Forwarded-Proto` (the bundled nginx forwarded its own
+  `http`, so behind Nginx Proxy Manager the admin cookie was never flagged `Secure` unless
+  `COOKIE_SECURE=true` was set), and `/uploads` carries the same `script-src 'none'` CSP as
+  `/branding`.
+
+### Fixed
+
+- **Restore could corrupt a live database.** The web restore overwrote the SQLite file in place
+  while the rendition pool, embed pool, notification flusher or an in-flight request could still
+  hold a connection — SQLite's WAL is bound to the file by *name*, so a straggling writer appended
+  frames the restored database then replayed. The rollback copy was also taken without a WAL
+  checkpoint, so a failed migration "rolled back" to a database missing the newest commits.
+  Restore now quiesces the instance (requests get a 503 + `Retry-After`, pools refuse new work, the
+  flusher skips), refuses with `409 instance_busy` if it doesn't go idle in 30 s, takes the rollback
+  snapshot with `VACUUM INTO`, and swaps the file with `os.replace`. The forward-only gate reads the
+  revision from the snapshot itself, and a pinned `SECRET_KEY` keeps precedence after restore.
+- **Drag-reorder in a filtered admin grid scrambled the gallery order and hid photos.** With a
+  name/flag/rating filter or a collection active, a reorder sent only the visible ids (the backend
+  renumbered just those) and replaced the images cache with the subset. Reordering is now off while
+  a filter narrows the grid.
+- **A gallery that expired while open reconnected its WebSocket once a second, forever.** `4410` is
+  now a permanent close code and the backoff only resets after a socket has stayed open 5 s.
+- Backup builds under a `.part` name and remove it on failure (no more stranded multi-GB
+  half-archives); renditions are written tmp + rename (the startup preview sync rewrote files that
+  were being served); a DB error inside image processing no longer strands the row in "pending".
+- sqlite-vec: an unbuilt index falls back to NumPy instead of blanking instance-wide search, and a
+  missing/stale index is rebuilt at startup.
+- Pinned covers are bound to their gallery (a moved pin falls back to the auto cover); `sort_order`
+  is no longer cascaded to sub-galleries; moving photos drops them from the source's collections
+  and purges its watermark cache; replace-in-place updates the row before deleting old files; the
+  like toggle absorbs the unique-constraint race; a non-ASCII gallery name no longer 500s the ZIP
+  download (RFC 6266 `filename*`); `sort_order` and id lists are bounded (422, not a driver
+  overflow); the shadowed duplicate `POST /galleries/{id}/reorder` is gone.
+- Admin app: API error toasts are never blank (HTTP/2 has no `statusText`); a backend restart no
+  longer bounces the admin to `/login` (only a 401 does, and the deep link comes back via `?next=`);
+  a second folder dropped mid-upload is refused instead of clobbering the running batch; pending
+  name/subtitle/expiry edits are saved when the settings modal closes via Escape (and on Enter);
+  watermark text/colour/opacity are debounced; a cascade refreshes the children's cached settings;
+  concurrent autosaves no longer revert each other; the selection drops ids that disappeared and
+  bulk actions act on the visible selection; backup polling stops on unmount and the job survives
+  navigation; batch rename refuses collisions and empty stems; rename dialogs ignore Enter while
+  saving; dropping a gallery into its own subtree is refused client-side; Undo surfaces its error;
+  the API-token copy button works on plain-http origins.
+- Client gallery: "Download all" pre-flights the gates so an expired token or a disabled download
+  shows in the dialog instead of navigating the gallery to a JSON error page; client uploads are
+  sent in batches of 50 (the backend's cap); the open lightbox follows a flag another reviewer set;
+  team votes show optimistically and roll back on error; far mobile slides render empty; grouped
+  windowed grids re-measure their offset when a group above changes height.
+- Accessibility: admin photo tiles are keyboard-operable in select and manual-sort modes; the
+  off-screen tools drawer is `inert`; the download and save-collection dialogs carry
+  `role="dialog"`, labels and Escape.
+- Uploads spool on the data volume rather than the container's `/tmp`; the embedding job retries
+  from the `medium` rendition when the sidecar can't decode a huge original.
+
+### Changed
+
+- Router → service → repository layering restored where it had slipped: header/cover/watermark
+  file handling, watermark compositing, public ZIP composition and job deletes moved out of the
+  route handlers.
+- The team-voting summary carries per-reviewer star ratings.
+- Compose: json-file log rotation on every service and env-overridable memory ceilings
+  (`BACKEND_MEMORY_LIMIT` 6g, `ML_MEMORY_LIMIT` 4g, `FRONTEND_MEMORY_LIMIT` 1g,
+  `NGINX_MEMORY_LIMIT` 512m). nginx streams ZIP downloads unbuffered.
+
+### Tests & CI
+
+- An auth sweep hits every non-public route anonymously (401 expected); a migration-drift test
+  runs the real `alembic upgrade head` against the models — it found `header_focus_x/y` nullable
+  in 0012 versus NOT NULL in the model, fixed by migration 0048; happy-path coverage for the
+  previously untested endpoints; a watermark test that compares served bytes; `pytest-timeout`;
+  CI runs `validate-i18n` and gives the E2E job one rerun; Dependabot for actions, pip, npm and
+  Docker base images.
+
 ## [1.9.4] - 2026-08-23
 
 An accessibility and polish release: a full keyboard/screen-reader pass over both surfaces, real
@@ -1077,7 +1193,8 @@ contract are considered stable as of this release.
   caps (stricter for public uploads).
 - Docker Compose deployment (backend + frontend + nginx); SQLite + local filesystem.
 
-[Unreleased]: https://github.com/nielsfranke/contactsheet/compare/v1.9.4...HEAD
+[Unreleased]: https://github.com/nielsfranke/contactsheet/compare/v1.10.0...HEAD
+[1.10.0]: https://github.com/nielsfranke/contactsheet/compare/v1.9.4...v1.10.0
 [1.9.4]: https://github.com/nielsfranke/contactsheet/compare/v1.9.3...v1.9.4
 [1.9.3]: https://github.com/nielsfranke/contactsheet/compare/v1.9.2...v1.9.3
 [1.9.2]: https://github.com/nielsfranke/contactsheet/compare/v1.9.1...v1.9.2
