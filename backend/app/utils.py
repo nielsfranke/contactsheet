@@ -1,6 +1,8 @@
 # SPDX-FileCopyrightText: 2026 Niels Franke
 # SPDX-License-Identifier: AGPL-3.0-or-later
 
+from urllib.parse import quote
+
 from fastapi import HTTPException, UploadFile, status
 
 _10_MB = 10 * 1024 * 1024
@@ -33,3 +35,12 @@ def assert_image_magic(data: bytes, mime: str) -> None:
             status_code=status.HTTP_415_UNSUPPORTED_MEDIA_TYPE,
             detail="File content does not match its declared type",
         )
+
+
+def attachment_disposition(filename: str) -> str:
+    """`Content-Disposition: attachment` for a possibly non-ASCII name. Starlette encodes header
+    values as latin-1, so a gallery called "東京" (or "Café") would 500 in a plain `filename=`;
+    RFC 6266 wants an ASCII fallback plus the UTF-8 `filename*` form, which browsers prefer."""
+    ascii_name = filename.encode("ascii", "ignore").decode() or "download"
+    ascii_name = ascii_name.replace('"', "").replace("\\", "")
+    return f'attachment; filename="{ascii_name}"; filename*=UTF-8\'\'{quote(filename, safe="")}'

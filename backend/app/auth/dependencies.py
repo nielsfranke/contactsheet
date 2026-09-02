@@ -1,11 +1,13 @@
 # SPDX-FileCopyrightText: 2026 Niels Franke
 # SPDX-License-Identifier: AGPL-3.0-or-later
 
+from dataclasses import dataclass
+
 from fastapi import Cookie, Depends, Header, HTTPException, status
 from jwt import InvalidTokenError
 from sqlalchemy.orm import Session
 
-from app.auth.jwt import decode_token
+from app.auth.jwt import decode_token, password_tag
 from app.database import get_db
 from app.runtime_config import get_token_version
 from app.services import api_token_service
@@ -58,34 +60,46 @@ def get_optional_admin(
         return False
 
 
-def gallery_id_from_token_value(token: str | None) -> str | None:
+@dataclass(frozen=True)
+class GalleryAccess:
+    """The claims of a gallery JWT that matter for access: which gallery, and against which
+    password generation it was issued (`pw`, see jwt.password_tag)."""
+
+    gallery_id: str
+    pw: str | None = None
+
+    def unlocks(self, gallery) -> bool:
+        return self.gallery_id == gallery.id and self.pw == password_tag(gallery.password_hash)
+
+
+def gallery_id_from_token_value(token: str | None) -> GalleryAccess | None:
     """Decode a gallery JWT supplied as a raw value (e.g. a ?token= query param — browsers can't set
-    an Authorization header on a navigation/download). Returns the gallery_id, or None."""
+    an Authorization header on a navigation/download). Returns its access claims, or None."""
     if not token:
         return None
     try:
         payload = decode_token(token)
-        if payload.get("type") != "gallery":
+        if payload.get("type") != "gallery" or not payload.get("gallery_id"):
             return None
-        return payload.get("gallery_id")
+        return GalleryAccess(gallery_id=payload["gallery_id"], pw=payload.get("pw"))
     except InvalidTokenError:
         return None
 
 
 def get_optional_gallery_token(
     authorization: str | None = Header(default=None),
-) -> str | None:
-    """Returns the gallery JWT payload dict, or None if no token provided."""
+) -> GalleryAccess | None:
+    """Returns the gallery JWT's access claims, or None if no token provided."""
     return gallery_id_from_token_value(_extract_bearer(authorization))
 
 
 def require_gallery_token(
     authorization: str | None = Header(default=None),
-) -> str:
-    gallery_id = get_optional_gallery_token(authorization)
-    if not gallery_id:
+) -> GalleryAccess:
+    access = get_optional_gallery_token(authorization)
+    if not access:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Gallery access token required")
-    return gallery_id
+    return access
 
 
 def require_scope(scope: str):

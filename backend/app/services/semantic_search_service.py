@@ -117,3 +117,22 @@ def status(db: Session) -> dict:
         "skipped": counts.get("skipped", 0),
         "total": sum(counts.values()),
     }
+
+
+def ensure_vec_index(db: Session) -> None:
+    """Startup hook: when the sqlite-vec backend is enabled, make sure its derived index matches the
+    BLOB table (missing after the env flag was first flipped, or after a failed rebuild). Best-effort
+    — any failure leaves the NumPy path in charge."""
+    from app import vector_index
+
+    if not vector_index.enabled():
+        return
+    try:
+        cfg = settings_repo.get(db).semantic_search or {}
+        if not cfg.get("enabled"):
+            return
+        model = cfg.get("model", DEFAULT_MODEL)
+        if vector_index.is_stale(db, model):
+            vector_index.rebuild(db, model)
+    except Exception:
+        logger.warning("sqlite-vec index sync at startup failed; NumPy fallback stays in charge", exc_info=True)

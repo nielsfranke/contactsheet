@@ -74,13 +74,15 @@ _PASSTHROUGH_UPDATE_FIELDS = (
 # a container holds mixed Review + Showcase sub-galleries (e.g. "Work in Progress" review folders
 # next to a "Final Deliveries" showcase), and "apply to all" should only propagate look & behaviour.
 # See docs/proposals/gallery-per-container-mode-presets.md.
-_CASCADE_FIELDS = (frozenset(_PASSTHROUGH_UPDATE_FIELDS) | {"bg_dimmed_color", "expires_at"}) - {"mode"}
+# `sort_order` is the sibling rank (identity, like the name) — cascading it would give every
+# descendant the same rank and scramble their ordering.
+_CASCADE_FIELDS = (frozenset(_PASSTHROUGH_UPDATE_FIELDS) | {"bg_dimmed_color", "expires_at"}) - {"mode", "sort_order"}
 
 # Copied from the parent when a sub-gallery is created (sort_order ranks siblings, so not that).
 # hide_parent_nav is excluded — a new sub-gallery shouldn't silently inherit standalone scoping.
 # `mode` IS inherited here (a new sub-gallery defaults to its parent's mode) even though it is not
 # cascaded — creation and cascade are intentionally different for mode.
-_INHERIT_CREATE_FIELDS = (_CASCADE_FIELDS | {"mode"}) - {"sort_order", "hide_parent_nav"}
+_INHERIT_CREATE_FIELDS = (_CASCADE_FIELDS | {"mode"}) - {"hide_parent_nav"}
 
 # Fields a mode preset (app_settings.preset_*) may default at gallery creation.
 # Mirrors schemas.settings.GalleryPreset.
@@ -455,6 +457,9 @@ def update_gallery(
     if "cover_image_id" in data.model_fields_set:
         updates["cover_image_id"] = data.cover_image_id or None
         if data.cover_image_id:
+            pinned = image_repo.get_by_id(db, data.cover_image_id)
+            if not pinned or pinned.gallery_id != gallery_id:
+                raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Cover image is not in this gallery")
             updates["cover_image_filename"] = None
 
     # header focus point: update when explicitly provided
@@ -828,3 +833,118 @@ def export_flagged(db: Session, gallery_id: str, flag: str | None = None, includ
         else:
             lines.append(name)
     return "\n".join(lines)
+
+
+# --- Branding images (header / cover) ------------------------------------------------------------
+
+_BRANDING_KINDS = {
+    "header": ("gallery-headers", "header_image_filename"),
+    "cover": ("gallery-covers", "cover_image_filename"),
+}
+
+
+def store_branding_image(db: Session, gallery_id: str, data: bytes, kind: str) -> Gallery:
+    """Store an uploaded header/cover as a bounded JPEG under branding/, replacing the previous one.
+    The pixels are re-encoded (EXIF stripped, size capped — a 4 MB+ original must not become the
+    page banner or the og:image) *before* anything on disk changes, so a corrupt upload leaves the
+    working image in place. A cover upload also drops a pinned photo cover: the upload wins."""
+    from app.tasks.image_processing import resize_bytes
+
+    subdir, attr = _BRANDING_KINDS[kind]
+    gallery = gallery_repo.get_by_id(db, gallery_id)
+    if not gallery:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Gallery not found")
+    try:
+        data = resize_bytes(data, app_config.header_max_px, app_config.header_quality)
+    except Exception:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Could not process image")
+
+    target_dir = os.path.join(app_config.branding_dir, subdir, gallery_id)
+    os.makedirs(target_dir, exist_ok=True)
+    filename = f"{uuid.uuid4()}.jpg"
+    with open(os.path.join(target_dir, filename), "wb") as f:
+        f.write(data)
+    previous = getattr(gallery, attr)
+    if previous:
+        old = os.path.join(target_dir, previous)
+        if os.path.exists(old):
+            os.unlink(old)
+    updates = {attr: filename}
+    if kind == "cover":
+        updates["cover_image_id"] = None
+    return gallery_repo.update(db, gallery, **updates)
+
+
+def remove_branding_image(db: Session, gallery_id: str, kind: str) -> None:
+    subdir, attr = _BRANDING_KINDS[kind]
+    gallery = gallery_repo.get_by_id(db, gallery_id)
+    if not gallery:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Gallery not found")
+    current = getattr(gallery, attr)
+    if not current:
+        return
+    old = os.path.join(app_config.branding_dir, subdir, gallery_id, current)
+    if os.path.exists(old):
+        os.unlink(old)
+    gallery_repo.update(db, gallery, **{attr: None})
+
+
+# --- Watermark image file --------------------------------------------------------------------------
+
+def _watermark_settings_dict(gallery: Gallery) -> dict:
+    if not gallery.watermark_settings:
+        return {}
+    try:
+        return json.loads(gallery.watermark_settings)
+    except Exception:
+        return {}
+
+
+def set_watermark_file(db: Session, gallery_id: str, data: bytes, ext: str, storage: StorageProvider) -> str:
+    """Store an uploaded watermark image for the gallery and point its settings at it; the previous
+    file (if any) is removed so re-uploads don't pile up orphans."""
+    gallery = gallery_repo.get_by_id(db, gallery_id)
+    if not gallery:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Gallery not found")
+    ws = _watermark_settings_dict(gallery)
+    previous = ws.get("filename")
+    filename = watermark_service.save_watermark(gallery_id, data, ext)
+    ws["filename"] = filename
+    update_gallery(db, gallery_id, GalleryUpdate.model_validate({"watermark_settings": json.dumps(ws)}), storage)
+    if previous and previous != filename:
+        watermark_service.delete_watermark(gallery_id, previous)
+    return filename
+
+
+def clear_watermark_file(db: Session, gallery_id: str, storage: StorageProvider) -> None:
+    gallery = gallery_repo.get_by_id(db, gallery_id)
+    if not gallery:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Gallery not found")
+    ws = _watermark_settings_dict(gallery)
+    if not ws.get("filename"):
+        return
+    watermark_service.delete_watermark(gallery_id, ws["filename"])
+    ws["filename"] = None
+    update_gallery(db, gallery_id, GalleryUpdate.model_validate({"watermark_settings": json.dumps(ws)}), storage)
+
+
+# --- Public ZIP composition ------------------------------------------------------------------------
+
+def public_zip_entries(db: Session, gallery: Gallery, sub_tokens: set[str]) -> tuple[list[tuple[str, str]], int]:
+    """(gallery_id, folder) entries for a public "download all (+ selected sub-galleries)" ZIP, and
+    the number of approved images they hold. With no sub-galleries selected the archive is flat;
+    otherwise each gallery's images go into a folder named after it. Pending client uploads never
+    count and never enter a public download; a child's own gates apply (`downloadable_children`)."""
+    from app.tasks.zip_task import safe_folder
+
+    selected = downloadable_children(db, gallery, sub_tokens)
+    counts = gallery_repo.batch_image_counts(db, [gallery.id] + [c.id for c in selected], only_approved=True)
+    entries: list[tuple[str, str]] = []
+    if not selected:
+        entries.append((gallery.id, ""))
+    else:
+        if counts.get(gallery.id, 0) > 0:
+            entries.append((gallery.id, safe_folder(gallery.name)))
+        entries.extend((c.id, safe_folder(c.name)) for c in selected)
+    total = sum(counts.get(gid, 0) for gid, _ in entries)
+    return entries, total

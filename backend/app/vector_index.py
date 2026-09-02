@@ -170,3 +170,18 @@ def search_global(db: Session, query, limit: int) -> list[tuple[str, float]]:
     ).fetchall()
     # cosine distance → similarity; vectors are normalized so this matches the NumPy dot product.
     return [(image_id, 1.0 - float(distance)) for image_id, distance in rows[:limit]]
+
+
+def is_stale(db: Session, model: str) -> bool:
+    """True when the vec0 index doesn't reflect the BLOB table: no dim recorded, or a different
+    row count than `image_embeddings` holds for `model`."""
+    blobs = db.execute(
+        text("SELECT COUNT(*) FROM image_embeddings WHERE model = :m"), {"m": model}
+    ).scalar_one()
+    if _current_dim(db) is None:
+        return blobs > 0
+    try:
+        indexed = db.execute(text(f"SELECT COUNT(*) FROM {_VEC_TABLE}")).scalar_one()
+    except Exception:
+        return True
+    return int(indexed) != int(blobs)

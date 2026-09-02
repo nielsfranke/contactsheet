@@ -404,8 +404,7 @@ def delete_backup(
             os.unlink(job.file_path)
         except OSError:
             pass
-    db.delete(job)
-    db.commit()
+    backup_job_repo.delete(db, job)
 
 
 @router.post("/restore")

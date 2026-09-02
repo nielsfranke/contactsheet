@@ -149,7 +149,11 @@ def count_images(db: Session, gallery_id: str, only_approved: bool = False) -> i
 
 def get_cover_image(db: Session, gallery: Gallery, only_approved: bool = False) -> Image | None:
     if gallery.cover_image_id:
-        stmt = select(Image).where(Image.id == gallery.cover_image_id, Image.deleted_at.is_(None))
+        # Bound to this gallery: a pinned photo that was moved elsewhere falls through to the auto
+        # cover instead of pointing at a rendition path under the wrong gallery id.
+        stmt = select(Image).where(
+            Image.id == gallery.cover_image_id, Image.gallery_id == gallery.id, Image.deleted_at.is_(None)
+        )
         if only_approved:
             stmt = stmt.where(Image.moderation_status == "approved")
         img = db.execute(stmt).scalar_one_or_none()
@@ -214,7 +218,8 @@ def batch_cover_images(db: Session, galleries: list[Gallery], only_approved: boo
         imgs = db.execute(stmt).scalars().all()
         img_by_id = {img.id: img for img in imgs}
         for gid, img_id in pinned.items():
-            if img_id in img_by_id:
+            # Same gallery-bound rule as get_cover_image (a moved pin falls through to auto).
+            if img_id in img_by_id and img_by_id[img_id].gallery_id == gid:
                 result[gid] = img_by_id[img_id]
             # If pinned image was deleted (or is pending moderation), fall through to auto logic below
             elif gid not in result:

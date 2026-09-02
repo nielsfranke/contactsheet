@@ -9,7 +9,7 @@ from fastapi import APIRouter, BackgroundTasks, Depends, File, Form, HTTPExcepti
 from fastapi.responses import FileResponse, StreamingResponse
 from sqlalchemy.orm import Session
 
-from app.auth.dependencies import gallery_id_from_token_value, get_optional_admin, get_optional_gallery_token
+from app.auth.dependencies import GalleryAccess, gallery_id_from_token_value, get_optional_admin, get_optional_gallery_token
 from app.auth.jwt import create_gallery_token
 from app.auth.password import verify_password
 from app.config import settings as app_settings
@@ -30,6 +30,7 @@ from app.schemas.zip_job import PublicZipCreate, ZipJobResponse
 from app.services import activity_service, collection_service, comment_service, gallery_service, image_service, notification_service, watermark_service
 from app.storage.base import StorageProvider
 from app.tasks.zip_task import build_zip_for_images, build_zip_multi, collect_members, open_zip_stream, safe_folder
+from app.utils import attachment_disposition
 
 router = APIRouter(prefix="/api/public", tags=["public"])
 
@@ -51,9 +52,15 @@ def _public_zip_response(job, share_token: str) -> ZipJobResponse:
     )
 
 
-def _require_gallery_access(gallery, gallery_id_from_token: str | None):
-    """Raise 401 if gallery is password-protected and token doesn't match."""
-    if gallery.password_hash and gallery_id_from_token != gallery.id:
+def _has_access(gallery, access: GalleryAccess | None) -> bool:
+    """A password-protected gallery needs a token for *this* gallery issued against its *current*
+    password (changing the password invalidates outstanding tokens)."""
+    return not gallery.password_hash or (access is not None and access.unlocks(gallery))
+
+
+def _require_gallery_access(gallery, gallery_id_from_token: GalleryAccess | None):
+    """Raise 401 if gallery is password-protected and the token doesn't unlock it."""
+    if not _has_access(gallery, gallery_id_from_token):
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Gallery access token required")
 
 
@@ -81,14 +88,13 @@ def get_public_gallery(
     share_token: str,
     db: Session = Depends(get_db),
     storage: StorageProvider = Depends(get_storage),
-    gallery_id_from_token: str | None = Depends(get_optional_gallery_token),
+    gallery_id_from_token: GalleryAccess | None = Depends(get_optional_gallery_token),
     is_admin: bool = Depends(get_optional_admin),
 ):
     gallery, public_response = gallery_service.get_public_gallery(db, share_token, storage)
 
-    if gallery.password_hash:
-        if gallery_id_from_token != gallery.id:
-            return {"requires_password": True}
+    if not _has_access(gallery, gallery_id_from_token):
+        return {"requires_password": True}
 
     # Notify + log the share-link open (skip the photographer's own preview). The activity row is
     # deduped per IP and only written when IP logging is enabled.
@@ -160,7 +166,7 @@ def auth_gallery(
             detail="Wrong password",
         )
 
-    token = create_gallery_token(gallery.id)
+    token = create_gallery_token(gallery.id, gallery.password_hash)
     return GalleryAuthResponse(access_token=token)
 
 
@@ -169,7 +175,7 @@ def get_public_images(
     share_token: str,
     db: Session = Depends(get_db),
     storage: StorageProvider = Depends(get_storage),
-    gallery_id_from_token: str | None = Depends(get_optional_gallery_token),
+    gallery_id_from_token: GalleryAccess | None = Depends(get_optional_gallery_token),
 ):
     gallery, public = gallery_service.get_public_gallery(db, share_token, storage)
     _require_gallery_access(gallery, gallery_id_from_token)
@@ -186,7 +192,7 @@ def client_upload_images(
     uploader: str = Form(""),
     db: Session = Depends(get_db),
     storage: StorageProvider = Depends(get_storage),
-    gallery_id_from_token: str | None = Depends(get_optional_gallery_token),
+    gallery_id_from_token: GalleryAccess | None = Depends(get_optional_gallery_token),
 ):
     gallery, _ = gallery_service.get_public_gallery(db, share_token, storage)
     _require_gallery_access(gallery, gallery_id_from_token)
@@ -195,7 +201,10 @@ def client_upload_images(
 
 
 def _require_collections(gallery):
-    if not gallery.sets_enabled:
+    # `sets_enabled` cascades to sub-galleries while `mode` does not — a Showcase child of a Review
+    # container carries the toggle, so review_active (Review mode, or the client mode switch) is the
+    # gate that actually decides whether clients may write here.
+    if not gallery.sets_enabled or not gallery_service.review_active(gallery):
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Collections are not enabled for this gallery")
 
 
@@ -204,7 +213,7 @@ def list_public_collections(
     share_token: str,
     db: Session = Depends(get_db),
     storage: StorageProvider = Depends(get_storage),
-    gallery_id_from_token: str | None = Depends(get_optional_gallery_token),
+    gallery_id_from_token: GalleryAccess | None = Depends(get_optional_gallery_token),
 ):
     gallery, _ = gallery_service.get_public_gallery(db, share_token, storage)
     _require_gallery_access(gallery, gallery_id_from_token)
@@ -220,7 +229,7 @@ def create_public_collection(
     body: CollectionCreate,
     db: Session = Depends(get_db),
     storage: StorageProvider = Depends(get_storage),
-    gallery_id_from_token: str | None = Depends(get_optional_gallery_token),
+    gallery_id_from_token: GalleryAccess | None = Depends(get_optional_gallery_token),
 ):
     gallery, _ = gallery_service.get_public_gallery(db, share_token, storage)
     _require_gallery_access(gallery, gallery_id_from_token)
@@ -240,7 +249,7 @@ def update_public_collection(
     body: CollectionUpdate,
     db: Session = Depends(get_db),
     storage: StorageProvider = Depends(get_storage),
-    gallery_id_from_token: str | None = Depends(get_optional_gallery_token),
+    gallery_id_from_token: GalleryAccess | None = Depends(get_optional_gallery_token),
 ):
     gallery, _ = gallery_service.get_public_gallery(db, share_token, storage)
     _require_gallery_access(gallery, gallery_id_from_token)
@@ -261,7 +270,7 @@ def delete_public_collection(
     reviewer: str = "",
     db: Session = Depends(get_db),
     storage: StorageProvider = Depends(get_storage),
-    gallery_id_from_token: str | None = Depends(get_optional_gallery_token),
+    gallery_id_from_token: GalleryAccess | None = Depends(get_optional_gallery_token),
 ):
     gallery, _ = gallery_service.get_public_gallery(db, share_token, storage)
     _require_gallery_access(gallery, gallery_id_from_token)
@@ -279,7 +288,7 @@ def flag_image(
     body: PublicFlagRequest,
     db: Session = Depends(get_db),
     storage: StorageProvider = Depends(get_storage),
-    gallery_id_from_token: str | None = Depends(get_optional_gallery_token),
+    gallery_id_from_token: GalleryAccess | None = Depends(get_optional_gallery_token),
 ):
     gallery, public = gallery_service.get_public_gallery(db, share_token, storage)
     _require_gallery_access(gallery, gallery_id_from_token)
@@ -297,7 +306,7 @@ def rate_image(
     body: PublicRateRequest,
     db: Session = Depends(get_db),
     storage: StorageProvider = Depends(get_storage),
-    gallery_id_from_token: str | None = Depends(get_optional_gallery_token),
+    gallery_id_from_token: GalleryAccess | None = Depends(get_optional_gallery_token),
 ):
     gallery, public = gallery_service.get_public_gallery(db, share_token, storage)
     _require_gallery_access(gallery, gallery_id_from_token)
@@ -312,7 +321,7 @@ def get_likes(
     reviewer: str,
     db: Session = Depends(get_db),
     storage: StorageProvider = Depends(get_storage),
-    gallery_id_from_token: str | None = Depends(get_optional_gallery_token),
+    gallery_id_from_token: GalleryAccess | None = Depends(get_optional_gallery_token),
 ):
     """Image ids in this gallery the reviewer has liked (so the heart shows filled for them)."""
     gallery, _ = gallery_service.get_public_gallery(db, share_token, storage)
@@ -329,7 +338,7 @@ def like_image(
     body: PublicLikeRequest,
     db: Session = Depends(get_db),
     storage: StorageProvider = Depends(get_storage),
-    gallery_id_from_token: str | None = Depends(get_optional_gallery_token),
+    gallery_id_from_token: GalleryAccess | None = Depends(get_optional_gallery_token),
 ):
     gallery, public = gallery_service.get_public_gallery(db, share_token, storage)
     _require_gallery_access(gallery, gallery_id_from_token)
@@ -344,7 +353,7 @@ def get_comments(
     image_id: str,
     db: Session = Depends(get_db),
     storage: StorageProvider = Depends(get_storage),
-    gallery_id_from_token: str | None = Depends(get_optional_gallery_token),
+    gallery_id_from_token: GalleryAccess | None = Depends(get_optional_gallery_token),
 ):
     gallery, _ = gallery_service.get_public_gallery(db, share_token, storage)
     _require_gallery_access(gallery, gallery_id_from_token)
@@ -373,7 +382,7 @@ def get_watermarked_medium(
     token: str | None = None,
     db: Session = Depends(get_db),
     storage: StorageProvider = Depends(get_storage),
-    gallery_id_from_token: str | None = Depends(get_optional_gallery_token),
+    gallery_id_from_token: GalleryAccess | None = Depends(get_optional_gallery_token),
 ):
     # `?token=` because these URLs land in <img src>, which can't carry an auth header
     # (same contract as the zip stream).
@@ -391,7 +400,7 @@ def get_watermarked_small(
     token: str | None = None,
     db: Session = Depends(get_db),
     storage: StorageProvider = Depends(get_storage),
-    gallery_id_from_token: str | None = Depends(get_optional_gallery_token),
+    gallery_id_from_token: GalleryAccess | None = Depends(get_optional_gallery_token),
 ):
     return _watermarked_variant(
         "small", share_token, image_id, request, db, storage,
@@ -407,7 +416,7 @@ def get_watermarked_thumb(
     token: str | None = None,
     db: Session = Depends(get_db),
     storage: StorageProvider = Depends(get_storage),
-    gallery_id_from_token: str | None = Depends(get_optional_gallery_token),
+    gallery_id_from_token: GalleryAccess | None = Depends(get_optional_gallery_token),
 ):
     return _watermarked_variant(
         "thumb", share_token, image_id, request, db, storage,
@@ -422,7 +431,7 @@ def get_public_original(
     token: str | None = None,
     db: Session = Depends(get_db),
     storage: StorageProvider = Depends(get_storage),
-    gallery_id_from_token: str | None = Depends(get_optional_gallery_token),
+    gallery_id_from_token: GalleryAccess | None = Depends(get_optional_gallery_token),
 ):
     """Access-checked original for protected galleries (see gallery_service.variants_protected):
     the per-photo download link and the <video> source, which can't use the unauthenticated static
@@ -458,10 +467,8 @@ def _watermarked_variant(
     request: Request,
     db: Session,
     storage: StorageProvider,
-    gallery_id_from_token: str | None,
+    gallery_id_from_token: GalleryAccess | None,
 ):
-    import hashlib
-    from fastapi.responses import FileResponse, Response as FastAPIResponse
     gallery, _ = gallery_service.get_public_gallery(db, share_token, storage)
     _require_gallery_access(gallery, gallery_id_from_token)
 
@@ -486,25 +493,9 @@ def _watermarked_variant(
     if not watermark_service.is_active(ws):
         return FileResponse(src_path, media_type="image/jpeg", headers={"Cache-Control": cache_control})
 
-    # Cache composited watermark to disk; key on image id + watermark settings hash
-    wm_hash = hashlib.sha1(json.dumps(ws, sort_keys=True).encode()).hexdigest()[:12]
-    cache_dir = os.path.join(app_settings.upload_dir, gallery.id, f"{variant}-wm")
-    os.makedirs(cache_dir, exist_ok=True)
-    cache_path = os.path.join(cache_dir, f"{image.id}_{wm_hash}.jpg")
-    etag = f'"{image.id}-{variant}-{wm_hash}"'
-
+    cache_path, etag = watermark_service.composited_variant(gallery.id, image.id, variant, src_path, ws)
     if request.headers.get("if-none-match") == etag:
-        return FastAPIResponse(status_code=304)
-
-    if not os.path.exists(cache_path):
-        with open(src_path, "rb") as f:
-            img_bytes = f.read()
-        composited = watermark_service.apply_watermark(img_bytes, gallery.id, ws)
-        # Atomic publish: a concurrent request must never see (and browser-cache) a half-written file.
-        tmp_path = f"{cache_path}.{os.getpid()}.{id(composited)}.tmp"
-        with open(tmp_path, "wb") as f:
-            f.write(composited)
-        os.replace(tmp_path, cache_path)
+        return Response(status_code=304)
 
     return FileResponse(
         cache_path,
@@ -522,7 +513,7 @@ def get_votes(
     reviewer: str,
     db: Session = Depends(get_db),
     storage: StorageProvider = Depends(get_storage),
-    gallery_id_from_token: str | None = Depends(get_optional_gallery_token),
+    gallery_id_from_token: GalleryAccess | None = Depends(get_optional_gallery_token),
 ):
     gallery, _ = gallery_service.get_public_gallery(db, share_token, storage)
     _require_gallery_access(gallery, gallery_id_from_token)
@@ -540,11 +531,15 @@ def set_vote(
     body: VoteCreate,
     db: Session = Depends(get_db),
     storage: StorageProvider = Depends(get_storage),
-    gallery_id_from_token: str | None = Depends(get_optional_gallery_token),
+    gallery_id_from_token: GalleryAccess | None = Depends(get_optional_gallery_token),
 ):
     gallery, _ = gallery_service.get_public_gallery(db, share_token, storage)
     _require_gallery_access(gallery, gallery_id_from_token)
-    if not gallery.enable_team_voting:
+    # Same gate as the shared flag/rating writes: reviewing must be active here (Review mode or the
+    # client mode switch — `enable_team_voting` alone cascades onto Showcase children) and ratings
+    # must be on (`color_flags_enabled` is the generic per-gallery ratings gate in every mode).
+    if not gallery.enable_team_voting or not gallery.color_flags_enabled \
+            or not gallery_service.review_active(gallery):
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Team voting not enabled")
 
     image = image_repo.get_by_id(db, image_id)
@@ -577,7 +572,7 @@ def add_comment(
     body: CommentCreate,
     db: Session = Depends(get_db),
     storage: StorageProvider = Depends(get_storage),
-    gallery_id_from_token: str | None = Depends(get_optional_gallery_token),
+    gallery_id_from_token: GalleryAccess | None = Depends(get_optional_gallery_token),
 ):
     gallery, _ = gallery_service.get_public_gallery(db, share_token, storage)
     _require_gallery_access(gallery, gallery_id_from_token)
@@ -616,7 +611,7 @@ def public_delete_comment(
     reviewer: str = "",
     db: Session = Depends(get_db),
     storage: StorageProvider = Depends(get_storage),
-    gallery_id_from_token: str | None = Depends(get_optional_gallery_token),
+    gallery_id_from_token: GalleryAccess | None = Depends(get_optional_gallery_token),
 ):
     gallery, _ = gallery_service.get_public_gallery(db, share_token, storage)
     _require_gallery_access(gallery, gallery_id_from_token)
@@ -633,7 +628,7 @@ def create_public_zip(
     background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
     storage: StorageProvider = Depends(get_storage),
-    gallery_id_from_token: str | None = Depends(get_optional_gallery_token),
+    gallery_id_from_token: GalleryAccess | None = Depends(get_optional_gallery_token),
     is_admin: bool = Depends(get_optional_admin),
 ):
     gallery, _ = gallery_service.get_public_gallery(db, share_token, storage)
@@ -660,27 +655,7 @@ def create_public_zip(
         _record_download(len(wanted))
         return _public_zip_response(job, share_token)
 
-    # A child's own password / downloads / expiry gates apply — the parent's token is no skeleton key.
-    selected = gallery_service.downloadable_children(db, gallery, set(body.subgallery_share_tokens))
-
-    # Image counts to validate the selection actually holds files (only_approved: pending client
-    # uploads don't count and never enter a public download).
-    ids = [gallery.id] + [c.id for c in selected]
-    counts = gallery_repo.batch_image_counts(db, ids, only_approved=True)
-    root_count = counts.get(gallery.id, 0)
-
-    # Build (gallery_id, folder) entries. With no sub-galleries selected the archive is flat;
-    # otherwise each gallery's images go into a folder named after it.
-    entries: list[tuple[str, str]] = []
-    if not selected:
-        entries.append((gallery.id, ""))
-    else:
-        if root_count > 0:
-            entries.append((gallery.id, safe_folder(gallery.name)))
-        for c in selected:
-            entries.append((c.id, safe_folder(c.name)))
-
-    total = sum(counts.get(gid, 0) for gid, _ in entries)
+    entries, total = gallery_service.public_zip_entries(db, gallery, set(body.subgallery_share_tokens))
     if total == 0:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Nothing to download in the current selection")
 
@@ -716,16 +691,7 @@ def stream_public_zip(
         members = collect_members(db, [(gallery.id, "")], only_approved=True, image_ids=image_ids)
     else:
         sub_tokens = {t for t in subs.split(",") if t}
-        # A child's own password / downloads / expiry gates apply — the parent's token is no skeleton key.
-        selected = gallery_service.downloadable_children(db, gallery, sub_tokens)
-        counts = gallery_repo.batch_image_counts(db, [gallery.id] + [c.id for c in selected], only_approved=True)
-        entries: list[tuple[str, str]] = []
-        if not selected:
-            entries.append((gallery.id, ""))
-        else:
-            if counts.get(gallery.id, 0) > 0:
-                entries.append((gallery.id, safe_folder(gallery.name)))
-            entries.extend((c.id, safe_folder(c.name)) for c in selected)
+        entries, _total = gallery_service.public_zip_entries(db, gallery, sub_tokens)
         members = collect_members(db, entries, only_approved=True)
 
     if not members:
@@ -744,7 +710,7 @@ def stream_public_zip(
         iter(zs),
         media_type="application/zip",
         headers={
-            "Content-Disposition": f'attachment; filename="{filename}"',
+            "Content-Disposition": attachment_disposition(filename),
             "Content-Length": str(content_length),
         },
     )
@@ -756,7 +722,7 @@ def get_public_zip(
     job_id: str,
     db: Session = Depends(get_db),
     storage: StorageProvider = Depends(get_storage),
-    gallery_id_from_token: str | None = Depends(get_optional_gallery_token),
+    gallery_id_from_token: GalleryAccess | None = Depends(get_optional_gallery_token),
 ):
     gallery, _ = gallery_service.get_public_gallery(db, share_token, storage)
     _require_gallery_access(gallery, gallery_id_from_token)
@@ -772,10 +738,12 @@ def download_public_zip(
     job_id: str,
     db: Session = Depends(get_db),
     storage: StorageProvider = Depends(get_storage),
-    gallery_id_from_token: str | None = Depends(get_optional_gallery_token),
+    gallery_id_from_token: GalleryAccess | None = Depends(get_optional_gallery_token),
 ):
     gallery, _ = gallery_service.get_public_gallery(db, share_token, storage)
     _require_gallery_access(gallery, gallery_id_from_token)
+    if not gallery.downloads_enabled:  # turned off since the job was created
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Downloads are disabled for this gallery")
     job = zip_job_repo.get(db, job_id)
     if not job or job.gallery_id != gallery.id:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Job not found")
@@ -783,9 +751,4 @@ def download_public_zip(
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="ZIP not ready")
 
     filename = f"{safe_folder(gallery.name)}.zip"
-    return FileResponse(
-        job.file_path,
-        media_type="application/zip",
-        filename=filename,
-        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
-    )
+    return FileResponse(job.file_path, media_type="application/zip", filename=filename)

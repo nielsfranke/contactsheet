@@ -16,7 +16,7 @@ from app.errors import CodedHTTPException
 from app.models.gallery import Gallery
 from app.models.image import Image
 from app.realtime import publish as realtime_publish
-from app.repositories import activity_repo, comment_repo, gallery_repo, image_repo, like_repo, vote_repo
+from app.repositories import activity_repo, collection_repo, comment_repo, gallery_repo, image_repo, like_repo, vote_repo
 from app.schemas.image import GlobalSearchResult, ImageResponse, ImageUpdate, PhotoPage, UploadResponse
 from app.services import gallery_service, notification_service
 from app.storage import format_detect
@@ -38,6 +38,10 @@ _ACCEPTED_LABEL = "JPEG, PNG, WebP, TIFF, PSD, camera RAW, MP4, MOV, WebM"
 
 # Max files a public visitor may send in one client-upload request.
 CLIENT_UPLOAD_MAX_FILES = 50
+
+# Formats a public visitor may upload (format_detect keys): the browser-native trio. Working
+# documents and camera RAW stay admin-only — their decoders are the attack surface, not the need.
+CLIENT_UPLOAD_FORMATS = frozenset({"jpeg", "png", "webp"})
 
 # Large working-document formats that get the multi-GB `max_document_bytes` ceiling (admin uploads
 # only) rather than the regular image cap. Keyed on the detected format's `key`.
@@ -308,22 +312,9 @@ def _replace_in_place(
     and reprocessing is enqueued."""
     target = matches[0]  # newest (live_by_filename is created_at DESC)
     old_stored = target.stored_filename
-    for subdir in _IMAGE_SUBDIRS:
-        storage.delete(f"{gallery_id}/{subdir}/{old_stored}")
-    # The watermark cache is keyed on the image *id* (which replace deliberately keeps) — purge it,
-    # or the public proxy would keep serving the pre-replace pixels under an unchanged ETag.
-    for subdir in _IMAGE_SUBDIRS:
-        if subdir == "original":
-            continue
-        for stale in glob.glob(
-            os.path.join(settings.upload_dir, gallery_id, f"{subdir}-wm", f"{target.id}_*.jpg")
-        ):
-            try:
-                os.remove(stale)
-            except OSError:
-                pass
     for sibling in matches[1:]:
         image_repo.soft_delete(db, sibling)
+    # Row first, files second: if the commit fails the live row still points at files that exist.
     updated = image_repo.update_fields(
         db,
         target,
@@ -338,10 +329,41 @@ def _replace_in_place(
         processing_status="done" if is_video else "pending",
         embedding_status="skipped" if is_video else "pending",
     )
+    for subdir in _IMAGE_SUBDIRS:
+        storage.delete(f"{gallery_id}/{subdir}/{old_stored}")
+    # The watermark cache is keyed on the image *id* (which replace deliberately keeps) — purge it,
+    # or the public proxy would keep serving the pre-replace pixels under an unchanged ETag.
+    _purge_watermark_cache(gallery_id, [target.id])
     if not is_video:
         submit_image_processing(updated.id, gallery_id, new_stored)
     realtime_publish(gallery_id, "image", image_id=updated.id)
     return updated
+
+
+def _purge_watermark_cache(gallery_id: str, image_ids: list[str]) -> None:
+    """Drop composited `{variant}-wm/{image_id}_*.jpg` files for these images in `gallery_id`."""
+    for subdir in _IMAGE_SUBDIRS:
+        if subdir == "original":
+            continue
+        for image_id in image_ids:
+            for stale in glob.glob(
+                os.path.join(settings.upload_dir, gallery_id, f"{subdir}-wm", f"{image_id}_*.jpg")
+            ):
+                try:
+                    os.remove(stale)
+                except OSError:
+                    pass
+
+
+def _detach_from_source_gallery(db: Session, source_gallery_id: str, image_ids: list[str]) -> None:
+    """Bookkeeping when images leave a gallery: the source's pinned cover (if it was one of them)
+    falls back to auto, their membership in the source's collections is dropped, and the source's
+    watermark cache for them is purged. Caller commits."""
+    source = gallery_repo.get_by_id(db, source_gallery_id)
+    if source and source.cover_image_id in image_ids:
+        source.cover_image_id = None
+    collection_repo.remove_images_from_gallery(db, source_gallery_id, image_ids)
+    _purge_watermark_cache(source_gallery_id, image_ids)
 
 
 def upload_images(
@@ -354,6 +376,7 @@ def upload_images(
     max_image_bytes: int | None = None,
     max_total_bytes: int | None = None,
     allow_video: bool = True,
+    allowed_keys: frozenset[str] | None = None,
     duplicate_actions: dict[str, str] | None = None,
 ) -> list[UploadResponse]:
     """`duplicate_actions` maps an incoming `original_filename` → "replace" | "keep_both" | "skip".
@@ -392,6 +415,14 @@ def upload_images(
                 status_code=status.HTTP_415_UNSUPPORTED_MEDIA_TYPE,
                 code="client_upload_video",
                 detail="Video upload is not available for client uploads — images only",
+            )
+        if allowed_keys is not None and fmt.key not in allowed_keys:
+            # The public path never reaches the PSD/TIFF/RAW decoders (Pillow plugins + LibRaw):
+            # they're the historically fuzz-rich ones and an anonymous visitor doesn't need them.
+            raise CodedHTTPException(
+                status_code=status.HTTP_415_UNSUPPORTED_MEDIA_TYPE,
+                code="upload_unsupported_type",
+                detail="Unsupported file type. Allowed: JPEG, PNG, WebP",
             )
 
         mime = fmt.mime
@@ -546,6 +577,7 @@ def client_upload_images(
         max_image_bytes=settings.client_upload_max_file_bytes,
         max_total_bytes=settings.client_upload_max_total_bytes,
         allow_video=False,
+        allowed_keys=CLIENT_UPLOAD_FORMATS,
     )
     if results:
         # Record the client contribution in the activity log (admin uploads go a different path
@@ -600,6 +632,7 @@ def move_image(db: Session, image_id: str, target_gallery_id: str, storage: Stor
             storage.move(src, dst)
 
     new_sort = len(image_repo.get_by_gallery(db, target_gallery_id))
+    _detach_from_source_gallery(db, src_gallery, [image_id])
     moved = image_repo.update_fields(db, image, gallery_id=target_gallery_id, sort_order=new_sort)
     # Per-reviewer likes/votes are filtered by gallery_id, so they must follow the image to its new
     # gallery — otherwise the heart reads empty there while a stale like silently lingers.
@@ -689,6 +722,7 @@ def transfer_images(
         image.gallery_id = target_gallery_id
         image.sort_order = base + offset
         results.append(image)
+    _detach_from_source_gallery(db, source_gallery_id, [img.id for img in ordered])
     db.commit()
     # Per-reviewer likes/votes are filtered by gallery_id, so they must follow the images (see
     # move_image).

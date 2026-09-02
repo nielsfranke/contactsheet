@@ -59,14 +59,15 @@ def _to_response(
     )
 
 
-def _live_images(db: Session, gallery_id: str) -> dict[str, Image]:
-    return {img.id: img for img in image_repo.get_by_gallery(db, gallery_id)}
+def _live_images(db: Session, gallery_id: str, public: bool = False) -> dict[str, Image]:
+    # Public callers never see (or may reference) pending client uploads.
+    return {img.id: img for img in image_repo.get_by_gallery(db, gallery_id, only_approved=public)}
 
 
 def list_collections(
     db: Session, gallery_id: str, storage: StorageProvider, public_gallery=None
 ) -> list[CollectionResponse]:
-    live = _live_images(db, gallery_id)
+    live = _live_images(db, gallery_id, public=public_gallery is not None)
     return [
         _to_response(c, live, storage, public_gallery)
         for c in collection_repo.list_by_gallery(db, gallery_id)
@@ -89,7 +90,7 @@ def create_collection(
     if not name:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Collection name is required")
 
-    live = _live_images(db, gallery_id)
+    live = _live_images(db, gallery_id, public=public_gallery is not None)
     # Keep only ids that belong to this gallery (preserve request order, drop dupes).
     seen: set[str] = set()
     image_ids = [iid for iid in data.image_ids if iid in live and not (iid in seen or seen.add(iid))]
@@ -133,7 +134,7 @@ def update_collection(
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Collection name is required")
         collection_repo.update_name(db, collection, name)
 
-    live = _live_images(db, gallery_id)
+    live = _live_images(db, gallery_id, public=public_gallery is not None)
     if data.image_ids is not None:
         # Keep only ids that belong to this gallery (preserve order, drop dupes); a collection must
         # retain at least one member (consistent with create).

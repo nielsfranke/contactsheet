@@ -101,3 +101,20 @@ def test_settings_change_drops_composited_cache(admin_client):
     r = admin_client.patch(f"/api/galleries/{g['id']}", json={"watermark_settings": json.dumps(ws)})
     assert r.status_code == 200
     assert not os.path.exists(stale)
+
+
+def test_image_watermark_filename_is_confined_to_the_gallery_dir(tmp_path, monkeypatch):
+    """`filename` comes from admin-controlled JSON; a `../` must never leave the gallery's dir."""
+    import os
+    from PIL import Image as _PIL
+    from app.config import settings as cfg
+    from app.services import watermark_service
+
+    monkeypatch.setattr(cfg, "watermarks_dir", str(tmp_path))
+    outside = tmp_path / "secret.png"
+    _PIL.new("RGBA", (4, 4), (255, 0, 0, 255)).save(outside)
+    base = _PIL.new("RGB", (32, 32), (0, 0, 0))
+    ws = WatermarkSettings(filename="../secret.png", opacity=100, size="large")
+    out = watermark_service._apply_image_watermark(base, ws, "gid")
+    assert out is base  # untouched: the traversal was refused, not followed
+    assert not os.path.exists(tmp_path / "gid")

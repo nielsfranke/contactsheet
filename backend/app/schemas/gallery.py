@@ -8,6 +8,11 @@ from typing import Literal
 
 from pydantic import BaseModel, Field, field_validator, model_validator
 
+# Bounds on caller-supplied ints/lists: SQLite binds a 64-bit int (a bigger one raises at the driver
+# → 500), and an id list is never legitimately larger than a whole gallery.
+_MAX_SORT = 2**31 - 1
+_MAX_IDS = 10_000
+
 
 LayoutType = Literal["grid", "masonry", "list"]
 ModeType = Literal["presentation", "collaboration"]
@@ -122,7 +127,7 @@ class GalleryCreate(BaseModel):
     password: str | None = None
     mode: ModeType = "presentation"
     layout: LayoutType = "grid"
-    sort_order: int = 0
+    sort_order: int = Field(0, ge=0, le=_MAX_SORT)
     downloads_enabled: bool = True
     enable_team_voting: bool = False
     headline: str | None = Field(default=None, max_length=512)
@@ -134,7 +139,7 @@ class GalleryDerive(BaseModel):
     selection). `parent_id` null = top-level, or the source gallery id for a sub-gallery."""
 
     name: str = Field(..., min_length=1, max_length=255)
-    image_ids: list[str] = Field(..., min_length=1)
+    image_ids: list[str] = Field(..., min_length=1, max_length=_MAX_IDS)
     parent_id: str | None = None
     operation: Literal["copy", "move"] = "copy"
 
@@ -147,7 +152,7 @@ class GalleryUpdate(BaseModel):
     mode: ModeType | None = None
     client_mode_switch_enabled: bool | None = None  # Showcase-only: clients may switch to Review
     layout: LayoutType | None = None
-    sort_order: int | None = None
+    sort_order: int | None = Field(None, ge=0, le=_MAX_SORT)
     pinned: bool | None = None              # admin favorite flag (never cascades)
     downloads_enabled: bool | None = None
     enable_team_voting: bool | None = None

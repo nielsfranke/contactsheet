@@ -2,6 +2,7 @@
 # SPDX-License-Identifier: AGPL-3.0-or-later
 
 from sqlalchemy import case, select, update
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.models.image import Image
@@ -28,7 +29,11 @@ def toggle(db: Session, image_id: str, gallery_id: str, reviewer_name: str) -> b
 
     db.add(ImageLike(image_id=image_id, gallery_id=gallery_id, reviewer_name=reviewer_name))
     db.execute(update(Image).where(Image.id == image_id).values(likes=Image.likes + 1))
-    db.commit()
+    try:
+        db.commit()
+    except IntegrityError:
+        # Two taps raced past the SELECT above; the other one won — the like exists, count is right.
+        db.rollback()
     return True
 
 

@@ -70,8 +70,13 @@ def factory_reset(password: str, db: Session) -> None:
     #    outstanding token, so the next request lands on /setup.
     db.query(AppSettings).delete()
     db.commit()
-    fresh = settings_repo.get(db)  # recreates id=1 with model defaults (setup_complete=False)
+    settings_repo.get(db)  # recreates id=1 with model defaults (setup_complete=False)
     new_key = secrets.token_hex(32)
-    settings_repo.update(db, secret_key=new_key)
+    # A fresh, random token generation as well: when SECRET_KEY is pinned in the environment the
+    # rotated DB key is overridden again at the next start, and a "remember me" cookie from before
+    # the reset (ver=1) would be valid on the not-yet-set-up instance. The generation is random
+    # (not 1) precisely so no pre-reset token can ever match it.
+    new_version = secrets.randbelow(2**31 - 2) + 2
+    settings_repo.update(db, secret_key=new_key, token_version=new_version)
     set_secret_key(new_key)
-    set_token_version(fresh.token_version)
+    set_token_version(new_version)

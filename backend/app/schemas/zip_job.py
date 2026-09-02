@@ -6,7 +6,7 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Literal
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 FilterType = Literal["all", "flagged", "green", "red", "yellow", "blue"]
 
@@ -16,7 +16,7 @@ class ZipJobCreate(BaseModel):
     # Optional: include these direct sub-galleries (each in its own folder).
     subgallery_ids: list[str] = []
     # Optional: download only this selection of images (flat archive). Takes precedence.
-    image_ids: list[str] = []
+    image_ids: list[str] = Field(default_factory=list, max_length=10_000)
 
 
 class PublicZipCreate(BaseModel):
@@ -24,7 +24,7 @@ class PublicZipCreate(BaseModel):
     subgallery_share_tokens: list[str] = []
     # When set, download only these images (a filtered selection) as a flat archive;
     # sub-galleries are ignored.
-    image_ids: list[str] = []
+    image_ids: list[str] = Field(default_factory=list, max_length=10_000)
 
 
 class ZipJobResponse(BaseModel):

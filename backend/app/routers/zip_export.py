@@ -122,12 +122,7 @@ def download_zip(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="ZIP file missing")
 
     filename = f"gallery-{gallery_id[:8]}-{job.filter_type}.zip"
-    return FileResponse(
-        job.file_path,
-        media_type="application/zip",
-        filename=filename,
-        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
-    )
+    return FileResponse(job.file_path, media_type="application/zip", filename=filename)
 
 
 @router.delete("/{gallery_id}/export/zip/{job_id}", status_code=204)
@@ -142,5 +137,4 @@ def delete_zip_job(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Job not found")
     if job.file_path and os.path.exists(job.file_path):
         os.unlink(job.file_path)
-    db.delete(job)
-    db.commit()
+    zip_job_repo.delete(db, job)

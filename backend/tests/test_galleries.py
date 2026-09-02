@@ -335,3 +335,44 @@ def test_headline_empty_string_clears_null_is_no_change(admin_client):
     cleared = admin_client.patch(f"/api/galleries/{g['id']}", json={"headline": ""})
     assert cleared.status_code == 200 and cleared.json()["headline"] is None
     assert admin_client.get(f"/api/galleries/{g['id']}").json()["headline"] is None
+
+
+# --- pinned cover is bound to its gallery ------------------------------------
+
+def test_pinned_cover_must_belong_to_the_gallery(admin_client):
+    a = make_gallery(admin_client, "A")
+    b = make_gallery(admin_client, "B")
+    foreign = add_image(b["id"])
+    r = admin_client.patch(f"/api/galleries/{a['id']}", json={"cover_image_id": foreign})
+    assert r.status_code == 400
+    own = add_image(a["id"])
+    assert admin_client.patch(f"/api/galleries/{a['id']}", json={"cover_image_id": own}).status_code == 200
+
+
+def test_moved_pinned_cover_falls_back_to_auto_cover(admin_client):
+    a = make_gallery(admin_client, "A")
+    b = make_gallery(admin_client, "B")
+    first = add_image(a["id"], filename="first.jpg", sort_order=0)
+    pinned = add_image(a["id"], filename="pinned.jpg", sort_order=1)
+    admin_client.patch(f"/api/galleries/{a['id']}", json={"cover_image_id": pinned})
+    assert admin_client.post(f"/api/images/{pinned}/move", json={"target_gallery_id": b["id"]}).status_code == 200
+    cover = admin_client.get(f"/api/galleries/{a['id']}").json()["cover_image_url"]
+    assert cover and f"/{a['id']}/thumb/" in cover  # first photo, under A's own path — not B's
+    listing = {g["id"]: g for g in admin_client.get("/api/galleries").json()}
+    assert f"/{a['id']}/thumb/" in listing[a["id"]]["cover_image_url"]
+
+
+def test_cascade_never_touches_sibling_rank(admin_client):
+    parent = make_gallery(admin_client, "P")
+    c1 = make_gallery(admin_client, "C1", parent_id=parent["id"])
+    c2 = make_gallery(admin_client, "C2", parent_id=parent["id"])
+    admin_client.patch(f"/api/galleries/{c2['id']}", json={"sort_order": 5})
+    admin_client.patch(f"/api/galleries/{parent['id']}", json={"sort_order": 3, "apply_to_subgalleries": True})
+    assert admin_client.get(f"/api/galleries/{c1['id']}").json()["sort_order"] == 0
+    assert admin_client.get(f"/api/galleries/{c2['id']}").json()["sort_order"] == 5
+
+
+def test_sort_order_is_bounded(admin_client):
+    g = make_gallery(admin_client, "G")
+    assert admin_client.patch(f"/api/galleries/{g['id']}", json={"sort_order": 2**70}).status_code == 422
+    assert admin_client.patch(f"/api/galleries/{g['id']}", json={"sort_order": -1}).status_code == 422

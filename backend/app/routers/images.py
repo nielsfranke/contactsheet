@@ -97,19 +97,6 @@ def update_image(
     return image_service._image_to_response(image, storage, include_original_url=True, comment_count=count)
 
 
-@router.post("/galleries/{gallery_id}/reorder", status_code=204)
-def reorder_images(
-    gallery_id: str,
-    body: ReorderRequest,
-    db: Session = Depends(get_db),
-    _admin: str = Depends(get_current_admin),
-):
-    gallery = gallery_repo.get_by_id(db, gallery_id)
-    if not gallery:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Gallery not found")
-    image_repo.set_sort_orders(db, gallery_id, body.image_ids)
-
-
 @router.delete("/images/{image_id}", status_code=204)
 def delete_image(
     image_id: str,
@@ -177,37 +164,14 @@ def upload_watermark(
     storage: StorageProvider = Depends(get_storage),
     _admin: str = Depends(get_current_admin),
 ):
-    gallery = gallery_repo.get_by_id(db, gallery_id)
-    if not gallery:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Gallery not found")
-
     mime = file.content_type or ""
     if mime not in ("image/png", "image/webp"):
         raise HTTPException(status_code=status.HTTP_415_UNSUPPORTED_MEDIA_TYPE, detail="PNG or WebP required")
-
-    ext = {
-        "image/png": ".png",
-        "image/webp": ".webp",
-    }[mime]
+    ext = {"image/png": ".png", "image/webp": ".webp"}[mime]
 
     data = read_limited(file)
     assert_image_magic(data, mime)
-    filename = watermark_service.save_watermark(gallery_id, data, ext)
-
-    existing: dict = {}
-    if gallery.watermark_settings:
-        try:
-            existing = json.loads(gallery.watermark_settings)
-        except Exception:
-            pass
-
-    existing["filename"] = filename
-    gallery_service.update_gallery(
-        db, gallery_id,
-        GalleryUpdate.model_validate({"watermark_settings": json.dumps(existing)}),
-        storage,
-    )
-    return {"filename": filename}
+    return {"filename": gallery_service.set_watermark_file(db, gallery_id, data, ext, storage)}
 
 
 @router.delete("/galleries/{gallery_id}/watermark", status_code=204)
@@ -217,20 +181,4 @@ def delete_watermark(
     storage: StorageProvider = Depends(get_storage),
     _admin: str = Depends(get_current_admin),
 ):
-    gallery = gallery_repo.get_by_id(db, gallery_id)
-    if not gallery:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Gallery not found")
-
-    if gallery.watermark_settings:
-        try:
-            ws = json.loads(gallery.watermark_settings)
-            if ws.get("filename"):
-                watermark_service.delete_watermark(gallery_id, ws["filename"])
-                ws["filename"] = None
-                gallery_service.update_gallery(
-                    db, gallery_id,
-                    GalleryUpdate.model_validate({"watermark_settings": json.dumps(ws)}),
-                    storage,
-                )
-        except Exception:
-            pass
+    gallery_service.clear_watermark_file(db, gallery_id, storage)

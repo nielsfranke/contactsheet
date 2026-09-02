@@ -14,7 +14,7 @@ from urllib.parse import urlparse
 
 from fastapi import APIRouter, Cookie, Query, WebSocket, WebSocketDisconnect
 
-from app.auth.dependencies import _is_valid_admin
+from app.auth.dependencies import gallery_id_from_token_value, _is_valid_admin
 from app.auth.jwt import decode_token
 from app.database import SessionLocal
 from app.realtime.hub import hub
@@ -122,14 +122,8 @@ async def public_gallery_ws(
         if gallery.password_hash:
             authorized = False
             if token:
-                try:
-                    payload = decode_token(token)
-                    authorized = (
-                        payload.get("type") == "gallery"
-                        and payload.get("gallery_id") == gallery.id
-                    )
-                except Exception:
-                    authorized = False
+                access = gallery_id_from_token_value(token)
+                authorized = access is not None and access.unlocks(gallery)
             if not authorized:
                 await websocket.close(code=_CLOSE_UNAUTHORIZED)
                 return

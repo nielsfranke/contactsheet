@@ -139,6 +139,11 @@ async def _lifespan(app: FastAPI):
         if purged.rowcount:
             _log.info("Purged %d sent notification(s) on startup", purged.rowcount)
 
+        # sqlite-vec opted in on an instance that already holds vectors: (re)build the derived index
+        # now, or instance-wide search would run on NumPy until the settings are re-saved.
+        from app.services import semantic_search_service
+        semantic_search_service.ensure_vec_index(db)
+
         # Scrub stored client IPs from activity rows past the retention window (privacy).
         from app.repositories import activity_repo
         retention_days = settings_repo.get(db).activity_ip_retention_days
@@ -223,11 +228,30 @@ def health():
     return {"status": "ok", "version": __version__}
 
 
+_READY_CACHE_S = 5.0
+_ready_cache: tuple[float, int, dict] | None = None
+
+
 @app.get("/api/health/ready")
 def health_ready():
     """Readiness: report each dependency a deploy relies on. 503 only if the DB (the one hard
     dependency) is down; `migrations: behind` flags an image pulled without `alembic upgrade head`.
-    No secrets/paths in the payload, so it's safe to leave unauthenticated for probes."""
+    No secrets/paths in the payload, so it's safe to leave unauthenticated for probes — and the
+    result is cached for a few seconds so an unauthenticated caller can't turn the DB round-trip
+    + alembic read + sidecar HTTP call into an amplifier."""
+    global _ready_cache
+    import time as _time
+
+    now = _time.monotonic()
+    if _ready_cache and now - _ready_cache[0] < _READY_CACHE_S:
+        _, code, content = _ready_cache
+        return JSONResponse(status_code=code, content=content)
+    code, content = _readiness()
+    _ready_cache = (now, code, content)
+    return JSONResponse(status_code=code, content=content)
+
+
+def _readiness() -> tuple[int, dict]:
     from sqlalchemy import text
 
     from app import migrations
@@ -267,4 +291,4 @@ def health_ready():
     else:
         overall, code = "ok", 200
 
-    return JSONResponse(status_code=code, content={"status": overall, "version": __version__, "checks": checks})
+    return code, {"status": overall, "version": __version__, "checks": checks}

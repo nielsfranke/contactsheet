@@ -4,7 +4,7 @@
 import uuid
 from datetime import datetime, timezone
 
-from sqlalchemy import select
+from sqlalchemy import delete as sa_delete, select
 from sqlalchemy.orm import Session
 
 from app.models.collection import Collection, CollectionImage
@@ -61,3 +61,19 @@ def replace_members(db: Session, collection: Collection, image_ids: list[str]) -
 def delete(db: Session, collection: Collection) -> None:
     db.delete(collection)
     db.commit()
+
+
+def remove_images_from_gallery(db: Session, gallery_id: str, image_ids: list[str]) -> int:
+    """Drop the given images from every collection of `gallery_id` (an image moved to another
+    gallery must not linger — hidden — in the source's sets and reappear if moved back). Caller
+    commits."""
+    if not image_ids:
+        return 0
+    collection_ids = select(Collection.id).where(Collection.gallery_id == gallery_id)
+    result = db.execute(
+        sa_delete(CollectionImage).where(
+            CollectionImage.collection_id.in_(collection_ids),
+            CollectionImage.image_id.in_(image_ids),
+        )
+    )
+    return result.rowcount or 0

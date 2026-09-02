@@ -677,3 +677,98 @@ def test_exif_and_iptc_hidden_unless_enabled(admin_client, db):
     admin_client.patch(f"/api/galleries/{g['id']}", json={"show_exif": False})
     r = _pub().post(f"/api/public/g/{g['share_token']}/images/{img_id}/flag", json={"flag": "red"})
     assert r.status_code == 200 and r.json()["exif_data"] is None
+
+
+# --- Gallery tokens are bound to the password they were issued against --------
+
+def test_gallery_token_dies_with_the_password(admin_client):
+    g = make_gallery(admin_client, "Locked")
+    add_image(g["id"])
+    admin_client.patch(f"/api/galleries/{g['id']}", json={"password": "first"})
+    pub = _pub()
+    tok = _auth_token(pub, g["share_token"], "first")
+    hdr = {"Authorization": f"Bearer {tok}"}
+    assert pub.get(f"/api/public/g/{g['share_token']}/images", headers=hdr).status_code == 200
+
+    # Password changed → the 12 h token issued against the old one is no longer good enough.
+    admin_client.patch(f"/api/galleries/{g['id']}", json={"password": "second"})
+    assert pub.get(f"/api/public/g/{g['share_token']}/images", headers=hdr).status_code == 401
+    assert pub.get(f"/api/public/g/{g['share_token']}", headers=hdr).json() == {"requires_password": True}
+    tok2 = _auth_token(pub, g["share_token"], "second")
+    assert pub.get(f"/api/public/g/{g['share_token']}/images", headers={"Authorization": f"Bearer {tok2}"}).status_code == 200
+
+    # Password removed → open again, with or without a stale token.
+    admin_client.patch(f"/api/galleries/{g['id']}", json={"password": ""})
+    assert pub.get(f"/api/public/g/{g['share_token']}/images", headers=hdr).status_code == 200
+    assert pub.get(f"/api/public/g/{g['share_token']}/images").status_code == 200
+
+
+# --- review_active is *the* gate for every client write -----------------------
+
+def test_team_votes_and_collections_closed_on_showcase_child(admin_client):
+    """`enable_team_voting` / `sets_enabled` cascade to sub-galleries but `mode` never does, so a
+    Showcase child of a Review container carries the toggles — the endpoints must still be shut."""
+    parent = make_gallery(admin_client, "Review", mode="collaboration",
+                          enable_team_voting=True, color_flags_enabled=True, sets_enabled=True)
+    child = make_gallery(admin_client, "Showcase", parent_id=parent["id"], mode="presentation")
+    admin_client.patch(f"/api/galleries/{parent['id']}",
+                       json={"enable_team_voting": True, "sets_enabled": True, "apply_to_subgalleries": True})
+    child_now = admin_client.get(f"/api/galleries/{child['id']}").json()
+    assert child_now["enable_team_voting"] and child_now["sets_enabled"] and child_now["mode"] == "presentation"
+    img = add_image(child["id"])
+    pub = _pub()
+    r = pub.put(f"/api/public/g/{child['share_token']}/images/{img}/vote", json={"reviewer_name": "Anna", "color_flag": "green"})
+    assert r.status_code == 400
+    r = pub.post(f"/api/public/g/{child['share_token']}/collections", json={"name": "Picks", "image_ids": [img], "creator": "Anna"})
+    assert r.status_code == 403
+    # Opening the client mode switch (review_active) opens them.
+    admin_client.patch(f"/api/galleries/{child['id']}", json={"client_mode_switch_enabled": True})
+    r = pub.put(f"/api/public/g/{child['share_token']}/images/{img}/vote", json={"reviewer_name": "Anna", "color_flag": "green"})
+    assert r.status_code == 200
+
+
+def test_public_collection_cannot_hold_pending_uploads(admin_client):
+    g = make_gallery(admin_client, "Sets", mode="collaboration")
+    admin_client.patch(f"/api/galleries/{g['id']}", json={"sets_enabled": True})
+    ok = add_image(g["id"])
+    pending = add_image(g["id"], moderation_status="pending")
+    r = _pub().post(f"/api/public/g/{g['share_token']}/collections",
+                    json={"name": "Picks", "image_ids": [pending, ok], "creator": "Anna"})
+    assert r.status_code == 201 and r.json()["image_ids"] == [ok]
+
+
+def test_client_upload_accepts_web_formats_only(admin_client):
+    """The anonymous path never reaches the TIFF/PSD/RAW decoders."""
+    import io as _io
+    from PIL import Image as _PIL
+    g = make_gallery(admin_client, "Up", mode="collaboration")
+    admin_client.patch(f"/api/galleries/{g['id']}", json={"client_upload_enabled": True})
+    buf = _io.BytesIO()
+    _PIL.new("RGB", (8, 8)).save(buf, format="TIFF")
+    r = _pub().post(f"/api/public/g/{g['share_token']}/images",
+                    files=[("files", ("scan.tif", buf.getvalue(), "image/tiff"))], data={"uploader": "Bob"})
+    assert r.status_code == 415 and r.json()["code"] == "upload_unsupported_type"
+    r = _pub().post(f"/api/public/g/{g['share_token']}/images",
+                    files=[("files", ("p.png", png_bytes(), "image/png"))], data={"uploader": "Bob"})
+    assert r.status_code == 201
+    # The photographer still uploads TIFFs.
+    r = admin_client.post(f"/api/galleries/{g['id']}/images", files=[("files", ("scan.tif", buf.getvalue(), "image/tiff"))])
+    assert r.status_code == 201
+
+
+def test_public_zip_download_rechecks_download_gate(admin_client):
+    g = make_gallery(admin_client, "Zip")
+    _upload(admin_client, g["id"])
+    job = _pub().post(f"/api/public/g/{g['share_token']}/zip", json={}).json()
+    admin_client.patch(f"/api/galleries/{g['id']}", json={"downloads_enabled": False})
+    assert _pub().get(f"/api/public/g/{g['share_token']}/zip/{job['id']}/download").status_code == 403
+
+
+def test_zip_download_name_survives_non_ascii_gallery_names(admin_client):
+    """Starlette encodes headers as latin-1 — a plain `filename="東京.zip"` would 500."""
+    g = make_gallery(admin_client, "東京 Café")
+    _upload(admin_client, g["id"])
+    r = _pub().get(f"/api/public/g/{g['share_token']}/zip/stream")
+    assert r.status_code == 200
+    cd = r.headers["content-disposition"]
+    assert cd.startswith("attachment;") and "filename*=UTF-8''" in cd and "%E6%9D%B1%E4%BA%AC" in cd

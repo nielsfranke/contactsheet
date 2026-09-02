@@ -330,3 +330,22 @@ def test_bulk_transfer_move_appends_and_carries_likes(admin_client):
         assert like_repo.liked_image_ids(db, a["id"], "Alice") == []
     finally:
         db.close()
+
+
+def test_move_drops_membership_in_source_collections(admin_client):
+    """A moved photo must not linger (hidden) in the source gallery's collections — it would
+    reappear there if ever moved back, and the set's count would silently disagree with its list."""
+    a = make_gallery(admin_client, "A")
+    b = make_gallery(admin_client, "B")
+    keep = add_image(a["id"], filename="keep.jpg")
+    gone = add_image(a["id"], filename="gone.jpg")
+    col = admin_client.post(f"/api/galleries/{a['id']}/collections", json={"name": "Picks", "image_ids": [keep, gone]})
+    assert col.status_code == 201
+    assert admin_client.post(f"/api/images/{gone}/move", json={"target_gallery_id": b["id"]}).status_code == 200
+    from app.models.collection import CollectionImage
+    db = SessionLocal()
+    try:
+        rows = db.query(CollectionImage).filter(CollectionImage.collection_id == col.json()["id"]).all()
+        assert [r.image_id for r in rows] == [keep]
+    finally:
+        db.close()

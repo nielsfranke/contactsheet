@@ -3,6 +3,8 @@
 
 import io
 import logging
+import hashlib
+import json
 import os
 import uuid
 
@@ -46,8 +48,11 @@ def _paste_xy(base: tuple[int, int], wm: tuple[int, int], position: str, margin:
 
 
 def _apply_image_watermark(base: PILImage.Image, ws: WatermarkSettings, gallery_id: str) -> PILImage.Image:
-    wm_path = os.path.join(settings.watermarks_dir, gallery_id, ws.filename or "")
-    if not ws.filename or not os.path.exists(wm_path):
+    # `filename` is admin-controlled JSON; confine it to the gallery's own watermark dir.
+    if not ws.filename or os.path.basename(ws.filename) != ws.filename or ws.filename.startswith("."):
+        return base
+    wm_path = os.path.join(settings.watermarks_dir, gallery_id, ws.filename)
+    if not os.path.exists(wm_path):
         return base
 
     with PILImage.open(wm_path) as wm_src:
@@ -145,3 +150,24 @@ def delete_watermark(gallery_id: str, filename: str) -> None:
     path = os.path.join(settings.watermarks_dir, gallery_id, filename)
     if os.path.exists(path):
         os.unlink(path)
+
+
+def composited_variant(gallery_id: str, image_id: str, variant: str, src_path: str, ws: dict) -> tuple[str, str]:
+    """Path + ETag of the watermarked rendition for `image_id`, compositing into the on-disk cache
+    (`{variant}-wm/{image_id}_{settings-hash}.jpg`) on first use. Keyed on the image id and a hash
+    of the settings, so a settings change is a new file and the old one simply goes stale."""
+    wm_hash = hashlib.sha1(json.dumps(ws, sort_keys=True).encode()).hexdigest()[:12]
+    cache_dir = os.path.join(settings.upload_dir, gallery_id, f"{variant}-wm")
+    os.makedirs(cache_dir, exist_ok=True)
+    cache_path = os.path.join(cache_dir, f"{image_id}_{wm_hash}.jpg")
+    etag = f'"{image_id}-{variant}-{wm_hash}"'
+    if not os.path.exists(cache_path):
+        with open(src_path, "rb") as f:
+            img_bytes = f.read()
+        composited = apply_watermark(img_bytes, gallery_id, ws)
+        # Atomic publish: a concurrent request must never see (and browser-cache) a half-written file.
+        tmp_path = f"{cache_path}.{os.getpid()}.{id(composited)}.tmp"
+        with open(tmp_path, "wb") as f:
+            f.write(composited)
+        os.replace(tmp_path, cache_path)
+    return cache_path, etag

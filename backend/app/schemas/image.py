@@ -80,7 +80,7 @@ class PhotoPage(BaseModel):
 
 
 class ImageUpdate(BaseModel):
-    sort_order: int | None = None
+    sort_order: int | None = Field(None, ge=0, le=2**31 - 1)
     color_flag: ColorFlag | None = None
     rating: Rating | None = None
     original_filename: str | None = None
@@ -124,13 +124,13 @@ class CheckDuplicatesResponse(BaseModel):
 
 
 class ReorderRequest(BaseModel):
-    image_ids: list[str]
+    image_ids: list[str] = Field(..., max_length=10_000)
 
 
 class ImageTransfer(BaseModel):
     """Copy or move a set of a gallery's images into an existing target gallery."""
 
-    image_ids: list[str] = Field(..., min_length=1)
+    image_ids: list[str] = Field(..., min_length=1, max_length=10_000)
     target_gallery_id: str
     operation: Literal["copy", "move"] = "copy"
 

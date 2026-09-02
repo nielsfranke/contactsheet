@@ -1,6 +1,7 @@
 # SPDX-FileCopyrightText: 2026 Niels Franke
 # SPDX-License-Identifier: AGPL-3.0-or-later
 
+import hashlib
 from datetime import datetime, timedelta, timezone
 
 import jwt
@@ -24,12 +25,22 @@ def create_admin_token(remember: bool = False) -> str:
     return jwt.encode(payload, get_secret_key(), algorithm=_ALGORITHM)
 
 
-def create_gallery_token(gallery_id: str) -> str:
+def password_tag(password_hash: str | None) -> str | None:
+    """Short, non-reversible tag of a gallery's password hash. Embedded in gallery tokens so that
+    changing or removing the password invalidates every token issued against the old one — a
+    12-hour token must not outlive the password the client typed to get it."""
+    if not password_hash:
+        return None
+    return hashlib.sha256(password_hash.encode()).hexdigest()[:16]
+
+
+def create_gallery_token(gallery_id: str, password_hash: str | None = None) -> str:
     now = datetime.now(timezone.utc)
     payload = {
         "sub": "gallery_access",
         "type": "gallery",
         "gallery_id": gallery_id,
+        "pw": password_tag(password_hash),
         "iat": now,
         "exp": now + timedelta(seconds=settings.gallery_token_ttl),
     }

@@ -101,3 +101,21 @@ def test_scrub_event_redacts_bodies_and_auth():
     assert req["headers"]["Authorization"] == "[redacted]"
     assert req["headers"]["Cookie"] == "[redacted]"
     assert req["headers"]["Accept"] == "*/*"  # non-sensitive header preserved
+
+
+def test_health_ready_is_cached_briefly(monkeypatch):
+    """Unauthenticated readiness must not be an amplifier (DB + alembic + sidecar HTTP per hit)."""
+    from app import main as app_main
+    calls = []
+    real = app_main._readiness
+
+    def counting():
+        calls.append(1)
+        return real()
+
+    monkeypatch.setattr(app_main, "_readiness", counting)
+    monkeypatch.setattr(app_main, "_ready_cache", None)
+    client = TestClient(app)
+    for _ in range(5):
+        assert client.get("/api/health/ready").status_code == 200
+    assert len(calls) == 1

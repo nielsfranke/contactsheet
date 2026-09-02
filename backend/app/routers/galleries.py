@@ -10,7 +10,7 @@ from sqlalchemy.orm import Session
 
 from app.auth.dependencies import get_current_admin, require_scope
 from app.config import settings as app_settings
-from app.utils import assert_image_magic, read_limited
+from app.utils import assert_image_magic, attachment_disposition, read_limited
 from app.database import get_db
 from app.dependencies import get_storage
 from app.rate_limit import limiter
@@ -309,6 +309,16 @@ def get_activity(
 _HEADER_IMG_MIMES = {"image/png", "image/jpeg", "image/webp"}
 
 
+def _read_branding_upload(file: UploadFile) -> bytes:
+    """Header/cover upload: declared type must be a web image and the bytes must agree."""
+    mime = file.content_type or ""
+    if mime not in _HEADER_IMG_MIMES:
+        raise HTTPException(status_code=status.HTTP_415_UNSUPPORTED_MEDIA_TYPE, detail="PNG, JPEG, or WebP required")
+    data = read_limited(file, app_settings.header_max_upload_bytes)
+    assert_image_magic(data, mime)
+    return data
+
+
 @router.post("/{gallery_id}/header-image", response_model=GalleryResponse)
 def upload_header_image(
     gallery_id: str,
@@ -317,38 +327,10 @@ def upload_header_image(
     storage: StorageProvider = Depends(get_storage),
     _admin: str = Depends(get_current_admin),
 ):
-    mime = file.content_type or ""
-    if mime not in _HEADER_IMG_MIMES:
-        raise HTTPException(status_code=status.HTTP_415_UNSUPPORTED_MEDIA_TYPE, detail="PNG, JPEG, or WebP required")
-
-    # Always stored as a bounded JPEG (re-encoded below), so the extension is fixed.
-    filename = f"{uuid.uuid4()}.jpg"
-    header_dir = os.path.join(app_settings.branding_dir, "gallery-headers", gallery_id)
-    os.makedirs(header_dir, exist_ok=True)
-
-    gallery = gallery_repo.get_by_id(db, gallery_id)
-    if not gallery:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Gallery not found")
-
-    data = read_limited(file, app_settings.header_max_upload_bytes)
-    assert_image_magic(data, mime)
-    # Bound the stored header so 4 MB+ originals don't bloat page loads or the og:image. A single
-    # non-srcset banner, so one 3840 px copy serves every screen. See docs/architecture/.
-    try:
-        data = image_processing.resize_bytes(data, app_settings.header_max_px, app_settings.header_quality)
-    except Exception:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Could not process image")
-
-    # Delete old header image
-    if gallery.header_image_filename:
-        old = os.path.join(header_dir, gallery.header_image_filename)
-        if os.path.exists(old):
-            os.unlink(old)
-
-    with open(os.path.join(header_dir, filename), "wb") as f:
-        f.write(data)
-
-    gallery = gallery_repo.update(db, gallery, header_image_filename=filename)
+    data = _read_branding_upload(file)
+    # Stored as a bounded JPEG — a single non-srcset banner, one 3840 px copy serves every screen
+    # and the og:image. See docs/architecture/header-cover-uploads-and-og-image-sizing.md.
+    gallery = gallery_service.store_branding_image(db, gallery_id, data, "header")
     return gallery_service._build_response(gallery, db, storage)
 
 
@@ -358,15 +340,7 @@ def delete_header_image(
     db: Session = Depends(get_db),
     _admin: str = Depends(get_current_admin),
 ):
-    gallery = gallery_repo.get_by_id(db, gallery_id)
-    if not gallery:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Gallery not found")
-    if gallery.header_image_filename:
-        header_dir = os.path.join(app_settings.branding_dir, "gallery-headers", gallery_id)
-        old = os.path.join(header_dir, gallery.header_image_filename)
-        if os.path.exists(old):
-            os.unlink(old)
-        gallery_repo.update(db, gallery, header_image_filename=None)
+    gallery_service.remove_branding_image(db, gallery_id, "header")
 
 
 class FromImageRequest(BaseModel):
@@ -395,37 +369,10 @@ def upload_cover_image(
     storage: StorageProvider = Depends(get_storage),
     _admin: str = Depends(get_current_admin),
 ):
-    """Upload a custom cover/card image (e.g. for an empty gallery with no photo to use)."""
-    mime = file.content_type or ""
-    if mime not in _HEADER_IMG_MIMES:
-        raise HTTPException(status_code=status.HTTP_415_UNSUPPORTED_MEDIA_TYPE, detail="PNG, JPEG, or WebP required")
-
-    # Always stored as a bounded JPEG (re-encoded below), so the extension is fixed.
-    filename = f"{uuid.uuid4()}.jpg"
-    cover_dir = os.path.join(app_settings.branding_dir, "gallery-covers", gallery_id)
-    os.makedirs(cover_dir, exist_ok=True)
-
-    gallery = gallery_repo.get_by_id(db, gallery_id)
-    if not gallery:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Gallery not found")
-
-    data = read_limited(file, app_settings.header_max_upload_bytes)
-    assert_image_magic(data, mime)
-    try:
-        data = image_processing.resize_bytes(data, app_settings.header_max_px, app_settings.header_quality)
-    except Exception:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Could not process image")
-
-    if gallery.cover_image_filename:
-        old = os.path.join(cover_dir, gallery.cover_image_filename)
-        if os.path.exists(old):
-            os.unlink(old)
-
-    with open(os.path.join(cover_dir, filename), "wb") as f:
-        f.write(data)
-
-    # Uploaded cover wins over a pinned photo cover; drop the pin so it's unambiguous.
-    gallery = gallery_repo.update(db, gallery, cover_image_filename=filename, cover_image_id=None)
+    """Upload a custom cover/card image (e.g. for an empty gallery with no photo to use). An
+    uploaded cover wins over a pinned photo cover (the pin is dropped so it's unambiguous)."""
+    data = _read_branding_upload(file)
+    gallery = gallery_service.store_branding_image(db, gallery_id, data, "cover")
     return gallery_service._build_response(gallery, db, storage)
 
 
@@ -435,15 +382,7 @@ def delete_cover_image(
     db: Session = Depends(get_db),
     _admin: str = Depends(get_current_admin),
 ):
-    gallery = gallery_repo.get_by_id(db, gallery_id)
-    if not gallery:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Gallery not found")
-    if gallery.cover_image_filename:
-        cover_dir = os.path.join(app_settings.branding_dir, "gallery-covers", gallery_id)
-        old = os.path.join(cover_dir, gallery.cover_image_filename)
-        if os.path.exists(old):
-            os.unlink(old)
-        gallery_repo.update(db, gallery, cover_image_filename=None)
+    gallery_service.remove_branding_image(db, gallery_id, "cover")
 
 
 @router.get("/{gallery_id}/export")
@@ -459,5 +398,5 @@ def export_selections(
     return Response(
         content=content,
         media_type="text/plain; charset=utf-8",
-        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+        headers={"Content-Disposition": attachment_disposition(filename)},
     )

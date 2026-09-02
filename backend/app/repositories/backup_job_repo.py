@@ -77,3 +77,8 @@ def purge_expired(db: Session) -> int:
     if count:
         db.commit()
     return count
+
+
+def delete(db: Session, job: BackupJob) -> None:
+    db.delete(job)
+    db.commit()

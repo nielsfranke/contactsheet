@@ -10,7 +10,7 @@ from pydantic import BaseModel, Field
 
 class CollectionCreate(BaseModel):
     name: str = Field(min_length=1, max_length=200)
-    image_ids: list[str] = Field(default_factory=list)
+    image_ids: list[str] = Field(default_factory=list, max_length=10_000)
     # Public side only: reviewer name of the creator. Ignored for admin-created collections.
     creator: str | None = Field(default=None, max_length=100)
 
@@ -21,7 +21,7 @@ class CollectionUpdate(BaseModel):
     creator-match authorization; ignored for admin."""
 
     name: str | None = Field(default=None, min_length=1, max_length=200)
-    image_ids: list[str] | None = None
+    image_ids: list[str] | None = Field(None, max_length=10_000)
     actor: str | None = Field(default=None, max_length=100)
 
 
