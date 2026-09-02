@@ -545,3 +545,135 @@ def test_gallery_token_not_valid_for_other_gallery(admin_client):
         f"/api/public/g/{b['share_token']}/images", headers={"Authorization": f"Bearer {tok_b}"}
     ).status_code == 200
     assert pub.get(f"/api/public/g/{b['share_token']}/zip/stream", params={"token": tok_b}).status_code == 200
+
+
+# --- Protected galleries never expose the static /uploads mount ---------------
+
+def _auth_token(pub, share_token, password="secret"):
+    return pub.post(f"/api/public/g/{share_token}/auth", json={"password": password}).json()["access_token"]
+
+
+def test_password_gallery_media_goes_through_access_checked_proxy(admin_client):
+    """A password only protects the photos if the *files* are gated too: static /uploads URLs are
+    served by nginx with no auth and a 30-day cache, so a once-seen link would outlive the gate."""
+    g = make_gallery(admin_client, "Locked")
+    img_id = _upload(admin_client, g["id"], "a.png").json()[0]["id"]
+    admin_client.patch(f"/api/galleries/{g['id']}", json={"password": "secret"})
+    pub = _pub()
+    tok = _auth_token(pub, g["share_token"])
+
+    [img] = pub.get(f"/api/public/g/{g['share_token']}/images", headers={"Authorization": f"Bearer {tok}"}).json()
+    proxy = f"/api/public/g/{g['share_token']}/images/{img_id}"
+    assert img["thumb_url"] == f"{proxy}/thumb"
+    assert img["small_url"] == f"{proxy}/small"
+    assert img["medium_url"] == f"{proxy}/medium"
+    # Downloads are on, so the original is offered — but through the proxy, never the static path.
+    assert img["original_url"] == f"{proxy}/original"
+    assert "/uploads/" not in str(img)
+
+    # The proxy re-checks the gallery token on every fetch (`?token=` — <img>/<a> can't set headers).
+    assert pub.get(f"{proxy}/thumb").status_code == 401
+    assert pub.get(f"{proxy}/original").status_code == 401
+    assert pub.get(f"{proxy}/thumb?token={tok}").status_code == 200
+    r = pub.get(f"{proxy}/original?token={tok}")
+    assert r.status_code == 200
+    assert r.headers["content-disposition"].startswith("attachment")
+    assert 'filename="a.png"' in r.headers["content-disposition"]
+    assert "private" in r.headers["cache-control"]
+    # The gallery's cover follows the same rule.
+    hdr = {"Authorization": f"Bearer {tok}"}
+    assert pub.get(f"/api/public/g/{g['share_token']}", headers=hdr).json()["cover_image_url"] == f"{proxy}/thumb"
+
+
+def test_original_proxy_respects_download_gate(admin_client):
+    g = make_gallery(admin_client, "Locked")
+    img_id = _upload(admin_client, g["id"]).json()[0]["id"]
+    admin_client.patch(f"/api/galleries/{g['id']}", json={"password": "secret", "downloads_enabled": False})
+    pub = _pub()
+    tok = _auth_token(pub, g["share_token"])
+    [img] = pub.get(f"/api/public/g/{g['share_token']}/images", headers={"Authorization": f"Bearer {tok}"}).json()
+    assert img["original_url"] is None
+    assert pub.get(f"/api/public/g/{g['share_token']}/images/{img_id}/original?token={tok}").status_code == 403
+
+
+def test_expiring_gallery_media_goes_through_proxy(admin_client):
+    """A static URL would keep serving after `expires_at`; the proxy 410s with the gallery."""
+    g = make_gallery(admin_client, "Ends soon")
+    img_id = _upload(admin_client, g["id"]).json()[0]["id"]
+    future = (datetime.now(timezone.utc) + timedelta(days=1)).isoformat()
+    admin_client.patch(f"/api/galleries/{g['id']}", json={"expires_at": future})
+    pub = _pub()
+    [img] = pub.get(f"/api/public/g/{g['share_token']}/images").json()
+    proxy = f"/api/public/g/{g['share_token']}/images/{img_id}"
+    assert img["thumb_url"] == f"{proxy}/thumb" and img["original_url"] == f"{proxy}/original"
+    assert pub.get(f"{proxy}/thumb").status_code == 200
+    past = (datetime.now(timezone.utc) - timedelta(days=1)).isoformat()
+    admin_client.patch(f"/api/galleries/{g['id']}", json={"expires_at": past})
+    assert pub.get(f"{proxy}/thumb").status_code == 410
+
+
+def test_open_gallery_keeps_static_urls(admin_client):
+    """No password / expiry / watermark / download gate → the cheap static mount stays in use."""
+    g = make_gallery(admin_client, "Open")
+    _upload(admin_client, g["id"])
+    [img] = _pub().get(f"/api/public/g/{g['share_token']}/images").json()
+    assert img["thumb_url"].startswith("/uploads/") and img["original_url"].startswith("/uploads/")
+
+
+def test_stream_zip_skips_protected_children(admin_client):
+    """The parent's ZIP must not bundle a child the viewer couldn't open on its own: a password-
+    protected child, one with downloads off, or an expired one is dropped from the selection."""
+    parent = make_gallery(admin_client, "Parent")
+    locked = make_gallery(admin_client, "Locked", parent_id=parent["id"])
+    nodl = make_gallery(admin_client, "NoDL", parent_id=parent["id"])
+    ok = make_gallery(admin_client, "Open", parent_id=parent["id"])
+    _upload(admin_client, parent["id"], "root.png")
+    _upload(admin_client, locked["id"], "secret.png")
+    _upload(admin_client, nodl["id"], "nodl.png")
+    _upload(admin_client, ok["id"], "kid.png")
+    admin_client.patch(f"/api/galleries/{locked['id']}", json={"password": "secret"})
+    admin_client.patch(f"/api/galleries/{nodl['id']}", json={"downloads_enabled": False})
+    subs = ",".join([locked["share_token"], nodl["share_token"], ok["share_token"]])
+    r = _pub().get(f"/api/public/g/{parent['share_token']}/zip/stream?subs={subs}")
+    assert r.status_code == 200
+    assert set(zipfile.ZipFile(io.BytesIO(r.content)).namelist()) == {"Parent/root.png", "Open/kid.png"}
+
+
+def test_zip_job_skips_protected_children(admin_client):
+    parent = make_gallery(admin_client, "Parent")
+    locked = make_gallery(admin_client, "Locked", parent_id=parent["id"])
+    _upload(admin_client, locked["id"], "secret.png")
+    admin_client.patch(f"/api/galleries/{locked['id']}", json={"password": "secret"})
+    # The parent itself is empty, so with the locked child dropped there is nothing to download.
+    r = _pub().post(f"/api/public/g/{parent['share_token']}/zip", json={"subgallery_share_tokens": [locked["share_token"]]})
+    assert r.status_code == 400
+
+
+# --- Metadata is gated server-side --------------------------------------------
+
+def test_exif_and_iptc_hidden_unless_enabled(admin_client, db):
+    """EXIF carries GPS — `show_exif` off must strip it from the public payload, not just the UI."""
+    import json as _json
+    from app.models.image import Image
+    g = make_gallery(admin_client, "Meta", mode="collaboration")
+    img_id = _upload(admin_client, g["id"]).json()[0]["id"]
+    row = db.query(Image).filter(Image.id == img_id).one()
+    row.exif_data = _json.dumps({"Make": "Leica", "GPSLatitude": [52, 31, 0]})
+    row.iptc_data = _json.dumps({"title": "Home"})
+    db.commit()
+
+    [pub_img] = _pub().get(f"/api/public/g/{g['share_token']}/images").json()
+    assert pub_img["exif_data"] is None and pub_img["iptc_data"] is None
+    # The photographer's own view is never stripped.
+    [adm_img] = admin_client.get(f"/api/galleries/{g['id']}/images").json()
+    assert adm_img["exif_data"]["Make"] == "Leica" and adm_img["iptc_data"]["title"] == "Home"
+
+    admin_client.patch(f"/api/galleries/{g['id']}", json={"show_exif": True, "show_iptc": True})
+    [pub_img] = _pub().get(f"/api/public/g/{g['share_token']}/images").json()
+    assert pub_img["exif_data"]["GPSLatitude"] == [52, 31, 0] and pub_img["iptc_data"]["title"] == "Home"
+    # The flag echo goes through the same serializer.
+    r = _pub().post(f"/api/public/g/{g['share_token']}/images/{img_id}/flag", json={"flag": "green"})
+    assert r.status_code == 200 and r.json()["exif_data"]["Make"] == "Leica"
+    admin_client.patch(f"/api/galleries/{g['id']}", json={"show_exif": False})
+    r = _pub().post(f"/api/public/g/{g['share_token']}/images/{img_id}/flag", json={"flag": "red"})
+    assert r.status_code == 200 and r.json()["exif_data"] is None

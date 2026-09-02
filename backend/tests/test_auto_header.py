@@ -145,7 +145,8 @@ def test_gallery_tree_skips_the_fallback(admin_client):
 def test_hero_medium_url_watermark_routes_through_proxy():
     """A watermarked gallery must serve the auto-header via the access-checked proxy (which
     composites the watermark) — never the raw static /uploads path — so it can't leak un-watermarked."""
-    gallery = SimpleNamespace(id="gid-1", share_token="tok-1")
+    gallery = SimpleNamespace(id="gid-1", share_token="tok-1", downloads_enabled=True,
+                              password_hash=None, expires_at=None, watermark_settings=None)
     fake_storage = SimpleNamespace(get_url=lambda p: f"/uploads/{p}")
 
     wm = gallery_service._hero_medium_url(gallery, "img-9", "abc.jpg", True, fake_storage)
@@ -153,3 +154,8 @@ def test_hero_medium_url_watermark_routes_through_proxy():
 
     plain = gallery_service._hero_medium_url(gallery, "img-9", "abc.jpg", False, fake_storage)
     assert plain == "/uploads/gid-1/medium/abc.jpg"
+
+    # Any other protection (password / expiry / downloads off) routes through the proxy just the same.
+    gallery.password_hash = "x"
+    locked = gallery_service._hero_medium_url(gallery, "img-9", "abc.jpg", False, fake_storage)
+    assert locked == "/api/public/g/tok-1/images/img-9/medium"

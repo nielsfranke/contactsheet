@@ -53,9 +53,19 @@ def _image_to_response(
     watermarked: bool = False,
     share_token: str | None = None,
     proxy_variants: bool = False,
+    include_exif: bool = True,
+    include_iptc: bool = True,
 ) -> ImageResponse:
     gallery_id = image.gallery_id
     sf = image.stored_filename
+
+    # Route media through the access-checked Python proxy whenever the gallery is protected (see
+    # gallery_service.variants_protected: watermark, downloads off, password, expiry). The proxy
+    # serves by image.id and never exposes the stored_filename, so a viewer can't derive the sibling
+    # static `…/original/{sf}` path, and it re-checks the gallery JWT on every fetch. Public-only
+    # (needs share_token); admin keeps the direct static URLs.
+    proxied = proxy_variants and share_token
+    base = f"/api/public/g/{share_token}/images/{image.id}" if proxied else None
 
     thumb_url = None
     small_url = None
@@ -65,15 +75,9 @@ def _image_to_response(
         # No renditions; the original streams directly to a <video> tag. Always
         # exposed so clips play even when the download button is hidden, and even
         # in watermark-protected galleries (video can't be watermarked).
-        video_url = storage.get_url(f"{gallery_id}/original/{sf}")
+        video_url = f"{base}/original" if proxied else storage.get_url(f"{gallery_id}/original/{sf}")
     elif image.processing_status == "done":
-        # Route thumb/small/medium through the access-checked Python proxy whenever the variants
-        # must be protected — watermarked galleries, OR galleries with downloads disabled. The
-        # proxy serves by image.id and never exposes the stored_filename, so a viewer can't derive
-        # the sibling `…/original/{sf}` static path and bypass the download gate. Public-only
-        # (needs share_token); admin keeps the direct static URLs.
-        if proxy_variants and share_token:
-            base = f"/api/public/g/{share_token}/images/{image.id}"
+        if proxied:
             thumb_url = f"{base}/thumb"
             small_url = f"{base}/small"
             medium_url = f"{base}/medium"
@@ -84,17 +88,19 @@ def _image_to_response(
 
     original_url = None
     if include_original_url and (image.is_video or not watermarked):
-        original_url = storage.get_url(f"{gallery_id}/original/{sf}")
+        original_url = f"{base}/original" if proxied else storage.get_url(f"{gallery_id}/original/{sf}")
 
+    # Metadata is gated server-side, not just hidden by the UI: EXIF carries GPS coordinates and
+    # IPTC free text — a gallery with `show_exif` off must not hand them to anyone with the link.
     exif = None
-    if image.exif_data:
+    if include_exif and image.exif_data:
         try:
             exif = json.loads(image.exif_data)
         except Exception:
             pass
 
     iptc = None
-    if image.iptc_data:
+    if include_iptc and image.iptc_data:
         try:
             iptc = json.loads(image.iptc_data)
         except Exception:
@@ -114,6 +120,43 @@ def _image_to_response(
     })
 
 
+def _public_serializer_kwargs(gallery: Gallery, watermark_enabled: bool) -> dict:
+    """The one place the public-surface serialization rules live. Every public endpoint that returns
+    an `ImageResponse` (listing, flag/rate/like echoes) goes through this so the gates can't drift:
+    originals only with downloads on, media via the proxy for protected galleries, metadata only when
+    the photographer turned it on."""
+    return {
+        "include_original_url": gallery.downloads_enabled,
+        "watermarked": watermark_enabled,
+        "share_token": gallery.share_token,
+        "proxy_variants": gallery_service.variants_protected(gallery),
+        "include_exif": gallery.show_exif,
+        "include_iptc": gallery.show_iptc,
+    }
+
+
+def public_image_response(
+    db: Session, gallery: Gallery, image: Image, storage: StorageProvider, watermark_enabled: bool
+) -> ImageResponse:
+    """Serialize one image for a public (client-facing) response."""
+    count = comment_repo.count_for_image(db, image.id)
+    acount = comment_repo.anchored_counts_for_images(db, [image.id]).get(image.id, 0)
+    return _image_to_response(
+        image, storage, comment_count=count, annotation_count=acount,
+        **_public_serializer_kwargs(gallery, watermark_enabled),
+    )
+
+
+def list_public_images(
+    db: Session, gallery: Gallery, storage: StorageProvider, watermark_enabled: bool
+) -> list[ImageResponse]:
+    """The public listing: approved images only, serialized with the public gates."""
+    return list_images(
+        db, gallery.id, storage, only_approved=True,
+        **_public_serializer_kwargs(gallery, watermark_enabled),
+    )
+
+
 def list_images(
     db: Session,
     gallery_id: str,
@@ -123,6 +166,8 @@ def list_images(
     share_token: str | None = None,
     only_approved: bool = False,
     proxy_variants: bool = False,
+    include_exif: bool = True,
+    include_iptc: bool = True,
 ) -> list[ImageResponse]:
     gallery = gallery_repo.get_by_id(db, gallery_id)
     if not gallery:
@@ -135,7 +180,7 @@ def list_images(
         _image_to_response(
             img, storage, include_original_url, counts.get(img.id, 0),
             anno_counts.get(img.id, 0), watermarked, share_token,
-            proxy_variants=proxy_variants,
+            proxy_variants=proxy_variants, include_exif=include_exif, include_iptc=include_iptc,
         )
         for img in images
     ]

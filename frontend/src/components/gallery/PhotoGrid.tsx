@@ -324,9 +324,10 @@ const PhotoTile = memo(function PhotoTile({
   }
 
   const activeFlagColor = FLAG_COLORS.find((f) => f.value === effectiveFlag);
-  const downloadUrl = img.original_url;
   // `original_url` is only present when the gallery has downloads enabled (backend-gated),
   // so a per-photo download button shows on hover in any mode — collaboration or presentation.
+  // Protected galleries hand out a proxied URL that needs the gallery token (`?token=`).
+  const downloadUrl = img.original_url ? withGalleryToken(img.original_url, galleryToken) : null;
   const showDownload = !!downloadUrl && !selectionMode;
 
   return (
@@ -355,7 +356,7 @@ const PhotoTile = memo(function PhotoTile({
           ) : img.is_video ? (
             // Browser-rendered poster: preload metadata and seek to the first frame.
             <video
-              src={img.video_url ? `${img.video_url}#t=0.1` : undefined}
+              src={img.video_url ? `${withGalleryToken(img.video_url, galleryToken)}#t=0.1` : undefined}
               preload="metadata"
               muted
               playsInline

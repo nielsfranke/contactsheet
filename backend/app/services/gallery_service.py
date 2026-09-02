@@ -162,12 +162,23 @@ def _is_expired(gallery: Gallery) -> bool:
     return expires < datetime.now(timezone.utc)
 
 
-def _variants_protected(gallery: Gallery) -> bool:
-    """True when this gallery's renditions must not be served from the static /uploads mount on
-    public surfaces — watermark active or downloads disabled. Mirrors the `proxy_variants` logic in
-    image_service._image_to_response: a static URL exposes `stored_filename`, from which a viewer
-    can derive the un-watermarked `…/original/{sf}` path and bypass the download gate."""
+def variants_protected(gallery: Gallery) -> bool:
+    """True when this gallery's media must not be served from the static /uploads mount on public
+    surfaces and has to go through the access-checked `/api/public/g/{token}/images/{id}/…` proxy
+    instead. The single gate for `proxy_variants` in image_service — every public serializer and
+    cover/hero URL builder must consult it so the rules can't drift:
+
+    - **downloads disabled** — a static URL exposes `stored_filename`, from which a viewer derives
+      the sibling `…/original/{sf}` path and bypasses the download gate;
+    - **watermark active** — the static renditions are the clean ones;
+    - **password-protected** — the static mount has no auth, so a once-seen URL (shared, cached,
+      or logged) would open the photo without the password; the proxy re-checks the gallery JWT;
+    - **expiring** — a static URL keeps working after `expires_at` (nginx caches it for 30 days);
+      the proxy 410s with the gallery.
+    """
     if not gallery.downloads_enabled:
+        return True
+    if gallery.password_hash or gallery.expires_at:
         return True
     if gallery.watermark_settings:
         try:
@@ -175,6 +186,20 @@ def _variants_protected(gallery: Gallery) -> bool:
         except Exception:
             pass
     return False
+
+
+def downloadable_children(db: Session, gallery: Gallery, share_tokens: set[str]) -> list[Gallery]:
+    """The direct sub-galleries a public ZIP of `gallery` may bundle, restricted to the requested
+    share tokens. A child's own protections apply: a password-protected child (its cover is hidden
+    behind the gate in the nav too), one with downloads off, or an expired one is silently dropped —
+    the parent's token must not become a skeleton key for the child's originals."""
+    return [
+        c for c in gallery_repo.get_children(db, gallery.id)
+        if c.share_token in share_tokens
+        and not c.password_hash
+        and c.downloads_enabled
+        and not _is_expired(c)
+    ]
 
 
 def _effective_cover_url(
@@ -187,7 +212,7 @@ def _effective_cover_url(
     if uploaded:
         return uploaded
     if photo_cover and photo_cover.processing_status == "done":
-        if public and _variants_protected(gallery):
+        if public and variants_protected(gallery):
             return f"/api/public/g/{gallery.share_token}/images/{photo_cover.id}/thumb"
         return storage.get_url(f"{gallery.id}/thumb/{photo_cover.stored_filename}")
     return None
@@ -195,10 +220,11 @@ def _effective_cover_url(
 
 def _hero_medium_url(gallery: Gallery, image_id: str, stored_filename: str,
                      watermark_enabled: bool, storage: StorageProvider) -> str:
-    """Full-screen opener URL for a photo's `medium` rendition. Watermarked galleries route through
-    the access-checked public proxy (which composites the watermark) so an auto-header never leaks an
-    un-watermarked view — mirrors image_service._image_to_response's proxy_variants logic."""
-    if watermark_enabled and gallery.share_token:
+    """Full-screen opener URL for a photo's `medium` rendition. Protected galleries (watermark,
+    downloads off, password, expiry — see `variants_protected`) route through the access-checked
+    public proxy (which composites the watermark) so an auto-header never leaks an un-watermarked
+    or un-gated view."""
+    if (watermark_enabled or variants_protected(gallery)) and gallery.share_token:
         return f"/api/public/g/{gallery.share_token}/images/{image_id}/medium"
     return storage.get_url(f"{gallery.id}/medium/{stored_filename}")
 

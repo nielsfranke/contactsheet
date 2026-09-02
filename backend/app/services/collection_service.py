@@ -34,7 +34,7 @@ def _thumb_url(
         return None
     # Public callers pass the gallery so a protected one (watermark / downloads off) serves its
     # cover through the access-checked proxy instead of leaking the static rendition URL.
-    if public_gallery is not None and gallery_service._variants_protected(public_gallery):
+    if public_gallery is not None and gallery_service.variants_protected(public_gallery):
         return f"/api/public/g/{public_gallery.share_token}/images/{image.id}/thumb"
     return storage.get_url(f"{gallery_id}/thumb/{image.stored_filename}")
 

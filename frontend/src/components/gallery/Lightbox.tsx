@@ -993,7 +993,7 @@ export function Lightbox({
           )}
           {downloadsEnabled && !annoCompact && (image.is_video ? image.video_url : image.original_url) && (
             <a
-              href={(image.is_video ? image.video_url : image.original_url) ?? undefined}
+              href={withGalleryToken((image.is_video ? image.video_url : image.original_url)!, galleryToken)}
               download={image.original_filename}
               aria-label={t("download")}
               title={t("download")}
@@ -1093,7 +1093,7 @@ export function Lightbox({
                     ? (isCurrent ? (
                         <video
                           key={im.id}
-                          src={im.video_url ?? ""}
+                          src={withGalleryToken(im.video_url ?? "", galleryToken)}
                           controls
                           autoPlay
                           playsInline
@@ -1110,7 +1110,7 @@ export function Lightbox({
           <div className={`absolute inset-0 flex items-center justify-center ${slidePad}`}>
             <video
               key={image.id}
-              src={image.video_url ?? ""}
+              src={withGalleryToken(image.video_url ?? "", galleryToken)}
               controls
               autoPlay
               playsInline

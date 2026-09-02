@@ -18,3 +18,6 @@ __pycache__/
 demo/.data/
 demo/.web/
 demo/assets/_pool/
+
+# Playwright MCP browser sessions — console dumps + DOM snapshots of whatever instance was driven
+.playwright-mcp/

@@ -174,17 +174,7 @@ def get_public_images(
     gallery, public = gallery_service.get_public_gallery(db, share_token, storage)
     _require_gallery_access(gallery, gallery_id_from_token)
 
-    return image_service.list_images(
-        db,
-        gallery.id,
-        storage,
-        include_original_url=gallery.downloads_enabled,
-        watermarked=public.watermark_enabled,
-        share_token=share_token,
-        only_approved=True,
-        # Hide the stored_filename (and thus the derivable original path) for protected galleries.
-        proxy_variants=public.watermark_enabled or not gallery.downloads_enabled,
-    )
+    return image_service.list_public_images(db, gallery, storage, public.watermark_enabled)
 
 
 @router.post("/g/{share_token}/images", response_model=list[UploadResponse], status_code=201)
@@ -295,13 +285,7 @@ def flag_image(
     _require_gallery_access(gallery, gallery_id_from_token)
 
     image = image_service.public_set_flag(db, gallery, image_id, body.flag)
-    count = comment_repo.count_for_image(db, image_id)
-    acount = comment_repo.anchored_counts_for_images(db, [image_id]).get(image_id, 0)
-    return image_service._image_to_response(
-        image, storage, gallery.downloads_enabled, count, acount,
-        watermarked=public.watermark_enabled, share_token=share_token,
-        proxy_variants=public.watermark_enabled or not gallery.downloads_enabled,
-    )
+    return image_service.public_image_response(db, gallery, image, storage, public.watermark_enabled)
 
 
 @router.post("/g/{share_token}/images/{image_id}/rate", response_model=ImageResponse)
@@ -319,13 +303,7 @@ def rate_image(
     _require_gallery_access(gallery, gallery_id_from_token)
 
     image = image_service.public_set_rating(db, gallery, image_id, body.rating)
-    count = comment_repo.count_for_image(db, image_id)
-    acount = comment_repo.anchored_counts_for_images(db, [image_id]).get(image_id, 0)
-    return image_service._image_to_response(
-        image, storage, gallery.downloads_enabled, count, acount,
-        watermarked=public.watermark_enabled, share_token=share_token,
-        proxy_variants=public.watermark_enabled or not gallery.downloads_enabled,
-    )
+    return image_service.public_image_response(db, gallery, image, storage, public.watermark_enabled)
 
 
 @router.get("/g/{share_token}/likes", response_model=list[str])
@@ -357,13 +335,7 @@ def like_image(
     _require_gallery_access(gallery, gallery_id_from_token)
 
     image = image_service.public_toggle_like(db, gallery, image_id, body.reviewer)
-    count = comment_repo.count_for_image(db, image_id)
-    acount = comment_repo.anchored_counts_for_images(db, [image_id]).get(image_id, 0)
-    return image_service._image_to_response(
-        image, storage, gallery.downloads_enabled, count, acount,
-        watermarked=public.watermark_enabled, share_token=share_token,
-        proxy_variants=public.watermark_enabled or not gallery.downloads_enabled,
-    )
+    return image_service.public_image_response(db, gallery, image, storage, public.watermark_enabled)
 
 
 @router.get("/g/{share_token}/images/{image_id}/comments", response_model=list[CommentResponse])
@@ -443,6 +415,42 @@ def get_watermarked_thumb(
     )
 
 
+@router.get("/g/{share_token}/images/{image_id}/original")
+def get_public_original(
+    share_token: str,
+    image_id: str,
+    token: str | None = None,
+    db: Session = Depends(get_db),
+    storage: StorageProvider = Depends(get_storage),
+    gallery_id_from_token: str | None = Depends(get_optional_gallery_token),
+):
+    """Access-checked original for protected galleries (see gallery_service.variants_protected):
+    the per-photo download link and the <video> source, which can't use the unauthenticated static
+    mount there. Same gates as the serializer that hands out the URL — originals of still images
+    only with downloads on and no watermark; video always plays (it can't be watermarked)."""
+    gallery, public = gallery_service.get_public_gallery(db, share_token, storage)
+    _require_gallery_access(gallery, gallery_id_from_token or gallery_id_from_token_value(token))
+
+    image = image_repo.get_by_id(db, image_id)
+    if not image or image.gallery_id != gallery.id or image.moderation_status != "approved":
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Image not found")
+    if not image.is_video and (not gallery.downloads_enabled or public.watermark_enabled):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Downloads are disabled for this gallery")
+
+    src_path = os.path.join(app_settings.upload_dir, gallery.id, "original", image.stored_filename)
+    if not os.path.exists(src_path):
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Image file not found")
+    # Video streams inline (Range requests for seeking); a still is a download under its real name.
+    # `private`: the response is per-token — a shared cache must never hand it to the next visitor.
+    return FileResponse(
+        src_path,
+        media_type=image.mime_type,
+        filename=image.original_filename,
+        content_disposition_type="inline" if image.is_video else "attachment",
+        headers={"Cache-Control": "private, max-age=3600"},
+    )
+
+
 def _watermarked_variant(
     variant: str,
     share_token: str,
@@ -472,8 +480,11 @@ def _watermarked_variant(
         except Exception:
             pass
 
+    # Password galleries ride a per-token URL — keep shared caches out of it.
+    cache_control = "private, max-age=3600" if gallery.password_hash else "public, max-age=3600"
+
     if not watermark_service.is_active(ws):
-        return FileResponse(src_path, media_type="image/jpeg")
+        return FileResponse(src_path, media_type="image/jpeg", headers={"Cache-Control": cache_control})
 
     # Cache composited watermark to disk; key on image id + watermark settings hash
     wm_hash = hashlib.sha1(json.dumps(ws, sort_keys=True).encode()).hexdigest()[:12]
@@ -499,7 +510,7 @@ def _watermarked_variant(
         cache_path,
         media_type="image/jpeg",
         headers={
-            "Cache-Control": "public, max-age=3600",
+            "Cache-Control": cache_control,
             "ETag": etag,
         },
     )
@@ -649,8 +660,8 @@ def create_public_zip(
         _record_download(len(wanted))
         return _public_zip_response(job, share_token)
 
-    children = gallery_repo.get_children(db, gallery.id)
-    selected = [c for c in children if c.share_token in set(body.subgallery_share_tokens)]
+    # A child's own password / downloads / expiry gates apply — the parent's token is no skeleton key.
+    selected = gallery_service.downloadable_children(db, gallery, set(body.subgallery_share_tokens))
 
     # Image counts to validate the selection actually holds files (only_approved: pending client
     # uploads don't count and never enter a public download).
@@ -705,8 +716,8 @@ def stream_public_zip(
         members = collect_members(db, [(gallery.id, "")], only_approved=True, image_ids=image_ids)
     else:
         sub_tokens = {t for t in subs.split(",") if t}
-        children = gallery_repo.get_children(db, gallery.id)
-        selected = [c for c in children if c.share_token in sub_tokens]
+        # A child's own password / downloads / expiry gates apply — the parent's token is no skeleton key.
+        selected = gallery_service.downloadable_children(db, gallery, sub_tokens)
         counts = gallery_repo.batch_image_counts(db, [gallery.id] + [c.id for c in selected], only_approved=True)
         entries: list[tuple[str, str]] = []
         if not selected:

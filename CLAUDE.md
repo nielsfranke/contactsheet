@@ -237,6 +237,12 @@ Key non-obvious constraints — full details in `docs/architecture/`.
 - Percent is **relative to fit**. Configurable in Settings → Gallery defaults (`app_settings.lightbox_zoom_enabled` / `lightbox_zoom_max`): on/off + ceiling 200/300/400 % or `"original"` (the photo's 1:1 size, derived per photo). Originals are never fetched — zooming bumps the slide's `sizes` so srcset re-picks the largest preview.
 - **Annotating while zoomed works**: zoom persists, wheel/slider stay live, only drag-pan stands down (the pen owns the drag). The note popover counter-scales via `--zoom-scale`. See `docs/architecture/lightbox-zoom-slider.md`.
 
+### Protected media (public surface)
+- `gallery_service.variants_protected(gallery)` is the **single gate** deciding whether a public gallery's media is served from the unauthenticated static `/uploads` mount or through the access-checked proxy `/api/public/g/{token}/images/{id}/{thumb|small|medium|original}`. True for: downloads off, watermark active, **password-protected**, or **expiring** (a static URL has no auth and a 30-day nginx cache, so it would outlive the gate). Every public serializer goes through `image_service._public_serializer_kwargs` — don't hand-roll `proxy_variants` in a router.
+- Proxied URLs need the gallery JWT as `?token=` (`withGalleryToken` in the frontend — `<img>`/`<a download>`/`<video>` can't set headers). The `/original` proxy enforces the same rule as the serializer (stills: downloads on + no watermark; video always).
+- **EXIF/IPTC are gated server-side** (`show_exif` / `show_iptc`) — EXIF carries GPS; the public payload carries `null`, not just a hidden UI.
+- A parent's public ZIP only bundles children the viewer could open on their own (`gallery_service.downloadable_children`: no password, downloads on, not expired).
+
 ### Watermarks
 - `watermark_service.is_active(ws)` is the single gate — used by the public serializer and the serving proxy. Composited on the fly for thumb/medium, cached to `{variant}-wm/` keyed on a settings hash. Originals and video are never watermarked.
 
