@@ -3,7 +3,7 @@
 
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { MODE_LABELS, DEFAULT_WATERMARK, type GalleryResponse, type ModeType, type WatermarkSettings } from "@/lib/types";
@@ -169,11 +169,34 @@ export function GallerySettingsModal({
     setReview((s) => ({ ...s, ...patch }));
     save(patch);
   }
+  // Text / colour / opacity fire per input event (a slider drag is ~30 events) — the local state
+  // follows immediately, the PATCH is debounced so the server isn't hit (and its watermark cache
+  // invalidated) thirty times, and "last response wins" can't land on a stale value.
+  const wmSaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => () => { if (wmSaveTimer.current) clearTimeout(wmSaveTimer.current); }, []);
   function patchWatermark(patch: Partial<WatermarkSettings>) {
     const next = { ...wmSettings, ...patch };
     setWmSettings(next);
-    save({ watermark_settings: JSON.stringify(next) });
+    if (wmSaveTimer.current) clearTimeout(wmSaveTimer.current);
+    wmSaveTimer.current = setTimeout(() => {
+      wmSaveTimer.current = null;
+      save({ watermark_settings: JSON.stringify(next) });
+    }, 300);
   }
+
+  // Blur-committed text fields: closing the modal (Escape) unmounts the input without a blur, so
+  // flush whatever is pending first — a typed-but-unblurred rename must not be dropped.
+  function handleOpenChange(next: boolean) {
+    if (!next) {
+      commitName();
+      commitHeadline();
+      commitExpiry();
+    }
+    onOpenChange(next);
+  }
+  const blurOnEnter = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Enter") e.currentTarget.blur();
+  };
 
   function setPasswordNow() {
     if (password) {
@@ -218,7 +241,7 @@ export function GallerySettingsModal({
   ];
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
       {/* Taller than many laptop viewports (the Allgemein/Aussehen tabs) — cap the height and
           scroll inside, or the header incl. the close button ends up above the viewport. */}
       <DialogContent className="sm:max-w-2xl max-h-[calc(100dvh-2rem)] overflow-y-auto">
@@ -227,7 +250,7 @@ export function GallerySettingsModal({
           <DialogDescription>
             {t.rich("description", {
               link: (chunks) => (
-                <Link href="/admin/settings/gallery-defaults" onClick={() => onOpenChange(false)}>
+                <Link href="/admin/settings/gallery-defaults" onClick={() => handleOpenChange(false)}>
                   {chunks}
                 </Link>
               ),
@@ -319,6 +342,7 @@ export function GallerySettingsModal({
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   onBlur={commitName}
+                  onKeyDown={blurOnEnter}
                   required
                 />
               </div>
@@ -330,6 +354,7 @@ export function GallerySettingsModal({
                   value={headline}
                   onChange={(e) => setHeadline(e.target.value)}
                   onBlur={commitHeadline}
+                  onKeyDown={blurOnEnter}
                   placeholder={t("subtitlePlaceholder")}
                 />
               </div>
@@ -455,7 +480,7 @@ export function GallerySettingsModal({
           )}
           <div className="flex items-center gap-3">
             <SaveStatus status={status} />
-            <Button size="sm" onClick={() => onOpenChange(false)}>
+            <Button size="sm" onClick={() => handleOpenChange(false)}>
               {tc("close")}
             </Button>
           </div>

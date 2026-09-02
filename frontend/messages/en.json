@@ -256,7 +256,8 @@
       "movedInto": "Moved {name}",
       "movedToTop": "Moved {name} to top level",
       "undo": "Undo",
-      "fallbackName": "gallery"
+      "fallbackName": "gallery",
+      "intoDescendant": "Can't move a gallery into one of its own sub-galleries"
     },
     "galleries": {
       "sortDate": "Date",
@@ -712,6 +713,16 @@
       "busiestGalleries": "Busiest galleries",
       "noActivity": "No activity recorded yet.",
       "colGallery": "Gallery"
+    },
+    "uploadToasts": {
+      "unsupportedType": "{name}: unsupported file type",
+      "tooLarge": "{name}: exceeds the {limit} limit",
+      "uploaded": "{count, plural, =1 {1 file uploaded} other {# files uploaded}}",
+      "cancelled": "Upload cancelled",
+      "cancelledPartial": "Upload cancelled — {count} already uploaded",
+      "partialFailed": "Uploaded {done} of {total} — the rest failed, please retry them",
+      "failed": "Upload failed",
+      "busy": "An upload is still running — wait for it to finish before adding more files"
     }
   },
   "settings": {
@@ -1273,6 +1284,9 @@
     "backup_invalid": "This file isn't a valid ContactSheet backup.",
     "backup_corrupt": "This backup failed its integrity check and may be damaged.",
     "backup_schema_newer": "This backup is from a newer ContactSheet. Upgrade before restoring.",
-    "backup_format_unsupported": "This backup was made by a newer ContactSheet. Upgrade before restoring."
+    "backup_format_unsupported": "This backup was made by a newer ContactSheet. Upgrade before restoring.",
+    "maintenance": "A restore is in progress — please try again in a moment.",
+    "instance_busy": "The instance is still busy (uploads or exports running). Wait for them to finish, then retry the restore.",
+    "gallery_token_required": "Your access to this gallery has expired — please enter the password again."
   }
 }

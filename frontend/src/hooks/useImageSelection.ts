@@ -61,6 +61,15 @@ export function useImageSelection(visibleIds: string[]) {
 
   const selectAll = useCallback(() => setSelected(new Set(visibleIds)), [visibleIds]);
 
+  /** Drop ids that are gone (deleted / moved away, e.g. via a realtime refetch) so a bulk action
+   *  never runs into a 404 mid-batch and the count never lies. */
+  const prune = useCallback((keep: Set<string>) => {
+    setSelected((prev) => {
+      if ([...prev].every((id) => keep.has(id))) return prev;
+      return new Set([...prev].filter((id) => keep.has(id)));
+    });
+  }, []);
+
   const isSelected = useCallback((id: string) => selected.has(id), [selected]);
 
   useEffect(() => {
@@ -81,5 +90,5 @@ export function useImageSelection(visibleIds: string[]) {
     return () => document.removeEventListener("keydown", onKey);
   }, [mode, visibleIds, selected, setMode]);
 
-  return { mode, setMode, selected, isSelected, toggle, selectRange, selectAll, clear, count: selected.size };
+  return { mode, setMode, selected, isSelected, toggle, selectRange, selectAll, clear, prune, count: selected.size };
 }

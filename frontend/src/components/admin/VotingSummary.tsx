@@ -73,9 +73,8 @@ export function VotingSummary({ galleryId, embedded = false }: Props) {
               </thead>
               <tbody className="divide-y divide-border">
                 {Object.entries(images).map(([imageId, data]) => {
-                  const totals = (data as unknown as { totals: Record<string, number> }).totals ?? {};
-                  const reviewerFlags = (data as unknown as { reviewers: Record<string, string> }).reviewers ?? {};
-                  const selectCount = (totals.green ?? 0);
+                  const { totals, reviewers: reviewerFlags, ratings } = data;
+                  const selectCount = totals.green ?? 0;
                   return (
                     <tr key={imageId}>
                       <td className="px-4 py-2 text-muted-foreground font-mono">
@@ -83,8 +82,12 @@ export function VotingSummary({ galleryId, embedded = false }: Props) {
                       </td>
                       {reviewers.map((r) => {
                         const flag = reviewerFlags[r] ?? "none";
+                        const stars = ratings?.[r] ?? 0;
                         return (
                           <td key={r} className="text-center px-3 py-2">
+                            {stars > 0 && (
+                              <span className="mr-1 text-amber-500 tabular-nums" title={`${stars}/5`}>★{stars}</span>
+                            )}
                             {flag !== "none" ? (
                               <span className={`inline-block w-3 h-3 rounded-full ${
                                 flag === "green" ? "bg-green-500" :

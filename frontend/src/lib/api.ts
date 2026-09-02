@@ -63,12 +63,32 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
       ...(init?.headers ?? {}),
     },
   });
-  if (!res.ok) {
-    handleUnauthorized(res.status);
-    const body = await res.json().catch(() => ({}));
-    throw Object.assign(new Error(errorDetail(body, res.statusText)), { status: res.status, body });
-  }
+  if (!res.ok) throw await apiError(res);
   if (res.status === 204) return undefined as T;
+  return res.json();
+}
+
+/** Build the thrown error for a failed fetch response: the admin 401 clear+redirect, the JSON body
+ *  attached (so `getErrorCode` can map a `CodedHTTPException` code), and a message that is never
+ *  blank — `res.statusText` is the empty string over HTTP/2, which turned a proxy 413/502/504 into
+ *  an empty toast. */
+async function apiError(res: Response): Promise<Error> {
+  handleUnauthorized(res.status);
+  const body = await res.json().catch(() => ({}));
+  return Object.assign(new Error(errorDetail(body, statusFallback(res.status, res.statusText))), {
+    status: res.status,
+    body,
+  });
+}
+
+function statusFallback(status: number, statusText: string): string {
+  return statusText || `HTTP ${status}`;
+}
+
+/** Multipart POST through fetch (no progress needed): same error shape + 401 handling as request(). */
+async function sendForm<T>(path: string, form: FormData): Promise<T> {
+  const res = await fetch(`${API_BASE}${path}`, { method: "POST", credentials: "include", body: form });
+  if (!res.ok) throw await apiError(res);
   return res.json();
 }
 
@@ -125,7 +145,12 @@ function sendXhr<T>(
           /* non-JSON error body */
         }
         const code = typeof body.code === "string" ? body.code : undefined;
-        reject(Object.assign(new Error(errorDetail(body, xhr.statusText)), { status: xhr.status, code }));
+        reject(
+          Object.assign(new Error(errorDetail(body, statusFallback(xhr.status, xhr.statusText))), {
+            status: xhr.status,
+            code,
+          }),
+        );
       });
     xhr.send(form);
   });
@@ -345,17 +370,7 @@ export const api = {
       // name; without a filename the multipart part is parsed as a plain string field and FastAPI
       // rejects it with a 422. Always carry a filename so the part is treated as an upload.
       form.append("file", file, file.name || "header.jpg");
-      return fetch(`${API_BASE}/api/galleries/${id}/header-image`, {
-        method: "POST",
-        credentials: "include",
-        body: form,
-      }).then(async (res) => {
-        if (!res.ok) {
-          const body = await res.json().catch(() => ({}));
-          throw Object.assign(new Error(errorDetail(body, res.statusText)), { status: res.status });
-        }
-        return res.json();
-      });
+      return sendForm<GalleryResponse>(`/api/galleries/${id}/header-image`, form);
     },
     deleteHeaderImage: (id: string) =>
       request<void>(`/api/galleries/${id}/header-image`, { method: "DELETE" }),
@@ -363,18 +378,15 @@ export const api = {
       const form = new FormData();
       // See uploadHeaderImage: a nameless dropped file must still carry a filename or FastAPI 422s.
       form.append("file", file, file.name || "cover.jpg");
-      return fetch(`${API_BASE}/api/galleries/${id}/cover-image`, {
-        method: "POST",
-        credentials: "include",
-        body: form,
-      }).then(async (res) => {
-        if (!res.ok) {
-          const body = await res.json().catch(() => ({}));
-          throw Object.assign(new Error(errorDetail(body, res.statusText)), { status: res.status });
-        }
-        return res.json();
-      });
+      return sendForm<GalleryResponse>(`/api/galleries/${id}/cover-image`, form);
     },
+    uploadWatermark: (id: string, file: File): Promise<{ filename: string }> => {
+      const form = new FormData();
+      form.append("file", file, file.name || "watermark.png");
+      return sendForm<{ filename: string }>(`/api/galleries/${id}/watermark`, form);
+    },
+    deleteWatermark: (id: string) =>
+      request<void>(`/api/galleries/${id}/watermark`, { method: "DELETE" }),
     deleteCoverImage: (id: string) =>
       request<void>(`/api/galleries/${id}/cover-image`, { method: "DELETE" }),
     setFocusPoint: (id: string, x: number, y: number) =>
@@ -404,17 +416,7 @@ export const api = {
     uploadLogo: (file: File): Promise<AppSettings> => {
       const form = new FormData();
       form.append("file", file);
-      return fetch(`${API_BASE}/api/admin/settings/logo`, {
-        method: "POST",
-        credentials: "include",
-        body: form,
-      }).then(async (res) => {
-        if (!res.ok) {
-          const body = await res.json().catch(() => ({}));
-          throw Object.assign(new Error(errorDetail(body, res.statusText)), { status: res.status });
-        }
-        return res.json();
-      });
+      return sendForm<AppSettings>("/api/admin/settings/logo", form);
     },
     deleteLogo: () => request<void>("/api/admin/settings/logo", { method: "DELETE" }),
     // Semantic-search index progress + ML sidecar health (for the settings panel).
@@ -657,6 +659,22 @@ export const api = {
       }),
     zipDownloadUrl: (token: string, jobId: string) =>
       `/api/public/g/${token}/zip/${jobId}/download`,
+    // Pre-flight for the streaming download: runs the same gates (token, downloads on, non-empty
+    // selection) and returns 204 — so a stale token or a disabled download surfaces as an error
+    // in the dialog instead of the browser navigating the gallery away to a JSON error page.
+    zipCheck: (
+      token: string,
+      opts: { subs?: string[]; images?: string[] },
+      galleryToken?: string,
+    ) => {
+      const p = new URLSearchParams();
+      if (opts.subs?.length) p.set("subs", opts.subs.join(","));
+      if (opts.images?.length) p.set("images", opts.images.join(","));
+      const qs = p.toString();
+      return request<void>(`/api/public/g/${token}/zip/check${qs ? `?${qs}` : ""}`, {
+        headers: authHeaders(galleryToken),
+      });
+    },
     // Streaming download: one GET the browser navigates to — no job, no poll, no "preparing".
     // The gallery JWT rides in ?token= because a navigation can't set an Authorization header.
     zipStreamUrl: (

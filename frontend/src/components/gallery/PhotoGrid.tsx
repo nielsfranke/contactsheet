@@ -90,7 +90,7 @@ export function PhotoGrid({
   onRangeSelect,
   lightboxImages,
 }: Props) {
-  const { open } = useLightboxStore();
+  const open = useLightboxStore((s) => s.open);
   // "no_preview" (e.g. a PSB without an embedded thumbnail) is displayable as a download-only tile.
   const ready = useMemo(
     () =>

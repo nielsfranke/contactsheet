@@ -61,6 +61,7 @@ interface Connection {
   dead: boolean;
   reconnectTimer?: ReturnType<typeof setTimeout>;
   heartbeatTimer?: ReturnType<typeof setInterval>;
+  stableTimer?: ReturnType<typeof setTimeout>;
 }
 
 const connections = new Map<string, Connection>();
@@ -68,7 +69,12 @@ const HEARTBEAT_MS = 25_000;
 const MAX_BACKOFF_MS = 30_000;
 // Application close codes from the server (app/routers/realtime.py). Permanent rejections —
 // reconnecting won't help (the token/gallery won't fix itself), so we stop hammering.
-const PERMANENT_CLOSE_CODES = new Set([4401, 4404]);
+// 4401 unauthorized · 4404 not found · 4410 gone (expired gallery).
+const PERMANENT_CLOSE_CODES = new Set([4401, 4404, 4410]);
+// A socket must stay open this long before its reconnect backoff resets. The server *accepts*
+// first and closes with a code right after — resetting on `onopen` let any accept-then-close
+// pattern defeat the backoff and reconnect every second.
+const STABLE_OPEN_MS = 5_000;
 
 function open(url: string, conn: Connection): void {
   let ws: WebSocket;
@@ -81,7 +87,9 @@ function open(url: string, conn: Connection): void {
   conn.ws = ws;
 
   ws.onopen = () => {
-    conn.attempts = 0;
+    conn.stableTimer = setTimeout(() => {
+      conn.attempts = 0;
+    }, STABLE_OPEN_MS);
     // Keep proxies from idling the connection out; the server ignores inbound frames.
     conn.heartbeatTimer = setInterval(() => {
       try {
@@ -106,6 +114,7 @@ function open(url: string, conn: Connection): void {
 
   ws.onclose = (ev) => {
     if (conn.heartbeatTimer) clearInterval(conn.heartbeatTimer);
+    if (conn.stableTimer) clearTimeout(conn.stableTimer);
     // A permanent rejection (auth / not found) — don't reconnect. Mark the connection dead so the
     // next subscribe (e.g. after re-login + navigating back) replaces it with a fresh attempt;
     // otherwise the corpse would sit in the map for as long as it has subscribers.
@@ -153,6 +162,7 @@ export function connectRealtime(url: string, listener: Listener): () => void {
       c.closed = true;
       if (c.reconnectTimer) clearTimeout(c.reconnectTimer);
       if (c.heartbeatTimer) clearInterval(c.heartbeatTimer);
+      if (c.stableTimer) clearTimeout(c.stableTimer);
       try {
         c.ws?.close();
       } catch {

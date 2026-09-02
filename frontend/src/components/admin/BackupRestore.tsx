@@ -3,7 +3,7 @@
 
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { Archive, Download, Loader2, Upload } from "lucide-react";
@@ -37,9 +37,32 @@ function formatBytes(n: number): string {
   return `${v.toFixed(1)} ${units[i]}`;
 }
 
-/** Poll a backup job until it leaves the pending/running state (bounded, ~10 min). */
-async function pollBackup(id: string): Promise<BackupJob> {
+// The in-flight/ready backup job outlives this component: navigating away mid-build must neither
+// keep polling into an unmounted page nor lose the finished archive's download link.
+const BACKUP_JOB_KEY = "cs.backup.job";
+
+function rememberJob(id: string | null) {
+  try {
+    if (id) sessionStorage.setItem(BACKUP_JOB_KEY, id);
+    else sessionStorage.removeItem(BACKUP_JOB_KEY);
+  } catch {
+    /* storage unavailable */
+  }
+}
+
+function rememberedJob(): string | null {
+  try {
+    return sessionStorage.getItem(BACKUP_JOB_KEY);
+  } catch {
+    return null;
+  }
+}
+
+/** Poll a backup job until it leaves the pending/running state (bounded, ~10 min) — or until the
+ *  caller's `alive` flag drops (component unmounted), which resolves to null. */
+async function pollBackup(id: string, alive: { current: boolean }): Promise<BackupJob | null> {
   for (let attempt = 0; attempt < 400; attempt++) {
+    if (!alive.current) return null;
     const job = await api.adminSettings.backupGet(id);
     if (job.status === "ready" || job.status === "error") return job;
     await new Promise((r) => setTimeout(r, 1500));
@@ -56,6 +79,38 @@ export function BackupRestore() {
   const [includeRenditions, setIncludeRenditions] = useState(true);
   const [building, setBuilding] = useState(false);
   const [ready, setReady] = useState<BackupJob | null>(null);
+  const alive = useRef(true);
+  useEffect(() => {
+    alive.current = true;
+    // Resume a build that was started before navigating away (or show its finished link).
+    const id = rememberedJob();
+    if (id) void track(id);
+    return () => {
+      alive.current = false;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- mount only
+  }, []);
+
+  async function track(id: string) {
+    setBuilding(true);
+    setReady(null);
+    try {
+      const done = await pollBackup(id, alive);
+      if (!done) return; // unmounted — the job keeps building server-side, resumed on return
+      rememberJob(null);
+      if (done.status === "ready") {
+        setReady(done);
+        toast.success(t("buildSuccess"));
+      } else {
+        toast.error(done.error_message ?? t("buildFailed"));
+      }
+    } catch {
+      rememberJob(null);
+      if (alive.current) toast.error(t("buildFailed"));
+    } finally {
+      if (alive.current) setBuilding(false);
+    }
+  }
 
   // --- restore ---
   const [open, setOpen] = useState(false);
@@ -70,20 +125,18 @@ export function BackupRestore() {
   async function onBackup() {
     setBuilding(true);
     setReady(null);
+    let job: BackupJob;
     try {
-      const job = await api.adminSettings.backupCreate(scope, includeRenditions);
-      const done = await pollBackup(job.id);
-      if (done.status === "ready") {
-        setReady(done);
-        toast.success(t("buildSuccess"));
-      } else {
-        toast.error(done.error_message ?? t("buildFailed"));
-      }
+      job = await api.adminSettings.backupCreate(scope, includeRenditions);
     } catch {
-      toast.error(t("buildFailed"));
-    } finally {
-      setBuilding(false);
+      if (alive.current) {
+        toast.error(t("buildFailed"));
+        setBuilding(false);
+      }
+      return;
     }
+    rememberJob(job.id);
+    await track(job.id);
   }
 
   function closeRestore(next: boolean) {

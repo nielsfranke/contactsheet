@@ -98,7 +98,14 @@ function WindowVirtualizedRows({ count, estimateSize, renderRow, overscan = 3 }:
     const measure = () => setScrollMargin(el.getBoundingClientRect().top + window.scrollY);
     measure();
     window.addEventListener("resize", measure);
-    return () => window.removeEventListener("resize", measure);
+    // Grouped views stack several lists: when a group above grows or shrinks (a flag moves a
+    // photo between groups, a filter narrows it) our document offset changes without a resize.
+    const ro = new ResizeObserver(measure);
+    ro.observe(document.body);
+    return () => {
+      window.removeEventListener("resize", measure);
+      ro.disconnect();
+    };
   }, []);
 
   const virtualizer = useWindowVirtualizer({ count, estimateSize, overscan, scrollMargin });

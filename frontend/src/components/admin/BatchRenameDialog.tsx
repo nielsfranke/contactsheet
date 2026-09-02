@@ -73,7 +73,8 @@ export function BatchRenameDialog({
       } else {
         newStem = `${prefix}${stem}${suffix}`;
       }
-      const name = `${newStem}${ext}`.trim();
+      // An emptied stem (find-mode removing the whole name) would rename to ".jpg" — keep the old.
+      const name = newStem.trim() ? `${newStem}${ext}`.trim() : img.original_filename;
       return { id: img.id, old: img.original_filename, name };
     });
   }, [images, mode, base, start, padding, separator, find, replace, prefix, suffix]);
@@ -223,7 +224,7 @@ export function BatchRenameDialog({
 
         <div className="flex justify-end gap-2 pt-1">
           <Button variant="outline" size="sm" onClick={() => onOpenChange(false)}>{tc("cancel")}</Button>
-          <Button size="sm" onClick={() => onApply(changes)} disabled={changes.length === 0 || busy}>
+          <Button size="sm" onClick={() => onApply(changes)} disabled={changes.length === 0 || busy || hasDuplicates}>
             {busy ? tc("saving") : changes.length === 0 ? t("batchNoChanges") : t("batchApply", { count: changes.length })}
           </Button>
         </div>

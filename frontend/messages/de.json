@@ -256,7 +256,8 @@
       "movedInto": "{name} verschoben",
       "movedToTop": "{name} auf oberste Ebene verschoben",
       "undo": "Rückgängig",
-      "fallbackName": "Galerie"
+      "fallbackName": "Galerie",
+      "intoDescendant": "Eine Galerie kann nicht in eine ihrer eigenen Untergalerien verschoben werden"
     },
     "galleries": {
       "sortDate": "Datum",
@@ -712,6 +713,16 @@
       "busiestGalleries": "Aktivste Galerien",
       "noActivity": "Noch keine Aktivität aufgezeichnet.",
       "colGallery": "Galerie"
+    },
+    "uploadToasts": {
+      "unsupportedType": "{name}: Dateityp wird nicht unterstützt",
+      "tooLarge": "{name}: überschreitet das Limit von {limit}",
+      "uploaded": "{count, plural, =1 {1 Datei hochgeladen} other {# Dateien hochgeladen}}",
+      "cancelled": "Upload abgebrochen",
+      "cancelledPartial": "Upload abgebrochen — {count} bereits hochgeladen",
+      "partialFailed": "{done} von {total} hochgeladen — der Rest ist fehlgeschlagen, bitte erneut versuchen",
+      "failed": "Upload fehlgeschlagen",
+      "busy": "Ein Upload läuft noch — bitte warten, bevor weitere Dateien hinzugefügt werden"
     }
   },
   "settings": {
@@ -1273,6 +1284,9 @@
     "backup_invalid": "Diese Datei ist keine gültige ContactSheet-Sicherung.",
     "backup_corrupt": "Diese Sicherung hat die Integritätsprüfung nicht bestanden und ist möglicherweise beschädigt.",
     "backup_schema_newer": "Diese Sicherung stammt aus einer neueren ContactSheet-Version. Aktualisiere vor dem Wiederherstellen.",
-    "backup_format_unsupported": "Diese Sicherung wurde mit einer neueren ContactSheet-Version erstellt. Aktualisiere vor dem Wiederherstellen."
+    "backup_format_unsupported": "Diese Sicherung wurde mit einer neueren ContactSheet-Version erstellt. Aktualisiere vor dem Wiederherstellen.",
+    "maintenance": "Eine Wiederherstellung läuft gerade — bitte in einem Moment erneut versuchen.",
+    "instance_busy": "Die Instanz ist noch beschäftigt (Uploads oder Exporte laufen). Bitte warten und die Wiederherstellung dann erneut starten.",
+    "gallery_token_required": "Der Zugang zu dieser Galerie ist abgelaufen — bitte das Passwort erneut eingeben."
   }
 }

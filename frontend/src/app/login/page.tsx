@@ -16,6 +16,13 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "sonner";
 import { AuthLegalStrip } from "@/components/legal/AuthLegalStrip";
 
+/** Where to land after sign-in: the `?next=` deep link the admin shell set on a 401 (only an
+ *  in-app admin path is honoured — never an absolute/protocol-relative URL), else the dashboard. */
+function nextAdminPath(): string {
+  const next = new URLSearchParams(window.location.search).get("next") ?? "";
+  return next.startsWith("/admin") && !next.startsWith("//") ? next : "/admin/galleries";
+}
+
 export default function LoginPage() {
   const router = useRouter();
   const t = useTranslations("auth");
@@ -47,7 +54,7 @@ export default function LoginPage() {
         await api.auth.me();
         if (cancelled) return;
         markAuthenticated();
-        router.replace("/admin/galleries");
+        router.replace(nextAdminPath());
         return;
       } catch {
         if (!cancelled) setChecking(false);
@@ -64,7 +71,7 @@ export default function LoginPage() {
     try {
       await api.auth.login(username, password, remember);
       markAuthenticated();
-      router.replace("/admin/galleries");
+      router.replace(nextAdminPath());
     } catch {
       toast.error(t("invalidCredentials"));
     } finally {

@@ -66,9 +66,18 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         markAuthenticated();
         setChecked(true);
       })
-      .catch(() => {
-        clearAuthenticated();
-        router.replace("/login");
+      .catch((err: { status?: number }) => {
+        if (err?.status === 401) {
+          clearAuthenticated();
+          // Carry the deep link so the login page can return here (backend restart mid-session
+          // used to bounce the admin to /login *and* lose the gallery they were on).
+          const next = window.location.pathname + window.location.search;
+          router.replace(`/login?next=${encodeURIComponent(next)}`);
+          return;
+        }
+        // Network error / 5xx: the cookie may well be valid — the backend is just unreachable
+        // (deploy in progress). Render the shell; individual requests surface their own errors.
+        setChecked(true);
       });
   }, [router]);
 

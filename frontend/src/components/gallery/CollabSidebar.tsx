@@ -5,6 +5,7 @@
 
 import { useEffect, useRef } from "react";
 import { useTranslations } from "next-intl";
+import { useBelowMd } from "@/hooks/useMediaQuery";
 import Link from "next/link";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -57,6 +58,7 @@ export function CollabSidebar({
   toolsOpen, setToolsOpen, canSwitchBack, onSwitchBack,
 }: CollabSidebarProps) {
   const t = useTranslations("gallery");
+  const belowMd = useBelowMd();
   const tc = useTranslations("common");
 
   // Drawer keyboard support (below md): focus lands on the close button when it opens (the drawer
@@ -84,7 +86,12 @@ export function CollabSidebar({
   const countCls = "text-muted-foreground";
 
   return (
-    <aside className={`w-72 shrink-0 overflow-y-auto border-r border-border bg-background md:sticky md:top-0 md:h-screen max-md:fixed max-md:inset-y-0 max-md:left-0 max-md:z-50 max-md:max-w-[84vw] max-md:shadow-xl max-md:transition-transform max-md:duration-200 ${toolsOpen ? "max-md:translate-x-0" : "max-md:-translate-x-full"}`}>
+    <aside
+      // Off-canvas but still mounted below md: `inert` keeps its links/buttons out of the tab order
+      // (and screen readers) while it is translated off-screen.
+      inert={belowMd && !toolsOpen}
+      className={`w-72 shrink-0 overflow-y-auto border-r border-border bg-background md:sticky md:top-0 md:h-screen max-md:fixed max-md:inset-y-0 max-md:left-0 max-md:z-50 max-md:max-w-[84vw] max-md:shadow-xl max-md:transition-transform max-md:duration-200 ${toolsOpen ? "max-md:translate-x-0" : "max-md:-translate-x-full"}`}
+    >
       {/* Mobile drawer header with close */}
       <div className="md:hidden flex items-center justify-between px-4 pt-4">
         <span className={labelCls}>{t("view.menu")}</span>

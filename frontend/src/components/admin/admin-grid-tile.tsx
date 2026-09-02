@@ -161,13 +161,38 @@ export function AdminTile({
           // sensor's threshold picks the photo(s) up to move into another gallery.
           <div
             {...(draggable ? dragProps : {})}
+            role="button"
+            tabIndex={0}
+            aria-pressed={isSelected?.(img.id) ?? false}
+            aria-label={img.original_filename}
             onClick={(e) => (e.shiftKey ? onRangeSelect : onToggleSelect)?.(img.id)}
-            className={cn("block w-full h-full", draggable ? "cursor-grab active:cursor-grabbing" : "cursor-pointer")}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" || e.key === " ") {
+                e.preventDefault();
+                (e.shiftKey ? onRangeSelect : onToggleSelect)?.(img.id);
+              }
+            }}
+            className={cn("block w-full h-full outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary", draggable ? "cursor-grab active:cursor-grabbing" : "cursor-pointer")}
           >
             {media}
           </div>
         ) : draggable ? (
-          <div {...dragProps} onClick={() => onOpen?.(img)} className="block w-full h-full cursor-grab active:cursor-grabbing">{media}</div>
+          <div
+            {...dragProps}
+            role="button"
+            tabIndex={0}
+            aria-label={img.original_filename}
+            onClick={() => onOpen?.(img)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" || e.key === " ") {
+                e.preventDefault();
+                onOpen?.(img);
+              }
+            }}
+            className="block w-full h-full cursor-grab active:cursor-grabbing outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary"
+          >
+            {media}
+          </div>
         ) : (
           <button
             onClick={() => onOpen?.(img)}

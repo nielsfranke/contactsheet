@@ -317,45 +317,6 @@ export function useGalleryDetail(id: string) {
     onError: (err: Error) => toast.error(err.message),
   });
 
-  // Bulk move: relocate every currently selected image into the chosen gallery, then exit
-  // select mode. Sequential so a failure stops cleanly and surfaces one error.
-  const moveSelectionMutation = useMutation({
-    mutationFn: async (targetId: string) => {
-      const ids = [...selection.selected];
-      for (const imgId of ids) await api.images.move(imgId, targetId);
-      return ids.length;
-    },
-    onSuccess: (count) => {
-      qc.invalidateQueries({ queryKey: ["gallery-images"] });
-      qc.invalidateQueries({ queryKey: ["galleries"] });
-      setMoveSelectionOpen(false);
-      setMoveFilter("");
-      selection.clear();
-      selection.setMode(false);
-      toast.success(t("toast.imagesMoved", { count }));
-    },
-    onError: (err: Error) => toast.error(err.message),
-  });
-
-  // Bulk delete: soft-delete every currently selected image, then exit select mode. Sequential so
-  // a failure stops cleanly and surfaces one error (mirrors the bulk-move pattern).
-  const deleteSelectionMutation = useMutation({
-    mutationFn: async () => {
-      const ids = [...selection.selected];
-      for (const imgId of ids) await api.images.delete(imgId);
-      return ids.length;
-    },
-    onSuccess: (count) => {
-      qc.invalidateQueries({ queryKey: ["gallery", id] });
-      qc.invalidateQueries({ queryKey: ["gallery-images", id] });
-      qc.invalidateQueries({ queryKey: ["galleries"] });
-      setDeleteSelectionConfirm(false);
-      selection.clear();
-      selection.setMode(false);
-      toast.success(t("toast.imagesDeleted", { count }));
-    },
-    onError: (err: Error) => toast.error(err.message),
-  });
 
   // Bulk rename: PATCH original_filename for each changed image, then exit select mode. Sequential
   // so a failure stops cleanly and surfaces one error (mirrors the bulk-move/delete pattern). The
@@ -430,6 +391,16 @@ export function useGalleryDetail(id: string) {
     };
   }, [arrange]);
 
+  // Any per-image filter or collection narrows the grid to a subset. Manual drag-reorder must be
+  // off then: a reorder sends the *visible* ids, and the backend renumbers only those — the hidden
+  // photos would keep stale ranks and the two orders interleave arbitrarily.
+  const filterActive =
+    arrange.filterName.trim() !== "" ||
+    arrange.flagFilters.size > 0 ||
+    arrange.ratingFilters.size > 0 ||
+    arrange.commentsOnly ||
+    !!activeCollection;
+
   const filteredSorted = useMemo(() => {
     // Search mode wins: show the server's similarity ranking as-is (no client filter/sort/group).
     if (searchActive) return searchResults ?? [];
@@ -456,11 +427,56 @@ export function useGalleryDetail(id: string) {
 
   const visibleIds = useMemo(() => filteredSorted.map((img) => img.id), [filteredSorted]);
   const selection = useImageSelection(visibleIds);
-  // Selected images in display order — batch rename numbers them as the admin sees them.
+  // Selected images in display order — batch rename numbers them as the admin sees them. Bulk
+  // actions act on *these* (what the admin can see), never on ids a narrower filter hid.
   const selectedImages = useMemo(
     () => filteredSorted.filter((img) => selection.selected.has(img.id)),
     [filteredSorted, selection.selected],
   );
+  const { prune } = selection;
+  useEffect(() => {
+    prune(new Set(images.map((img) => img.id)));
+  }, [images, prune]);
+
+  // Bulk move: relocate every currently selected image into the chosen gallery, then exit
+  // select mode. Sequential so a failure stops cleanly and surfaces one error.
+  const moveSelectionMutation = useMutation({
+    mutationFn: async (targetId: string) => {
+      const ids = selectedImages.map((img) => img.id);
+      for (const imgId of ids) await api.images.move(imgId, targetId);
+      return ids.length;
+    },
+    onSuccess: (count) => {
+      qc.invalidateQueries({ queryKey: ["gallery-images"] });
+      qc.invalidateQueries({ queryKey: ["galleries"] });
+      setMoveSelectionOpen(false);
+      setMoveFilter("");
+      selection.clear();
+      selection.setMode(false);
+      toast.success(t("toast.imagesMoved", { count }));
+    },
+    onError: (err: Error) => toast.error(err.message),
+  });
+
+  // Bulk delete: soft-delete every currently selected image, then exit select mode. Sequential so
+  // a failure stops cleanly and surfaces one error (mirrors the bulk-move pattern).
+  const deleteSelectionMutation = useMutation({
+    mutationFn: async () => {
+      const ids = selectedImages.map((img) => img.id);
+      for (const imgId of ids) await api.images.delete(imgId);
+      return ids.length;
+    },
+    onSuccess: (count) => {
+      qc.invalidateQueries({ queryKey: ["gallery", id] });
+      qc.invalidateQueries({ queryKey: ["gallery-images", id] });
+      qc.invalidateQueries({ queryKey: ["galleries"] });
+      setDeleteSelectionConfirm(false);
+      selection.clear();
+      selection.setMode(false);
+      toast.success(t("toast.imagesDeleted", { count }));
+    },
+    onError: (err: Error) => toast.error(err.message),
+  });
 
   // "Copy filenames" → optionally fold in every descendant gallery's photos. The subtree images
   // are fetched lazily (only while the dialog is open with the option on) and run through the same
@@ -570,9 +586,6 @@ export function useGalleryDetail(id: string) {
     if (idx >= 0) openLightbox(lightboxList, idx, intent);
   }
 
-  const filterActive =
-    arrange.filterName.trim() !== "" || arrange.flagFilters.size > 0 ||
-    arrange.ratingFilters.size > 0 || arrange.commentsOnly;
   function handleDownload() {
     // Active filter → download exactly the visible photos. Otherwise open the sub-gallery picker.
     if (filterActive) adminZip.startImages(lightboxList.map((i) => i.id));
@@ -636,8 +649,8 @@ export function useGalleryDetail(id: string) {
       return;
     }
     const overId = String(e.over.id);
-    // Reorder (manual sort, ungrouped) when dropped on another tile.
-    if (arrange.sortKey === "manual" && !groups && activeId !== overId) {
+    // Reorder (manual sort, ungrouped, whole gallery visible) when dropped on another tile.
+    if (arrange.sortKey === "manual" && !groups && !filterActive && !searchActive && activeId !== overId) {
       const oldIndex = filteredSorted.findIndex((img) => img.id === activeId);
       const newIndex = filteredSorted.findIndex((img) => img.id === overId);
       if (oldIndex === -1 || newIndex === -1) return;

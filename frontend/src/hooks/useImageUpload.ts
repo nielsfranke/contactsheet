@@ -7,6 +7,7 @@ import { useCallback, useRef, useState } from "react";
 import { api } from "@/lib/api";
 import type { DuplicateAction } from "@/lib/types";
 import { chunkByBytes, UPLOAD_CHUNK_TARGET_BYTES } from "@/lib/upload-chunks";
+import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 
 /** A filename colliding with a live image in the target gallery, plus how many copies exist. */
@@ -78,17 +79,19 @@ export function isAcceptedMedia(f: File): boolean {
   );
 }
 
-function validateFiles(incoming: File[]): File[] {
+type Translate = (key: string, values?: Record<string, string | number>) => string;
+
+function validateFiles(incoming: File[], t: Translate): File[] {
   return incoming.filter((f) => {
     if (!isAcceptedMedia(f)) {
-      toast.error(`${f.name}: unsupported file type`);
+      toast.error(t("unsupportedType", { name: f.name }));
       return false;
     }
     const isVideo = isVideoFile(f);
     const isDoc = !isVideo && isDocumentFile(f);
     const cap = isVideo ? MAX_VIDEO_BYTES : isDoc ? MAX_DOCUMENT_BYTES : MAX_IMAGE_BYTES;
     if (f.size > cap) {
-      toast.error(`${f.name}: exceeds ${isVideo ? "2 GB" : isDoc ? "8 GB" : "300 MB"} limit`);
+      toast.error(t("tooLarge", { name: f.name, limit: isVideo ? "2 GB" : isDoc ? "8 GB" : "300 MB" }));
       return false;
     }
     return true;
@@ -101,15 +104,36 @@ function validateFiles(incoming: File[]): File[] {
  * any number of triggers (drop zone, sidebar button) can drive via `openPicker`.
  */
 export function useImageUpload(galleryId: string, onUploaded: () => void) {
+  const t = useTranslations("admin.uploadToasts");
   const inputRef = useRef<HTMLInputElement>(null);
   const abortRef = useRef<AbortController | null>(null);
+  // One batch at a time: a second drop mid-upload used to overwrite `abortRef` (Cancel then only
+  // reached the newer batch), interleave both batches' progress, and the first batch's `finally`
+  // flipped the UI to idle while the second was still streaming.
+  const busyRef = useRef(false);
   const [uploading, setUploading] = useState(false);
   const [progress, setProgress] = useState(0);
   const [duplicatePrompt, setDuplicatePrompt] = useState<DuplicatePrompt | null>(null);
 
   const uploadFiles = useCallback(
     async (incoming: File[]) => {
-      const valid = validateFiles(incoming);
+      if (busyRef.current) {
+        toast.info(t("busy"));
+        return;
+      }
+      busyRef.current = true;
+      try {
+        await runBatch(incoming);
+      } finally {
+        busyRef.current = false;
+      }
+    },
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- runBatch is defined below with the same deps
+    [galleryId, onUploaded, t],
+  );
+
+  async function runBatch(incoming: File[]) {
+      const valid = validateFiles(incoming, t);
       if (!valid.length) return;
 
       // Pre-flight: catch filename collisions *before* streaming any bytes so the photographer can
@@ -171,26 +195,24 @@ export function useImageUpload(galleryId: string, onUploaded: () => void) {
           onUploaded(); // reveal each committed wave instead of making the user wait for the whole batch
         }
         setProgress(100);
-        toast.success(`${uploaded} file${uploaded > 1 ? "s" : ""} uploaded`);
+        toast.success(t("uploaded", { count: uploaded }));
       } catch (err: unknown) {
         // User-initiated cancel (xhr.abort) — a quiet info toast, not an error.
         if (err && typeof err === "object" && "aborted" in err) {
-          toast.info(uploaded > 0 ? `Upload cancelled — ${uploaded} already uploaded` : "Upload cancelled");
+          toast.info(uploaded > 0 ? t("cancelledPartial", { count: uploaded }) : t("cancelled"));
         } else if (uploaded > 0) {
           // A later chunk failed after earlier ones committed — report the partial result so the
           // photographer knows how many landed and can retry only the remainder.
-          toast.error(`Uploaded ${uploaded} of ${files.length} — the rest failed, please retry them`);
+          toast.error(t("partialFailed", { done: uploaded, total: files.length }));
           onUploaded();
         } else {
-          toast.error(err instanceof Error ? err.message : "Upload failed");
+          toast.error(err instanceof Error && err.message ? err.message : t("failed"));
         }
       } finally {
         setUploading(false);
         abortRef.current = null;
       }
-    },
-    [galleryId, onUploaded]
-  );
+  }
 
   // Abort the in-flight upload (no-op if nothing is uploading).
   const cancelUpload = useCallback(() => abortRef.current?.abort(), []);

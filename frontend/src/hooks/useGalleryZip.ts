@@ -4,7 +4,8 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { api } from "@/lib/api";
+import { useTranslations } from "next-intl";
+import { api, getErrorCode } from "@/lib/api";
 import type { ZipJob } from "@/lib/types";
 
 function triggerBrowserDownload(url: string) {
@@ -98,21 +99,44 @@ function useZipBuilder(ops: ZipOps) {
 export function useGalleryZip(shareToken: string, galleryToken?: string) {
   const [preparing, setPreparing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const t = useTranslations("errors");
+  const alive = useRef(true);
+  useEffect(() => {
+    alive.current = true;
+    return () => {
+      alive.current = false;
+    };
+  }, []);
 
-  function go(url: string, onSuccess?: () => void) {
+  async function go(sel: { subs?: string[]; images?: string[] }, onSuccess?: () => void) {
     setError(null);
     setPreparing(true);
-    triggerBrowserDownload(url);
+    // A plain navigation can't recover from a non-2xx: the tab would show the JSON error instead
+    // of the gallery (a 12 h token expired in a long-open tab, downloads switched off meanwhile).
+    // Check the gates first and keep the failure inside the dialog.
+    try {
+      await api.public.zipCheck(shareToken, sel, galleryToken);
+    } catch (e) {
+      if (!alive.current) return;
+      const code = getErrorCode(e);
+      setError(code && t.has(code) ? t(code) : (e as Error).message);
+      setPreparing(false);
+      return;
+    }
+    if (!alive.current) return;
+    triggerBrowserDownload(api.public.zipStreamUrl(shareToken, { ...sel, galleryToken }));
     // The browser's download manager owns it from here; clear the transient button state.
-    setTimeout(() => setPreparing(false), 1200);
+    setTimeout(() => {
+      if (alive.current) setPreparing(false);
+    }, 1200);
     onSuccess?.();
   }
 
   function start(subIds: string[], onSuccess?: () => void) {
-    go(api.public.zipStreamUrl(shareToken, { subs: subIds, galleryToken }), onSuccess);
+    return go({ subs: subIds }, onSuccess);
   }
   function startImages(imageIds: string[], onSuccess?: () => void) {
-    go(api.public.zipStreamUrl(shareToken, { images: imageIds, galleryToken }), onSuccess);
+    return go({ images: imageIds }, onSuccess);
   }
 
   return { start, startImages, preparing, error, setError };

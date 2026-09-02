@@ -288,9 +288,16 @@ def get_votes_summary(
     for v in all_votes:
         reviewers.add(v.reviewer_name)
         if v.image_id not in images:
-            images[v.image_id] = {"totals": {"green": 0, "red": 0, "yellow": 0, "blue": 0, "none": 0}, "reviewers": {}}
+            images[v.image_id] = {
+                "totals": {"green": 0, "red": 0, "yellow": 0, "blue": 0, "none": 0},
+                "reviewers": {},
+                "ratings": {},
+            }
         images[v.image_id]["reviewers"][v.reviewer_name] = v.color_flag
         images[v.image_id]["totals"][v.color_flag] = images[v.image_id]["totals"].get(v.color_flag, 0) + 1
+        # Per-reviewer stars ride the same row (rating_mode "stars"/"both"); 0 = not rated.
+        if v.rating:
+            images[v.image_id]["ratings"][v.reviewer_name] = v.rating
     return VoteSummaryResponse(reviewers=sorted(reviewers), images=images)
 
 

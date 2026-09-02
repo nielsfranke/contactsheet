@@ -8,7 +8,7 @@ import { useTranslations } from "next-intl";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { api, getErrorCode } from "@/lib/api";
-import type { ColorFlag, GalleryPublicResponse, ImageResponse } from "@/lib/types";
+import type { ColorFlag, GalleryPublicResponse, ImageResponse, Vote } from "@/lib/types";
 import { type ToolbarArrange as ArrangeState } from "./GalleryToolbar";
 import { resolveOpenerFont } from "@/lib/gallery-fonts";
 import { compareCaptureDate, hasCaptureDate } from "@/lib/image-sort";
@@ -269,34 +269,71 @@ export function useGalleryView(
     );
   }, [groups, filteredSorted]);
 
-  const { isOpen } = useLightboxStore();
+  const isOpen = useLightboxStore((s) => s.isOpen);
+
+  // Optimistic per-reviewer vote: the tile reads its flag/stars from the `public-votes` query, so
+  // patch that cache first (the pick shows instantly, not after two round-trips on a slow link)
+  // and roll it back with a toast if the server refuses.
+  const patchVote = useCallback(
+    (imageId: string, patch: Partial<Pick<Vote, "color_flag" | "rating">>) => {
+      const key = ["public-votes", shareToken, reviewerName];
+      const prev = qc.getQueryData<Vote[]>(key);
+      qc.setQueryData<Vote[]>(key, (cur = []) => {
+        const existing = cur.find((v) => v.image_id === imageId);
+        if (existing) return cur.map((v) => (v.image_id === imageId ? { ...v, ...patch } : v));
+        return [
+          ...cur,
+          {
+            id: `optimistic-${imageId}`,
+            image_id: imageId,
+            gallery_id: gallery.id,
+            reviewer_name: reviewerName ?? "",
+            color_flag: "none",
+            rating: 0,
+            updated_at: new Date().toISOString(),
+            ...patch,
+          } as Vote,
+        ];
+      });
+      return () => qc.setQueryData(key, prev);
+    },
+    [qc, shareToken, reviewerName, gallery.id],
+  );
 
   const handleVote = useCallback(
     (imageId: string, flag: string) => {
       if (!reviewerName) return;
+      const rollback = patchVote(imageId, { color_flag: flag as Vote["color_flag"] });
       api.public
         .setVote(shareToken, imageId, reviewerName, flag, galleryToken)
         .then(() => {
           qc.invalidateQueries({ queryKey: ["public-votes", shareToken, reviewerName] });
         })
-        // The tile shows the optimistic value until the next refetch — without feedback a failed
-        // vote silently reverts and the reviewer never learns their pick didn't stick.
-        .catch((err) => toast.error(errMsg(err)));
+        // Without feedback a failed vote silently reverts and the reviewer never learns their
+        // pick didn't stick.
+        .catch((err) => {
+          rollback();
+          toast.error(errMsg(err));
+        });
     },
-    [reviewerName, shareToken, galleryToken, qc, errMsg],
+    [reviewerName, shareToken, galleryToken, qc, errMsg, patchVote],
   );
 
   const handleRatingVote = useCallback(
     (imageId: string, rating: number) => {
       if (!reviewerName) return;
+      const rollback = patchVote(imageId, { rating: rating as Vote["rating"] });
       api.public
         .setRatingVote(shareToken, imageId, reviewerName, rating, galleryToken)
         .then(() => {
           qc.invalidateQueries({ queryKey: ["public-votes", shareToken, reviewerName] });
         })
-        .catch((err) => toast.error(errMsg(err)));
+        .catch((err) => {
+          rollback();
+          toast.error(errMsg(err));
+        });
     },
-    [reviewerName, shareToken, galleryToken, qc, errMsg],
+    [reviewerName, shareToken, galleryToken, qc, errMsg, patchVote],
   );
 
   const hasNav = gallery.subgalleries.length > 0 || !!gallery.parent_share_token;

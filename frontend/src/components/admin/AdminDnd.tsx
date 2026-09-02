@@ -24,6 +24,7 @@ import { getEventCoordinates } from "@dnd-kit/utilities";
 import { useTranslations } from "next-intl";
 import { Folder } from "lucide-react";
 import { api } from "@/lib/api";
+import type { GalleryResponse } from "@/lib/types";
 import { toast } from "sonner";
 
 // Keep the drag overlay centered on the cursor (like @dnd-kit/modifiers' snapCenterToCursor, which
@@ -107,6 +108,17 @@ const collision: CollisionDetection = (args) => {
   return closestCenter({ ...args, droppableContainers: tiles });
 };
 
+/** True when `candidate` sits anywhere below `galleryId` in the (flat, parent_id-linked) list. */
+function isDescendant(galleries: GalleryResponse[], galleryId: string, candidate: string): boolean {
+  const parentOf = new Map(galleries.map((g) => [g.id, g.parent_id]));
+  let cur: string | null | undefined = candidate;
+  for (let hops = 0; cur && hops < 64; hops++) {
+    if (cur === galleryId) return true;
+    cur = parentOf.get(cur);
+  }
+  return false;
+}
+
 export function AdminDndProvider({ children }: { children: ReactNode }) {
   const qc = useQueryClient();
   const t = useTranslations("admin.dnd");
@@ -127,6 +139,12 @@ export function AdminDndProvider({ children }: { children: ReactNode }) {
 
   function reparent(galleryId: string, target: string | null, origParentId: string | null, name?: string) {
     if (target === galleryId || target === origParentId) return; // self / no-op
+    // Dropping onto one of its own descendants: the backend rejects it, but with a generic error —
+    // catch it here from the cached tree and say why.
+    if (target && isDescendant(qc.getQueryData<GalleryResponse[]>(["galleries"]) ?? [], galleryId, target)) {
+      toast.error(t("intoDescendant"));
+      return;
+    }
     const refresh = () => {
       qc.invalidateQueries({ queryKey: ["galleries"] });
       qc.invalidateQueries({ queryKey: ["gallery"] });
@@ -142,7 +160,11 @@ export function AdminDndProvider({ children }: { children: ReactNode }) {
           toast(target ? t("movedInto", { name: display }) : t("movedToTop", { name: display }), {
             position: "top-center",
             duration: 8000,
-            action: { label: t("undo"), onClick: () => api.galleries.move(galleryId, origParentId).then(refresh) },
+            action: {
+              label: t("undo"),
+              onClick: () =>
+                api.galleries.move(galleryId, origParentId).then(refresh).catch((err: Error) => toast.error(err.message)),
+            },
           });
         },
       },

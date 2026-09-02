@@ -3,7 +3,7 @@
 
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import type { AppSettings, AppSettingsUpdate } from "@/lib/types";
@@ -26,7 +26,9 @@ export function useSettingsAutosave() {
   const [status, setStatus] = useState<AutosaveStatus>("idle");
   const idleTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  const mutationKey = ["admin-settings-autosave"];
   const mutation = useMutation({
+    mutationKey,
     mutationFn: (patch: AppSettingsUpdate) => api.adminSettings.update(patch),
     onMutate: async (patch) => {
       setStatus("saving");
@@ -41,12 +43,14 @@ export function useSettingsAutosave() {
       setStatus("error");
     },
     onSuccess: (data) => {
-      // Reconcile with the server-normalised response (e.g. masked notification secrets).
-      qc.setQueryData(SETTINGS_KEY, data);
+      // Reconcile with the server-normalised response (e.g. masked notification secrets) — but
+      // only from the last in-flight save, so an earlier response can't revert a later toggle.
+      if (qc.isMutating({ mutationKey }) <= 1) qc.setQueryData(SETTINGS_KEY, data);
       setStatus("saved");
       idleTimer.current = setTimeout(() => setStatus("idle"), 2000);
     },
   });
+  useEffect(() => () => { if (idleTimer.current) clearTimeout(idleTimer.current); }, []);
 
   return {
     save: (patch: AppSettingsUpdate) => mutation.mutate(patch),

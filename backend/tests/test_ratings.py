@@ -75,3 +75,17 @@ def test_per_reviewer_star_vote_independent_of_flag(admin_client):
     assert r.status_code == 200
     body = r.json()
     assert body["rating"] == 3 and body["color_flag"] == "green"
+
+
+def test_vote_summary_carries_per_reviewer_stars(admin_client):
+    g = make_gallery(admin_client, "Team", mode="collaboration", enable_team_voting=True)
+    img = add_image(g["id"])
+    base = f"/api/public/g/{g['share_token']}/images/{img}/vote"
+    assert _pub().put(base, json={"reviewer_name": "Anna", "color_flag": "green"}).status_code == 200
+    assert _pub().put(base, json={"reviewer_name": "Anna", "rating": 4}).status_code == 200
+    assert _pub().put(base, json={"reviewer_name": "Ben", "color_flag": "red"}).status_code == 200
+    summary = admin_client.get(f"/api/galleries/{g['id']}/votes/summary").json()
+    row = summary["images"][img]
+    assert row["reviewers"] == {"Anna": "green", "Ben": "red"}
+    assert row["ratings"] == {"Anna": 4}
+    assert row["totals"]["green"] == 1 and row["totals"]["red"] == 1

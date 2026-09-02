@@ -3,7 +3,7 @@
 
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import type { GalleryResponse, GalleryUpdate } from "@/lib/types";
@@ -17,7 +17,9 @@ const NON_RESPONSE_KEYS = new Set(["password", "apply_to_subgalleries"]);
 // Fields the gallery tree (left rail / overview) actually renders. The cost of autosave is the
 // `["galleries"]` tree refetch, not the tiny write — so we only refetch the tree when one of these
 // changes (or on a cascade, which can rewrite children). Look/behaviour toggles skip it entirely.
-const TREE_FIELDS = new Set<keyof GalleryUpdate>(["name", "mode", "pinned"]);
+// Fields the overview tiles / tree render — a save touching one refreshes the `galleries` list
+// (headline is the tile subtitle; a password flips the tile's lock badge).
+const TREE_FIELDS = new Set<keyof GalleryUpdate>(["name", "headline", "mode", "pinned", "password"]);
 
 /**
  * Per-gallery autosave for `GallerySettingsModal` — a gallery-scoped sibling of
@@ -34,7 +36,9 @@ export function useGallerySettingsAutosave(galleryId: string) {
   const idleTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const galleryKey = ["gallery", galleryId];
 
+  const mutationKey = ["gallery-settings", galleryId];
   const mutation = useMutation({
+    mutationKey,
     mutationFn: (patch: GalleryUpdate) => api.galleries.update(galleryId, patch),
     onMutate: async (patch) => {
       setStatus("saving");
@@ -54,15 +58,22 @@ export function useGallerySettingsAutosave(galleryId: string) {
       setStatus("error");
     },
     onSuccess: (data, patch) => {
-      qc.setQueryData(galleryKey, data);
+      // Two toggles flipped quickly: the first response still carries the second's *old* value,
+      // and writing it over the cache would visibly revert that toggle for one round-trip. Only
+      // the last in-flight save reconciles the cache (its response reflects every patch so far).
+      if (qc.isMutating({ mutationKey }) <= 1) qc.setQueryData(galleryKey, data);
       const touchesTree =
         !!patch.apply_to_subgalleries ||
         Object.keys(patch).some((k) => TREE_FIELDS.has(k as keyof GalleryUpdate));
       if (touchesTree) qc.invalidateQueries({ queryKey: ["galleries"] });
+      // A cascade rewrote every descendant — their detail queries (30 s stale) must not keep the
+      // pre-cascade values, or a blur-save in a child's modal would send the old ones back.
+      if (patch.apply_to_subgalleries) qc.invalidateQueries({ queryKey: ["gallery"] });
       setStatus("saved");
       idleTimer.current = setTimeout(() => setStatus("idle"), 2000);
     },
   });
+  useEffect(() => () => { if (idleTimer.current) clearTimeout(idleTimer.current); }, []);
 
   return {
     save: (patch: GalleryUpdate) => mutation.mutate(patch),

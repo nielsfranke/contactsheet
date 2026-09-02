@@ -81,6 +81,14 @@ export default function NotificationsSettingsPage() {
 
   // Local editing buffer for the whole notifications blob; persists secrets typed before a save.
   const [draft, setDraft] = useState<NotificationSettings | null>(null);
+  // Every save sends the whole buffer, so once the server answers (masked secrets, `secrets_set`
+  // hints) its blob supersedes the draft. Keyed on the *reference* (React Query structurally
+  // shares identical data), so a background refetch returning the same data leaves typing alone.
+  const [seenServer, setSeenServer] = useState(settings?.notifications);
+  if (settings?.notifications !== seenServer) {
+    setSeenServer(settings?.notifications);
+    setDraft(null);
+  }
   const [addType, setAddType] = useState<NotificationChannelType>("email");
   const raw = draft ?? settings?.notifications ?? DEFAULTS;
   // Merge default event flags so a legacy stored blob (missing newer keys like `download`) still
@@ -102,8 +110,11 @@ export default function NotificationsSettingsPage() {
     setDraft(next);
     save({ notifications: next });
   };
-  // Persist the current buffer — used on blur of free-text fields.
-  const commit = () => save({ notifications: value });
+  // Persist the current buffer — used on blur of free-text fields. A blur without an edit is a
+  // no-op (no PATCH for tabbing through the form).
+  const commit = () => {
+    if (draft !== null) save({ notifications: value });
+  };
 
   const setEvent = (key: NotificationEventKey, on: boolean) =>
     apply({ events: { ...value.events, [key]: on } });

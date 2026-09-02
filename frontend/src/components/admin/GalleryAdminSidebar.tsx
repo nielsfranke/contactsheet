@@ -19,8 +19,9 @@ import { cn } from "@/lib/utils";
 import {
   Settings, Eye, Send, UploadCloud, Download, MoreVertical,
   Plus, CheckSquare, Trash2, Activity, Vote,
-  Folder, FolderOpen, Pencil, Eraser, Image as ImageIcon, Frame, Layers, X, Copy, FolderPlus, FolderInput,
+  Folder, FolderOpen, Pencil, Eraser, Image as ImageIcon, Frame, X, Copy, FolderPlus, FolderInput,
 } from "lucide-react";
+import { Icons } from "@/lib/ui-icons";
 
 export type SortKey = "manual" | "filename" | "date" | "captured" | "rating";
 export type GroupKey = "none" | "flag" | "rating";
@@ -228,7 +229,7 @@ export function GalleryAdminSidebar({
       {/* Collections */}
       <div className="space-y-2">
         <h2 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground flex items-center gap-1.5">
-          <Layers size={13} /> {t("collections")}
+          <Icons.collection size={13} /> {t("collections")}
         </h2>
 
         <Button

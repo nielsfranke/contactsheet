@@ -61,7 +61,11 @@ def _has_access(gallery, access: GalleryAccess | None) -> bool:
 def _require_gallery_access(gallery, gallery_id_from_token: GalleryAccess | None):
     """Raise 401 if gallery is password-protected and the token doesn't unlock it."""
     if not _has_access(gallery, gallery_id_from_token):
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Gallery access token required")
+        raise CodedHTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            code="gallery_token_required",
+            detail="Gallery access token required",
+        )
 
 
 @router.get("/legal/{doc}", response_model=LegalPageResponse)
@@ -664,6 +668,34 @@ def create_public_zip(
     background_tasks.add_task(build_zip_multi, job.id, entries, only_approved=True)
     _record_download(total)
     return _public_zip_response(job, share_token)
+
+
+@router.get("/g/{share_token}/zip/check", status_code=204)
+def check_public_zip(
+    share_token: str,
+    subs: str = Query(""),
+    images: str = Query(""),
+    db: Session = Depends(get_db),
+    storage: StorageProvider = Depends(get_storage),
+    gallery_id_from_token: GalleryAccess | None = Depends(get_optional_gallery_token),
+):
+    """Pre-flight for the streaming download: the same gates as `/zip/stream` (token, downloads
+    on, non-empty selection), no body. The browser can't recover from a non-2xx on a navigation —
+    it would show the JSON error instead of the gallery — so the client checks here first."""
+    gallery, _ = gallery_service.get_public_gallery(db, share_token, storage)
+    _require_gallery_access(gallery, gallery_id_from_token)
+    if not gallery.downloads_enabled:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Downloads are disabled for this gallery")
+    image_ids = {i for i in images.split(",") if i}
+    if image_ids:
+        members = collect_members(db, [(gallery.id, "")], only_approved=True, image_ids=image_ids)
+        if not members:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Nothing to download in the current selection")
+    else:
+        _entries, total = gallery_service.public_zip_entries(db, gallery, {t for t in subs.split(",") if t})
+        if total == 0:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Nothing to download in the current selection")
+    return Response(status_code=204)
 
 
 @router.get("/g/{share_token}/zip/stream")

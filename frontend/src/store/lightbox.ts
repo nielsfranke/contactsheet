@@ -55,10 +55,12 @@ export const useLightboxStore = create<LightboxState>((set, get) => ({
   close: () => set({ isOpen: false }),
   next: () => {
     const { images, currentIndex } = get();
+    if (!images.length) return; // `% 0` is NaN — a keypress racing close-on-empty must not desync
     set({ currentIndex: (currentIndex + 1) % images.length });
   },
   prev: () => {
     const { images, currentIndex } = get();
+    if (!images.length) return;
     set({ currentIndex: (currentIndex - 1 + images.length) % images.length });
   },
   // Jump straight to an index (no wrap) — used by the mobile scroll-snap carousel, which reports

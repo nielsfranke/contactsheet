@@ -772,3 +772,21 @@ def test_zip_download_name_survives_non_ascii_gallery_names(admin_client):
     assert r.status_code == 200
     cd = r.headers["content-disposition"]
     assert cd.startswith("attachment;") and "filename*=UTF-8''" in cd and "%E6%9D%B1%E4%BA%AC" in cd
+
+
+def test_zip_check_runs_the_download_gates_without_a_body(admin_client):
+    """The client pre-flights the streaming download here: a navigation can't recover from a
+    non-2xx (the tab would show the JSON error instead of the gallery)."""
+    g = make_gallery(admin_client, "Zip")
+    _upload(admin_client, g["id"])
+    empty = make_gallery(admin_client, "Empty")
+    pub = _pub()
+    assert pub.get(f"/api/public/g/{g['share_token']}/zip/check").status_code == 204
+    assert pub.get(f"/api/public/g/{empty['share_token']}/zip/check").status_code == 400
+    admin_client.patch(f"/api/galleries/{g['id']}", json={"password": "secret"})
+    r = pub.get(f"/api/public/g/{g['share_token']}/zip/check")
+    assert r.status_code == 401 and r.json()["code"] == "gallery_token_required"
+    tok = _auth_token(pub, g["share_token"])
+    assert pub.get(f"/api/public/g/{g['share_token']}/zip/check", headers={"Authorization": f"Bearer {tok}"}).status_code == 204
+    admin_client.patch(f"/api/galleries/{g['id']}", json={"downloads_enabled": False})
+    assert pub.get(f"/api/public/g/{g['share_token']}/zip/check", headers={"Authorization": f"Bearer {tok}"}).status_code == 403

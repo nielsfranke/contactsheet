@@ -55,6 +55,7 @@ export default function GalleryDetailPage() {
     searchQuery,
     setSearchQuery,
     searchActive,
+    filterActive,
     searchLoading,
     searchError,
     openSettings,
@@ -356,7 +357,7 @@ export default function GalleryDetailPage() {
                     ? t("emptyNoImages")
                     : t("emptyFiltered")
               }
-              draggable={arrange.sortKey === "manual" && !groups && !selection.mode && !searchActive}
+              draggable={arrange.sortKey === "manual" && !groups && !selection.mode && !searchActive && !filterActive}
               onOpen={d.openPreview}
               selectionMode={selection.mode}
               isSelected={selection.isSelected}

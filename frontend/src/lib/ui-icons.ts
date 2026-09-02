@@ -44,6 +44,8 @@ export const Icons = {
   pin: Pin,
   /** A gallery that contains sub-galleries. */
   subGallery: Layers,
+  /** A saved selection (collection) of photos. Shares the glyph with subGallery on purpose. */
+  collection: Layers,
   /** Open / jump to the detail page. */
   open: ArrowUpRight,
   /** Password-protected. */

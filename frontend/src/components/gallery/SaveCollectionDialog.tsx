@@ -21,10 +21,22 @@ export function SaveCollectionDialog({
   const t = useTranslations("gallery");
   const tc = useTranslations("common");
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-6 backdrop-blur-sm">
-      <div className="w-full max-w-sm space-y-4 rounded-xl border border-border bg-popover text-popover-foreground p-6 shadow-2xl">
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-6 backdrop-blur-sm"
+      onClick={() => !saving && onCancel()}
+    >
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="save-collection-title"
+        onClick={(e) => e.stopPropagation()}
+        onKeyDown={(e) => {
+          if (e.key === "Escape" && !saving) onCancel();
+        }}
+        className="w-full max-w-sm space-y-4 rounded-xl border border-border bg-popover text-popover-foreground p-6 shadow-2xl"
+      >
         <div>
-          <h2 className="text-lg font-semibold text-foreground">{t("collections.saveDialogTitle")}</h2>
+          <h2 id="save-collection-title" className="text-lg font-semibold text-foreground">{t("collections.saveDialogTitle")}</h2>
           <p className="mt-1 text-sm text-muted-foreground">{t("collections.imageCount", { count: imageCount })}</p>
         </div>
         <form

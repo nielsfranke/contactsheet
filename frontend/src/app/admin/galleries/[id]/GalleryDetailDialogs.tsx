@@ -381,7 +381,7 @@ export function GalleryDetailDialogs({
             value={renameValue}
             onChange={(e) => setRenameValue(e.target.value)}
             onKeyDown={(e) => {
-              if (e.key === "Enter" && renameValue.trim()) updateMutation.mutate({ name: renameValue.trim() });
+              if (e.key === "Enter" && renameValue.trim() && !updateMutation.isPending) updateMutation.mutate({ name: renameValue.trim() });
             }}
             placeholder={t("renamePlaceholder")}
             autoFocus
@@ -405,7 +405,7 @@ export function GalleryDetailDialogs({
             value={renameCollectionValue}
             onChange={(e) => setRenameCollectionValue(e.target.value)}
             onKeyDown={(e) => {
-              if (e.key === "Enter" && renameCollectionTarget && renameCollectionValue.trim())
+              if (e.key === "Enter" && renameCollectionTarget && renameCollectionValue.trim() && !updateCollectionMutation.isPending)
                 updateCollectionMutation.mutate({ collectionId: renameCollectionTarget.id, data: { name: renameCollectionValue.trim() } });
             }}
             placeholder={t("collectionNamePlaceholder")}
@@ -446,7 +446,7 @@ export function GalleryDetailDialogs({
             value={renameImageValue}
             onChange={(e) => setRenameImageValue(e.target.value)}
             onKeyDown={(e) => {
-              if (e.key === "Enter" && renameImageTarget && renameImageValue.trim())
+              if (e.key === "Enter" && renameImageTarget && renameImageValue.trim() && !renameImageMutation.isPending)
                 renameImageMutation.mutate({ imgId: renameImageTarget.id, name: renameImageValue.trim() });
             }}
             placeholder={t("filenamePlaceholder")}

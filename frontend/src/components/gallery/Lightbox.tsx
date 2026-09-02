@@ -197,6 +197,10 @@ export function Lightbox({
   const dismiss = useRef<{ x: number; y: number; axis: "h" | "v" | null; dy: number } | null>(null);
   const imgRef = useRef<HTMLImageElement>(null);
   const hoverClearTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => () => {
+    if (scrollSettle.current) clearTimeout(scrollSettle.current);
+    if (hoverClearTimer.current) clearTimeout(hoverClearTimer.current);
+  }, []);
   // Measured top-toolbar height — the bare bottom strip mirrors it for an even photo frame.
   const topBarRef = useRef<HTMLDivElement>(null);
   const [topBarH, setTopBarH] = useState(0);
@@ -308,6 +312,18 @@ export function Lightbox({
     setHoveredAnno(null);
     setShowAnnotations(false);
     setZoomBoost(false);
+  }
+  // Same photo, new server value (another reviewer flagged it → realtime refetch): follow it, the
+  // way the grid tile does — otherwise the open lightbox keeps the stale flag until you navigate.
+  const [syncedFlag, setSyncedFlag] = useState(image?.color_flag);
+  const [syncedRating, setSyncedRating] = useState(image?.rating);
+  if (image && image.color_flag !== syncedFlag) {
+    setSyncedFlag(image.color_flag);
+    setLocalFlag(image.color_flag);
+  }
+  if (image && image.rating !== syncedRating) {
+    setSyncedRating(image.rating);
+    setLocalRating(image.rating);
   }
 
   const effectiveFlag: ColorFlag = teamVoting
@@ -1101,7 +1117,9 @@ export function Lightbox({
                           className="max-w-full max-h-full object-contain"
                         />
                       ) : <div className="w-full h-full" />)
-                    : slideContent(im, isCurrent, dist <= 4, dist <= 2)}
+                    // Far slides stay sized-but-empty: with thousands of photos, mounting every
+                    // slide's zoom layer + badges is what makes each swipe re-reconcile the lot.
+                    : dist <= 6 ? slideContent(im, isCurrent, dist <= 4, dist <= 2) : null}
                 </div>
               );
             })}

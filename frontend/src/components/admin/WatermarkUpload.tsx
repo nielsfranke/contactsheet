@@ -9,6 +9,7 @@ import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { Upload, Trash2, Loader2 } from "lucide-react";
 import { toast } from "sonner";
+import { api } from "@/lib/api";
 
 interface Props {
   galleryId: string;
@@ -27,18 +28,7 @@ export function WatermarkUpload({ galleryId, hasWatermark, onUploaded }: Props) 
   async function handleUpload(file: File) {
     setLoading(true);
     try {
-      const form = new FormData();
-      form.append("file", file);
-      const res = await fetch(`/api/galleries/${galleryId}/watermark`, {
-        method: "POST",
-        body: form,
-        credentials: "include",
-      });
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({}));
-        throw new Error(err.detail ?? t("uploadFailed"));
-      }
-      const body = await res.json().catch(() => ({}));
+      const body = await api.galleries.uploadWatermark(galleryId, file);
       onUploaded?.(body.filename ?? null);
       qc.invalidateQueries({ queryKey: ["gallery", galleryId] });
       toast.success(t("watermarkUploaded"));
@@ -52,11 +42,7 @@ export function WatermarkUpload({ galleryId, hasWatermark, onUploaded }: Props) 
   async function handleDelete() {
     setLoading(true);
     try {
-      const res = await fetch(`/api/galleries/${galleryId}/watermark`, {
-        method: "DELETE",
-        credentials: "include",
-      });
-      if (!res.ok) throw new Error(t("deleteFailed"));
+      await api.galleries.deleteWatermark(galleryId);
       onUploaded?.(null);
       qc.invalidateQueries({ queryKey: ["gallery", galleryId] });
       toast.success(t("watermarkRemoved"));

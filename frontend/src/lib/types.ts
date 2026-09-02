@@ -210,9 +210,17 @@ export interface Vote {
   updated_at: string;
 }
 
+export interface VoteSummaryImage {
+  totals: Record<ColorFlag, number>;
+  /** reviewer → their flag on this photo */
+  reviewers: Record<string, ColorFlag>;
+  /** reviewer → their star rating (1–5) on this photo; absent when they haven't rated */
+  ratings: Record<string, number>;
+}
+
 export interface VoteSummary {
   reviewers: string[];
-  images: Record<string, Record<string, string>>;
+  images: Record<string, VoteSummaryImage>;
 }
 
 export interface GalleryCreate {

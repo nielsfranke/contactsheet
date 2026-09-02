@@ -3,7 +3,7 @@
 
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Folder, FolderOpen, X, Loader2, AlertTriangle, Check } from "lucide-react";
 import { useTranslations } from "next-intl";
 
@@ -33,6 +33,14 @@ export function DownloadGalleryDialog({
 }: Props) {
   const t = useTranslations("gallery.downloadDialog");
   const tc = useTranslations("common");
+  // Escape closes (unless a download is being prepared), like the Radix dialogs elsewhere.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape" && !preparing) onOpenChange(false);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [preparing, onOpenChange]);
   const [selected, setSelected] = useState<Set<string>>(new Set());
 
   // Reset selection each time the dialog (re)opens — via the previous-state pattern.
@@ -67,12 +75,20 @@ export function DownloadGalleryDialog({
       onClick={() => !preparing && onOpenChange(false)}
     >
       <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="download-dialog-title"
         className="w-full max-w-lg rounded-2xl bg-popover text-popover-foreground shadow-xl p-6 space-y-4"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-start justify-between">
-          <h2 className="text-xl font-semibold">{t("title")}</h2>
-          <button onClick={() => !preparing && onOpenChange(false)} className="text-muted-foreground hover:text-foreground">
+          <h2 id="download-dialog-title" className="text-xl font-semibold">{t("title")}</h2>
+          <button
+            type="button"
+            onClick={() => !preparing && onOpenChange(false)}
+            aria-label={tc("close")}
+            className="text-muted-foreground hover:text-foreground"
+          >
             <X size={20} />
           </button>
         </div>

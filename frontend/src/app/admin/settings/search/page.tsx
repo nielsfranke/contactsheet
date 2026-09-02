@@ -3,6 +3,8 @@
 
 "use client";
 
+import { useEffect, useRef, useState } from "react";
+
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
@@ -28,6 +30,10 @@ const THRESHOLD_MAX_PCT = 30;
 
 export default function SearchSettingsPage() {
   const t = useTranslations("settings.search");
+  // Slider drag → one PATCH after the hand comes off, not one per tick.
+  const [pctDraft, setPctDraft] = useState<number | null>(null);
+  const thresholdTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => () => { if (thresholdTimer.current) clearTimeout(thresholdTimer.current); }, []);
   const qc = useQueryClient();
   const { save, status } = useSettingsAutosave();
 
@@ -73,7 +79,7 @@ export default function SearchSettingsPage() {
   const ready = !!idx?.configured && sidecarReachable;
   const unavailable = statusKnown && !ready;
   // picdrop-style "accuracy": present the cosine cutoff as a percentage the user nudges.
-  const accuracyPct = Math.round(cfg.default_threshold * 100);
+  const accuracyPct = pctDraft ?? Math.round(cfg.default_threshold * 100);
 
   return (
     <div className="p-6 max-w-xl space-y-6">
@@ -126,7 +132,16 @@ export default function SearchSettingsPage() {
                 max={THRESHOLD_MAX_PCT}
                 step={1}
                 value={accuracyPct}
-                onChange={(e) => update({ default_threshold: Number(e.target.value) / 100 })}
+                onChange={(e) => {
+                  const pct = Number(e.target.value);
+                  setPctDraft(pct);
+                  if (thresholdTimer.current) clearTimeout(thresholdTimer.current);
+                  thresholdTimer.current = setTimeout(() => {
+                    thresholdTimer.current = null;
+                    update({ default_threshold: pct / 100 });
+                    setPctDraft(null);
+                  }, 300);
+                }}
                 className="w-full accent-primary"
                 aria-label={t("threshold")}
               />

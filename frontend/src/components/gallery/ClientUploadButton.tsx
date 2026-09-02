@@ -14,6 +14,9 @@ import { Input } from "@/components/ui/input";
 import { useTranslations } from "next-intl";
 import { ACCEPTED_IMAGE_EXT_ATTR } from "@/hooks/useImageUpload";
 
+// Mirrors `image_service.CLIENT_UPLOAD_MAX_FILES` on the backend.
+const CLIENT_UPLOAD_BATCH = 50;
+
 // Images only on the public path (no video for client uploads); RAW/TIFF/PSD arrive with no
 // usable MIME, so accept by extension. The backend re-validates by magic and rejects video.
 const ACCEPT = ACCEPTED_IMAGE_EXT_ATTR;
@@ -75,15 +78,28 @@ export function ClientUploadButton({ shareToken, galleryToken, moderation, class
     setUploading(true);
     setPct(0);
     try {
-      const uploaded = await api.public.uploadImages(
-        shareToken,
-        files,
-        useReviewerStore.getState().name ?? "Guest",
-        galleryToken,
-        setPct,
-        controller.signal,
-      );
-      const n = uploaded.length;
+      // The backend caps a client-upload request at 50 files: send a big phone-roll selection in
+      // sequential batches (aggregate progress) instead of streaming hundreds of MB and then
+      // getting the whole thing rejected.
+      const uploader = useReviewerStore.getState().name ?? "Guest";
+      const batches: File[][] = [];
+      for (let i = 0; i < files.length; i += CLIENT_UPLOAD_BATCH) batches.push(files.slice(i, i + CLIENT_UPLOAD_BATCH));
+      const totalBytes = files.reduce((sum, f) => sum + f.size, 0) || 1;
+      let doneBytes = 0;
+      let n = 0;
+      for (const batch of batches) {
+        const batchBytes = batch.reduce((sum, f) => sum + f.size, 0);
+        const uploaded = await api.public.uploadImages(
+          shareToken,
+          batch,
+          uploader,
+          galleryToken,
+          (p) => setPct(Math.round(((doneBytes + (batchBytes * p) / 100) / totalBytes) * 100)),
+          controller.signal,
+        );
+        doneBytes += batchBytes;
+        n += uploaded.length;
+      }
       if (moderation) {
         // Held in the approval queue — it won't appear publicly yet, so don't refetch the grid.
         toast.success(t("addedPending", { count: n }));

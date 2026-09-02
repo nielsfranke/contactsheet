@@ -7,6 +7,7 @@ import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
+import { copyText } from "@/lib/utils";
 import { Check, Copy } from "lucide-react";
 import { api, getErrorCode } from "@/lib/api";
 import type { ApiToken, ApiTokenCreated, ApiTokenScope } from "@/lib/types";
@@ -83,11 +84,12 @@ function CreateSection({ t, te }: { t: T; te: T }) {
 
   async function copySecret() {
     if (!created) return;
-    try {
-      await navigator.clipboard.writeText(created.token);
+    // copyText falls back to execCommand — `navigator.clipboard` is undefined on a plain-http
+    // LAN origin, the common self-hosted case.
+    if (await copyText(created.token)) {
       setCopied(true);
       toast.success(t("copied"));
-    } catch {
+    } else {
       toast.error(t("copyFailed"));
     }
   }
