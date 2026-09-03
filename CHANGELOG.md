@@ -12,6 +12,36 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.11.0] - 2026-09-03
+
+Analytics grows up, and the admin gallery overview gets a phone-friendly list. **A migration
+(0049) runs on upgrade; no action needed.**
+
+### Added
+
+- **Analytics: the range selector now applies to everything.** Totals, top photos, busiest
+  galleries and the new reviewer ranking all follow the 7 / 30 / 90-day window — previously only
+  the two charts did, and the totals were silently all-time.
+- **Period-over-period trends on every stat tile** (`+40 %`, `−12 %`, `new`), comparing the
+  window with the equally long one before it.
+- **Engagement over time** — a third chart summing flags, likes, ratings, votes, comments and
+  annotations per day.
+- **Reviewers table** (per gallery and instance-wide): who flagged, rated, liked, voted,
+  commented or uploaded how much, and when they were last active. Anonymous rows (guest views,
+  shared flags without a name, the photographer's own moderation) are excluded.
+- **Review status** per gallery: how many photos carry any mark, the colour-flag split, the star
+  histogram, photos with likes / comments and the number of team voters — a snapshot of the live
+  images, not activity history, so it stays right after a flag is set and cleared again.
+- **Phone list view for galleries.** Settings → Workspace (or the toggle in the overview toolbar
+  on a phone) switches the All Galleries page and a gallery's sub-galleries to compact rows below
+  the tablet breakpoint. Desktop always keeps the cover grid.
+
+### Changed
+
+- Uploads and team-votes tiles on the analytics dashboard appear only once either has activity.
+- The busiest-galleries table's engagement column is computed server-side (`engagement` on the
+  rollup) instead of being re-derived in the browser.
+
 ## [1.10.0] - 2026-09-02
 
 A hardening release from a full-codebase review: the public surface stops leaking around the
@@ -1193,7 +1223,8 @@ contract are considered stable as of this release.
   caps (stricter for public uploads).
 - Docker Compose deployment (backend + frontend + nginx); SQLite + local filesystem.
 
-[Unreleased]: https://github.com/nielsfranke/contactsheet/compare/v1.10.0...HEAD
+[Unreleased]: https://github.com/nielsfranke/contactsheet/compare/v1.11.0...HEAD
+[1.11.0]: https://github.com/nielsfranke/contactsheet/compare/v1.10.0...v1.11.0
 [1.10.0]: https://github.com/nielsfranke/contactsheet/compare/v1.9.4...v1.10.0
 [1.9.4]: https://github.com/nielsfranke/contactsheet/compare/v1.9.3...v1.9.4
 [1.9.3]: https://github.com/nielsfranke/contactsheet/compare/v1.9.2...v1.9.3
