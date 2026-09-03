@@ -376,3 +376,12 @@ def test_sort_order_is_bounded(admin_client):
     g = make_gallery(admin_client, "G")
     assert admin_client.patch(f"/api/galleries/{g['id']}", json={"sort_order": 2**70}).status_code == 422
     assert admin_client.patch(f"/api/galleries/{g['id']}", json={"sort_order": -1}).status_code == 422
+
+
+# ---- admin view settings ----------------------------------------------------------
+
+def test_overview_mobile_layout_roundtrip(admin_client):
+    assert admin_client.get("/api/admin/settings").json()["overview_mobile_layout"] == "grid"
+    r = admin_client.patch("/api/admin/settings", json={"overview_mobile_layout": "list"})
+    assert r.status_code == 200 and r.json()["overview_mobile_layout"] == "list"
+    assert admin_client.patch("/api/admin/settings", json={"overview_mobile_layout": "tiles"}).status_code == 422

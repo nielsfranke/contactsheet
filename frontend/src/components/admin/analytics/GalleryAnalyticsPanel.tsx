@@ -13,6 +13,8 @@ import { BarTimeseries } from "./BarTimeseries";
 import { TotalsRow } from "./TotalsRow";
 import { RangeToggle } from "./RangeToggle";
 import { ViewsDisabledNote } from "./ViewsDisabledNote";
+import { ReviewersTable } from "./ReviewersTable";
+import { ReviewStatusPanel } from "./ReviewStatusPanel";
 import type { TopImage } from "@/lib/types";
 
 const BREAKDOWN_ICONS: Record<string, React.ReactNode> = {
@@ -53,6 +55,11 @@ export function GalleryAnalyticsPanel({ galleryId }: { galleryId: string }) {
     queryKey: ["analytics", "gallery", galleryId, days],
     queryFn: () => api.analytics.gallery(galleryId, days),
   });
+  // Which of flags / stars the review-status block shows follows the instance rating mode.
+  const { data: settings } = useQuery({
+    queryKey: ["admin-settings"],
+    queryFn: () => api.adminSettings.get(),
+  });
 
   if (isLoading || !data) {
     return (
@@ -69,15 +76,21 @@ export function GalleryAnalyticsPanel({ galleryId }: { galleryId: string }) {
         <RangeToggle value={days} onChange={setDays} />
       </div>
 
-      <TotalsRow totals={data.totals} viewsAvailable={data.views_available} />
+      <TotalsRow totals={data.totals} previous={data.previous_totals} days={days} viewsAvailable={data.views_available} />
 
       {!data.views_available && <ViewsDisabledNote />}
 
-      <div className="grid gap-3 sm:grid-cols-2">
+      <div className={`grid gap-3 ${data.views_available ? "sm:grid-cols-3" : "sm:grid-cols-2"}`}>
         {data.views_available && (
           <BarTimeseries data={data.views_series} label={t("viewsOverTime")} totalLabel={t("total")} />
         )}
         <BarTimeseries data={data.downloads_series} label={t("downloadsOverTime")} totalLabel={t("total")} />
+        <BarTimeseries data={data.engagement_series} label={t("engagementOverTime")} totalLabel={t("total")} />
+      </div>
+
+      <div>
+        <h4 className="mb-2 text-sm font-medium text-foreground">{t("reviewStatus")}</h4>
+        <ReviewStatusPanel status={data.review_status} ratingMode={settings?.rating_mode ?? "flags"} />
       </div>
 
       <div>
@@ -90,6 +103,15 @@ export function GalleryAnalyticsPanel({ galleryId }: { galleryId: string }) {
               <TopImageCard key={item.image.id} item={item} />
             ))}
           </div>
+        )}
+      </div>
+
+      <div>
+        <h4 className="mb-2 text-sm font-medium text-foreground">{t("reviewers")}</h4>
+        {data.top_reviewers.length === 0 ? (
+          <p className="text-xs text-muted-foreground">{t("noReviewers")}</p>
+        ) : (
+          <ReviewersTable reviewers={data.top_reviewers} />
         )}
       </div>
 

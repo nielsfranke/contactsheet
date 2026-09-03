@@ -300,6 +300,8 @@ export type AdminGridMode = "mirror" | "custom";
 export type OverviewShape = "square" | "aspect";
 export type OverviewSort = "created" | "name" | "photos";
 export type SortDir = "asc" | "desc";
+/** Gallery overview below `md` (phones): cover grid or compact rows. Desktop always uses the grid. */
+export type OverviewMobileLayout = "grid" | "list";
 /** In-gallery photo sort keys (mirrors GalleryAdminSidebar's SortKey). */
 export type GallerySortKey = "manual" | "filename" | "date" | "captured";
 
@@ -406,6 +408,7 @@ export interface AppSettings {
   overview_corners: CornersType;
   overview_sort: OverviewSort;
   overview_sort_dir: SortDir;
+  overview_mobile_layout: OverviewMobileLayout;
   gallery_sort: GallerySortKey;
   gallery_sort_dir: SortDir;
   footer_enabled: boolean;
@@ -485,6 +488,7 @@ export interface AppSettingsUpdate {
   overview_corners?: CornersType;
   overview_sort?: OverviewSort;
   overview_sort_dir?: SortDir;
+  overview_mobile_layout?: OverviewMobileLayout;
   gallery_sort?: GallerySortKey;
   gallery_sort_dir?: SortDir;
   footer_enabled?: boolean;
@@ -643,15 +647,42 @@ export interface VisitorEntry {
   at: string;
 }
 
+/** A named client (reviewer / uploader) and what they did in the window. */
+export interface ReviewerEntry {
+  name: string;
+  score: number;
+  breakdown: Record<string, number>;
+  last_active: string;
+}
+
+/** Current state of the gallery's live images — a snapshot, not history (ignores the window). */
+export interface ReviewStatus {
+  images: number;
+  /** Images carrying any mark: flag, star, like, team vote or comment. */
+  reviewed: number;
+  /** Shared colour flag → image count (all five colours present, incl. "none"). */
+  flags: Record<ColorFlag, number>;
+  /** Index = shared star rating 0..5 → image count (0 = unrated). */
+  ratings: number[];
+  liked: number;
+  commented: number;
+  voters: number;
+}
+
 export interface GalleryAnalytics {
   gallery_id: string;
   days: number;
   /** False when IP logging is off: views/visitors are unavailable, not zero. */
   views_available: boolean;
+  /** Windowed to the last `days`; previous_totals covers the `days` before that. */
   totals: EngagementTotals;
+  previous_totals: EngagementTotals;
   views_series: TimeseriesPoint[];
   downloads_series: TimeseriesPoint[];
+  engagement_series: TimeseriesPoint[];
   top_images: TopImage[];
+  top_reviewers: ReviewerEntry[];
+  review_status: ReviewStatus;
   recent_visitors: VisitorEntry[];
 }
 
@@ -659,16 +690,22 @@ export interface GalleryRollup {
   gallery_id: string;
   name: string;
   totals: EngagementTotals;
+  /** All activity in the window (incl. views/downloads/uploads). */
   score: number;
+  /** Per-photo engagement only (flags/likes/ratings/votes/comments/annotations). */
+  engagement: number;
 }
 
 export interface InstanceAnalytics {
   days: number;
   views_available: boolean;
   totals: EngagementTotals;
+  previous_totals: EngagementTotals;
   views_series: TimeseriesPoint[];
   downloads_series: TimeseriesPoint[];
+  engagement_series: TimeseriesPoint[];
   busiest_galleries: GalleryRollup[];
+  top_reviewers: ReviewerEntry[];
 }
 
 export type ZipFilterType = "all" | "flagged" | "green" | "red" | "yellow" | "blue";

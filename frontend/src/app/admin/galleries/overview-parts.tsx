@@ -199,3 +199,113 @@ export function GalleryTile({
     </div>
   );
 }
+
+/**
+ * Compact row variant of GalleryTile for the phone "list" layout (`overview_mobile_layout`): a
+ * small cover, the name + counts, and one kebab holding pin / rename / delete. Same data and
+ * callbacks as the tile so the page can swap between the two without re-plumbing. Drag/drop is
+ * off on touch (as on the tile); the row stays a nest drop target for a mouse-driven narrow window.
+ */
+export function GalleryListRow({
+  g, tileCorners, dimmed, onOpen, onTogglePin, onRename, onDelete,
+}: {
+  g: GalleryResponse;
+  tileCorners: string;
+  dimmed: boolean;
+  onOpen: () => void;
+  onTogglePin: () => void;
+  onRename: () => void;
+  onDelete: () => void;
+}) {
+  const t = useTranslations("admin.galleries");
+  const isTouch = useCoarsePointer();
+  const isFolder = g.children.length > 0;
+  const countParts: string[] = [];
+  if (isFolder) countParts.push(t("galleryCount", { count: g.children.length }));
+  if (g.image_count > 0 || countParts.length === 0) countParts.push(t("photoCount", { count: g.image_count }));
+  const drag = useDraggable({ id: `${g.id}:row`, data: { reparent: true, galleryId: g.id, parentId: g.parent_id, name: g.name }, disabled: isTouch });
+  const drop = useDroppable({ id: `${GALLERY_DROP_PREFIX}${g.id}:row`, data: { galleryId: g.id }, disabled: isTouch });
+  const setRef = (el: HTMLElement | null) => {
+    drag.setNodeRef(el);
+    drop.setNodeRef(el);
+  };
+  return (
+    <div
+      ref={setRef}
+      {...(isTouch ? {} : drag.listeners)}
+      onClick={onOpen}
+      className={cn(
+        "group -mx-2 flex cursor-pointer items-center gap-3 rounded-lg px-2 py-2 transition-colors active:bg-muted/60",
+        drop.isOver && "bg-accent ring-2 ring-primary",
+        dimmed && "opacity-30",
+      )}
+    >
+      <div className={cn("relative h-14 w-14 shrink-0 overflow-hidden bg-muted", tileCorners)}>
+        {g.cover_image_url ? (
+          // alt="": decorative — the gallery name is the link text beside it.
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={g.cover_image_url} alt="" className="h-full w-full object-cover" />
+        ) : (
+          <CoverPlaceholder name={g.name} compact />
+        )}
+        {isFolder && (
+          <OverlayPill variant="badge" size="xs" className="absolute bottom-1 right-1 gap-0.5" title={t("subGalleryCount", { count: g.children.length })}>
+            <Icons.subGallery size={10} aria-hidden /> <span className="tabular-nums" aria-hidden>{g.children.length}</span>
+            <span className="sr-only">{t("subGalleryCount", { count: g.children.length })}</span>
+          </OverlayPill>
+        )}
+      </div>
+      <div className="min-w-0 flex-1">
+        <div className="flex items-center gap-1">
+          {g.has_password && <Icons.locked size={12} className="flex-shrink-0 text-muted-foreground" />}
+          <Link
+            href={`/admin/galleries/${g.id}`}
+            onClick={(e) => e.stopPropagation()}
+            className="min-w-0 truncate rounded text-sm font-medium text-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          >
+            {g.name}
+          </Link>
+          {g.pinned && (
+            <Icons.pin size={12} className="flex-shrink-0 -rotate-45 fill-current text-muted-foreground" aria-label={t("pinnedShelf")} />
+          )}
+        </div>
+        {g.headline && <p className="mt-0.5 truncate text-xs text-muted-foreground/80">{g.headline}</p>}
+        <div className="mt-0.5 flex items-center gap-2 text-xs text-muted-foreground">
+          <span className="inline-flex items-center gap-1" title={t("modeTitle", { mode: MODE_LABELS[g.mode] })}>
+            {g.mode === "collaboration" ? <Icons.modeReview size={11} aria-hidden /> : <Icons.modeShowcase size={11} aria-hidden />}
+            <span className="sr-only">{MODE_LABELS[g.mode]}</span>
+          </span>
+          <span className="truncate">{countParts.join(" · ")}</span>
+          {g.comment_count > 0 && (
+            <span className="flex items-center gap-0.5">
+              <Icons.comment size={10} aria-hidden /> <span aria-hidden>{g.comment_count}</span>
+              <span className="sr-only">{t("commentCount", { count: g.comment_count })}</span>
+            </span>
+          )}
+        </div>
+      </div>
+      {/* Row kebab: the tile's hover pills have no hover on a phone, so pin joins rename/delete. */}
+      <DropdownMenu>
+        <DropdownMenuTrigger
+          className="shrink-0 rounded-md p-2 text-muted-foreground outline-none hover:bg-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring"
+          title={t("moreActions")}
+          aria-label={t("moreActions")}
+          onClick={(e) => e.stopPropagation()}
+        >
+          <MoreVertical size={16} />
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end">
+          <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onTogglePin(); }}>
+            <Icons.pin size={14} className={cn("-rotate-45", g.pinned && "fill-current")} /> {g.pinned ? t("unpinFromTop") : t("pinToTop")}
+          </DropdownMenuItem>
+          <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onRename(); }}>
+            <Pencil size={14} /> {t("renameAction")}
+          </DropdownMenuItem>
+          <DropdownMenuItem destructive onClick={(e) => { e.stopPropagation(); onDelete(); }}>
+            <Trash2 size={14} /> {t("deleteAction")}
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
+    </div>
+  );
+}

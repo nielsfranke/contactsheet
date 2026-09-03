@@ -6,7 +6,7 @@
 import { Suspense, useEffect, useRef } from "react";
 import { useTranslations } from "next-intl";
 import type { GlobalSearchResult, OverviewSort } from "@/lib/types";
-import { Search, Plus, ArrowUp, ArrowDown, Pin, ScanSearch, Loader2 } from "lucide-react";
+import { Search, Plus, ArrowUp, ArrowDown, Pin, ScanSearch, Loader2, LayoutGrid, List } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -16,7 +16,8 @@ import { ToolbarBand } from "@/components/gallery/ToolbarBand";
 import { GRID_COLS, GAP } from "@/lib/gridLayout";
 import { cn } from "@/lib/utils";
 import { useGalleriesBrowser } from "./useGalleriesBrowser";
-import { GalleryTile, TopLevelZone } from "./overview-parts";
+import { GalleryListRow, GalleryTile, TopLevelZone } from "./overview-parts";
+import { useBelowMd } from "@/hooks/useMediaQuery";
 
 const SORT_OPTIONS: { value: OverviewSort; labelKey: string }[] = [
   { value: "created", labelKey: "sortDate" },
@@ -49,7 +50,7 @@ function GalleriesBrowser() {
     sort, dir, pickSort, togglePin, openRename, setDeleteTarget,
     renameTarget, setRenameTarget, renameValue, setRenameValue, submitRename, renameMutation,
     deleteTarget, deleteMutation,
-    size, spacing, tileShape, tileCorners,
+    size, spacing, tileShape, tileCorners, mobileLayout, setMobileLayout,
     searchEnabled, searchMode, setSearchMode,
     photoQuery, setPhotoQuery, semanticActive, browseFiltered, photoResults, photoLoading, photoError, openResult,
     photoSort, photoDir, pickPhotoSort,
@@ -73,6 +74,43 @@ function GalleriesBrowser() {
   }, [hasMore, browseFetchingMore, loadMore]);
 
   const photoMode = searchMode === "photos";
+  // Phone list layout: only below md — desktop always gets the cover grid. The SSR snapshot is
+  // "not mobile", so the first paint is the grid and a phone swaps to rows on hydration.
+  const listView = useBelowMd() && mobileLayout === "list";
+
+  const renderGalleries = (items: typeof visible) =>
+    listView ? (
+      <div className="divide-y divide-border">
+        {items.map((g) => (
+          <GalleryListRow
+            key={g.id}
+            g={g}
+            tileCorners={tileCorners}
+            dimmed={g.id === dimId}
+            onOpen={() => openGallery(g)}
+            onTogglePin={() => togglePin(g)}
+            onRename={() => openRename(g)}
+            onDelete={() => setDeleteTarget(g)}
+          />
+        ))}
+      </div>
+    ) : (
+      <div className={cn("grid items-start", GRID_COLS[size], GAP[spacing])}>
+        {items.map((g) => (
+          <GalleryTile
+            key={g.id}
+            g={g}
+            tileShape={tileShape}
+            tileCorners={tileCorners}
+            dimmed={g.id === dimId}
+            onOpen={() => openGallery(g)}
+            onTogglePin={() => togglePin(g)}
+            onRename={() => openRename(g)}
+            onDelete={() => setDeleteTarget(g)}
+          />
+        ))}
+      </div>
+    );
 
   // One renderer for both browse + search hits — a thumbnail, a gallery badge, and the filename.
   // Clicking deep-links into the gallery and opens the lightbox at that photo.
@@ -187,6 +225,19 @@ function GalleriesBrowser() {
           <Button size="sm" onClick={() => setCreateOpen(true)}>
             <Plus size={15} className="mr-1.5" /> {t("newGallery")}
           </Button>
+          {/* Grid ⇄ list, phones only (md:hidden): persisted as overview_mobile_layout. */}
+          {!photoMode && (
+            <button
+              type="button"
+              onClick={() => setMobileLayout(mobileLayout === "list" ? "grid" : "list")}
+              title={mobileLayout === "list" ? t("viewGrid") : t("viewList")}
+              aria-label={mobileLayout === "list" ? t("viewGrid") : t("viewList")}
+              aria-pressed={mobileLayout === "list"}
+              className="inline-flex h-8 w-8 items-center justify-center rounded-md bg-muted text-muted-foreground outline-none hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring md:hidden"
+            >
+              {mobileLayout === "list" ? <LayoutGrid size={15} /> : <List size={15} />}
+            </button>
+          )}
           {/* Sort — galleries by date/name/photos; All Photos by date/name. Hidden while a photo
               search is active (results are a similarity ranking). */}
           {!photoMode ? (
@@ -297,21 +348,7 @@ function GalleriesBrowser() {
               <h2 className="mb-2 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                 <Pin size={13} className="fill-current -rotate-45" /> {t("pinnedShelf")}
               </h2>
-              <div className={cn("grid items-start", GRID_COLS[size], GAP[spacing])}>
-                {pinned.map((g) => (
-                  <GalleryTile
-                    key={g.id}
-                    g={g}
-                    tileShape={tileShape}
-                    tileCorners={tileCorners}
-                    dimmed={false}
-                    onOpen={() => openGallery(g)}
-                    onTogglePin={() => togglePin(g)}
-                    onRename={() => openRename(g)}
-                    onDelete={() => setDeleteTarget(g)}
-                  />
-                ))}
-              </div>
+              {renderGalleries(pinned)}
             </section>
           )}
 
@@ -320,21 +357,7 @@ function GalleriesBrowser() {
               {q ? t("emptyFilter") : t("emptyRoot")}
             </p>
           ) : (
-            <div className={cn("grid items-start", GRID_COLS[size], GAP[spacing])}>
-              {visible.map((g) => (
-                <GalleryTile
-                  key={g.id}
-                  g={g}
-                  tileShape={tileShape}
-                  tileCorners={tileCorners}
-                  dimmed={g.id === dimId}
-                  onOpen={() => openGallery(g)}
-                  onTogglePin={() => togglePin(g)}
-                  onRename={() => openRename(g)}
-                  onDelete={() => setDeleteTarget(g)}
-                />
-              ))}
-            </div>
+            renderGalleries(visible)
           )}
         </>
       )}

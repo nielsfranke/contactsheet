@@ -101,3 +101,51 @@ export function SubGalleryCard({ child, parentId, onShare }: { child: GalleryRes
     </div>
   );
 }
+
+/**
+ * Row variant of SubGalleryCard for the phone "list" layout (`overview_mobile_layout`). Same
+ * drag source / drop target wiring; the share button is always visible (no hover on touch).
+ */
+export function SubGalleryRow({ child, parentId, onShare }: { child: GalleryResponse; parentId: string; onShare: () => void }) {
+  const t = useTranslations("admin.detail");
+  const drag = useDraggable({ id: `${child.id}:row`, data: { reparent: true, galleryId: child.id, parentId, name: child.name } });
+  const drop = useDroppable({ id: `${GALLERY_DROP_PREFIX}${child.id}:row`, data: { galleryId: child.id } });
+  const active = useAdminDndActive();
+  const dimmed = active?.kind === "gallery" && active.galleryId === child.id;
+  const setRef = (el: HTMLElement | null) => { drag.setNodeRef(el); drop.setNodeRef(el); };
+  return (
+    <div
+      ref={setRef}
+      {...drag.listeners}
+      className={cn(
+        "-mx-2 flex items-center gap-3 rounded-lg px-2 py-2 transition-colors active:bg-muted/60",
+        dimmed && "opacity-30",
+        drop.isOver && "bg-accent ring-2 ring-primary",
+      )}
+    >
+      <Link href={`/admin/galleries/${child.id}`} className="flex min-w-0 flex-1 items-center gap-3">
+        <div className="h-14 w-14 shrink-0 overflow-hidden rounded-md bg-muted">
+          {child.cover_image_url ? (
+            // alt="": decorative — the gallery name is the link text beside it.
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={child.cover_image_url} alt="" className="h-full w-full object-cover" />
+          ) : (
+            <CoverPlaceholder name={child.name} compact />
+          )}
+        </div>
+        <div className="min-w-0 flex-1">
+          <p className="truncate text-sm font-medium text-foreground">{child.name}</p>
+          <p className="text-xs text-muted-foreground">{t("imagesCount", { count: child.image_count })}</p>
+        </div>
+      </Link>
+      <button
+        onClick={onShare}
+        title={t("shareLink")}
+        aria-label={t("shareLink")}
+        className="shrink-0 rounded-md p-2 text-muted-foreground outline-none hover:bg-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring"
+      >
+        <Send size={14} />
+      </button>
+    </div>
+  );
+}

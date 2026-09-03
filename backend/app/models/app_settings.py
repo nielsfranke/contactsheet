@@ -91,6 +91,9 @@ class AppSettings(Base):
     overview_sort: Mapped[str] = mapped_column(String(20), nullable=False, default="created")
     # Direction of overview_sort / left-tree order: "asc" or "desc". Default newest-first.
     overview_sort_dir: Mapped[str] = mapped_column(String(4), nullable=False, default="desc")
+    # How galleries render below the md breakpoint (phones): the cover "grid" or a compact "list"
+    # of rows. Applies to the overview + a gallery's sub-galleries; desktop always uses the grid.
+    overview_mobile_layout: Mapped[str] = mapped_column(String(10), nullable=False, default="grid")
     # Instance-wide default photo sort for galleries (sticky: the admin in-gallery view writes
     # this back on change; the client gallery seeds its initial sort from it). Keys mirror the
     # toolbar: manual / filename / date / captured.

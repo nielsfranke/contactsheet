@@ -16,6 +16,7 @@ import type {
   AppSettings,
   CornersType,
   LayoutType,
+  OverviewMobileLayout,
   OverviewShape,
   OverviewSort,
   SizeType,
@@ -237,6 +238,16 @@ export default function WorkspaceSettingsPage() {
               { value: "created", label: t("newest") },
               { value: "name", label: t("name") },
               { value: "photos", label: t("photos") },
+            ]}
+          />
+        </Row>
+        <Row label={t("mobileLayout")} hint={t("mobileLayoutHint")}>
+          <Segmented<OverviewMobileLayout>
+            value={settings.overview_mobile_layout ?? "grid"}
+            onChange={(v) => save({ overview_mobile_layout: v })}
+            options={[
+              { value: "grid", label: t("grid") },
+              { value: "list", label: t("list") },
             ]}
           />
         </Row>

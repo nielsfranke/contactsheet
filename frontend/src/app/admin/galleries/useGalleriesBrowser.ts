@@ -8,7 +8,7 @@ import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from "@tansta
 import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import { api } from "@/lib/api";
-import type { GalleryResponse, GlobalSearchResult, OverviewSort, SortDir } from "@/lib/types";
+import type { AppSettings, GalleryResponse, GlobalSearchResult, OverviewMobileLayout, OverviewSort, SortDir } from "@/lib/types";
 import { sortGalleries, NATURAL_SORT_DIR, flattenTree } from "@/lib/gallery-sort";
 import { useAdminDndActive } from "@/components/admin/AdminDnd";
 import { toast } from "sonner";
@@ -58,6 +58,7 @@ export function useGalleriesBrowser() {
   const corners = settings?.overview_corners ?? "round";
   const sort = settings?.overview_sort ?? "created";
   const dir: SortDir = settings?.overview_sort_dir ?? "asc";
+  const mobileLayout: OverviewMobileLayout = settings?.overview_mobile_layout ?? "grid";
 
   // Persist the sort choice instance-wide (shared with the left nav tree + admin-view settings).
   const sortMutation = useMutation({
@@ -72,6 +73,17 @@ export function useGalleriesBrowser() {
         ? { overview_sort: field, overview_sort_dir: dir === "asc" ? "desc" : "asc" }
         : { overview_sort: field, overview_sort_dir: NATURAL_SORT_DIR[field] },
     );
+
+  // Phone layout (grid of covers vs compact rows) — persisted like the other overview knobs,
+  // with an optimistic flip so the toggle feels instant on a slow mobile connection.
+  const layoutMutation = useMutation({
+    mutationFn: (next: OverviewMobileLayout) => api.adminSettings.update({ overview_mobile_layout: next }),
+    onMutate: (next) => {
+      qc.setQueryData<AppSettings | undefined>(["admin-settings"], (s) => (s ? { ...s, overview_mobile_layout: next } : s));
+    },
+    onSettled: () => qc.invalidateQueries({ queryKey: ["admin-settings"] }),
+  });
+  const setMobileLayout = (next: OverviewMobileLayout) => layoutMutation.mutate(next);
 
   // Pin/unpin a gallery (admin favorite). Rides PATCH /api/galleries/{id}; refreshes the tree.
   const pinMutation = useMutation({
@@ -240,5 +252,7 @@ export function useGalleriesBrowser() {
     spacing,
     tileShape,
     tileCorners,
+    mobileLayout,
+    setMobileLayout,
   };
 }

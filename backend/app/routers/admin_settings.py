@@ -69,6 +69,7 @@ def _to_response(s) -> AppSettingsResponse:
         overview_corners=s.overview_corners,
         overview_sort=s.overview_sort,
         overview_sort_dir=s.overview_sort_dir,
+        overview_mobile_layout=s.overview_mobile_layout,
         gallery_sort=s.gallery_sort,
         gallery_sort_dir=s.gallery_sort_dir,
         footer_enabled=s.footer_enabled,
@@ -143,7 +144,7 @@ def update_settings(
     if "semantic_search" in body.model_fields_set:
         updates["semantic_search"] = body.semantic_search.model_dump() if body.semantic_search else None
     # Admin-only view + footer scalars.
-    for field in ("admin_grid_mode", "overview_size", "overview_shape", "overview_spacing", "overview_corners", "overview_sort", "overview_sort_dir", "gallery_sort", "gallery_sort_dir", "footer_enabled", "brand_display", "brand_font", "activity_ip_logging", "activity_ip_retention_days", "rating_mode", "auto_header_enabled", "support_link_enabled"):
+    for field in ("admin_grid_mode", "overview_size", "overview_shape", "overview_spacing", "overview_corners", "overview_sort", "overview_sort_dir", "overview_mobile_layout", "gallery_sort", "gallery_sort_dir", "footer_enabled", "brand_display", "brand_font", "activity_ip_logging", "activity_ip_retention_days", "rating_mode", "auto_header_enabled", "support_link_enabled"):
         if getattr(body, field) is not None:
             updates[field] = getattr(body, field)
     resize_previews = (

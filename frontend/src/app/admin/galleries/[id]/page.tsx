@@ -6,7 +6,8 @@
 import { useEffect, useRef } from "react";
 import { useParams, useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { SidebarPortal, SubGalleryCard } from "./parts";
+import { SidebarPortal, SubGalleryCard, SubGalleryRow } from "./parts";
+import { useBelowMd } from "@/hooks/useMediaQuery";
 import { useGalleryDetail } from "./useGalleryDetail";
 import { GalleryDetailDialogs } from "./GalleryDetailDialogs";
 import type { GalleryResponse } from "@/lib/types";
@@ -29,6 +30,7 @@ export default function GalleryDetailPage() {
   const { id } = useParams<{ id: string }>();
   const t = useTranslations("admin.detail");
   const tShell = useTranslations("admin.shell");
+  const belowMd = useBelowMd();
 
   const d = useGalleryDetail(id);
   const {
@@ -144,6 +146,8 @@ export default function GalleryDetailPage() {
   // its sub-galleries and lets the photo tooling recede (an empty grid + sort toolbar over zero
   // photos is noise). A leaf or a mixed gallery (has photos) stays photo-first.
   const isContainer = images.length === 0 && children.length > 0;
+  // Phone list layout for the sub-gallery block (same knob as the overview: overview_mobile_layout).
+  const subListView = belowMd && (adminSettings?.overview_mobile_layout ?? "grid") === "list";
 
   // Preview the banner the client actually gets: a manual header wins, else the auto-picked photo
   // (only present when the instance opted in). Mirrors the public layouts' `?? fallback`, so the
@@ -165,11 +169,19 @@ export default function GalleryDetailPage() {
           {t.rich("noSubGalleries", { b: (c) => <span className="text-foreground font-medium">{c}</span> })}
         </p>
       ) : (
-        <div className={cn("grid", GRID_COLS[adminGrid?.presentation.previewSize ?? "medium"], GAP[adminGrid?.presentation.previewSpacing ?? "medium"])}>
-          {children.map((child) => (
-            <SubGalleryCard key={child.id} child={child} parentId={id} onShare={() => setSharingSubId(child.id)} />
-          ))}
-        </div>
+        subListView ? (
+          <div className="divide-y divide-border">
+            {children.map((child) => (
+              <SubGalleryRow key={child.id} child={child} parentId={id} onShare={() => setSharingSubId(child.id)} />
+            ))}
+          </div>
+        ) : (
+          <div className={cn("grid", GRID_COLS[adminGrid?.presentation.previewSize ?? "medium"], GAP[adminGrid?.presentation.previewSpacing ?? "medium"])}>
+            {children.map((child) => (
+              <SubGalleryCard key={child.id} child={child} parentId={id} onShare={() => setSharingSubId(child.id)} />
+            ))}
+          </div>
+        )
       )}
     </section>
   );

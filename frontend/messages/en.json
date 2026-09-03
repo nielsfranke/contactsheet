@@ -314,7 +314,9 @@
       "deleting": "Deleting…",
       "renamed": "Renamed to “{name}”",
       "deleted": "Deleted “{name}”",
-      "commentCount": "{count, plural, one {# comment} other {# comments}}"
+      "commentCount": "{count, plural, one {# comment} other {# comments}}",
+      "viewList": "Show as list",
+      "viewGrid": "Show as grid"
     },
     "tree": {
       "showAll": "Show all galleries",
@@ -712,7 +714,27 @@
       "instanceSubtitle": "Engagement across all galleries.",
       "busiestGalleries": "Busiest galleries",
       "noActivity": "No activity recorded yet.",
-      "colGallery": "Gallery"
+      "colGallery": "Gallery",
+      "votes": "Votes",
+      "vsPrevious": "vs. previous {days} days",
+      "trendNew": "new",
+      "engagementOverTime": "Engagement over time",
+      "reviewStatus": "Review status",
+      "noPhotos": "No photos yet.",
+      "reviewedOf": "{reviewed} of {total} photos reviewed",
+      "flagSplit": "Flags",
+      "flaggedOf": "{flagged} of {total} flagged",
+      "unflagged": "Unflagged",
+      "starSplit": "Stars",
+      "ratedOf": "{rated} of {total} rated",
+      "unrated": "Unrated",
+      "likedPhotos": "Liked photos",
+      "commentedPhotos": "Commented photos",
+      "voters": "Reviewers voted",
+      "reviewers": "Reviewers",
+      "noReviewers": "No named reviewers in this period.",
+      "colReviewer": "Reviewer",
+      "colLastActive": "Last active"
     },
     "uploadToasts": {
       "unsupportedType": "{name}: unsupported file type",
@@ -867,7 +889,9 @@
       "sortBy": "Sort by",
       "newest": "Newest",
       "name": "Name",
-      "photos": "Photos"
+      "photos": "Photos",
+      "mobileLayout": "On phones",
+      "mobileLayoutHint": "How galleries are listed on a small screen — the cover grid or compact rows. Desktop always uses the grid."
     },
     "general": {
       "title": "General",

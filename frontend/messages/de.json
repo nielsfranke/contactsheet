@@ -314,7 +314,9 @@
       "deleting": "Wird gelöscht…",
       "renamed": "Umbenannt in „{name}“",
       "deleted": "„{name}“ gelöscht",
-      "commentCount": "{count, plural, one {# Kommentar} other {# Kommentare}}"
+      "commentCount": "{count, plural, one {# Kommentar} other {# Kommentare}}",
+      "viewList": "Als Liste anzeigen",
+      "viewGrid": "Als Raster anzeigen"
     },
     "tree": {
       "showAll": "Alle Galerien anzeigen",
@@ -712,7 +714,27 @@
       "instanceSubtitle": "Interaktion über alle Galerien hinweg.",
       "busiestGalleries": "Aktivste Galerien",
       "noActivity": "Noch keine Aktivität aufgezeichnet.",
-      "colGallery": "Galerie"
+      "colGallery": "Galerie",
+      "votes": "Stimmen",
+      "vsPrevious": "ggü. den vorherigen {days} Tagen",
+      "trendNew": "neu",
+      "engagementOverTime": "Interaktion im Zeitverlauf",
+      "reviewStatus": "Review-Stand",
+      "noPhotos": "Noch keine Fotos.",
+      "reviewedOf": "{reviewed} von {total} Fotos bewertet",
+      "flagSplit": "Markierungen",
+      "flaggedOf": "{flagged} von {total} markiert",
+      "unflagged": "Ohne Markierung",
+      "starSplit": "Sterne",
+      "ratedOf": "{rated} von {total} bewertet",
+      "unrated": "Ohne Sterne",
+      "likedPhotos": "Fotos mit Likes",
+      "commentedPhotos": "Kommentierte Fotos",
+      "voters": "Abstimmende",
+      "reviewers": "Reviewer",
+      "noReviewers": "Keine benannten Reviewer in diesem Zeitraum.",
+      "colReviewer": "Reviewer",
+      "colLastActive": "Zuletzt aktiv"
     },
     "uploadToasts": {
       "unsupportedType": "{name}: Dateityp wird nicht unterstützt",
@@ -867,7 +889,9 @@
       "sortBy": "Sortieren nach",
       "newest": "Neueste",
       "name": "Name",
-      "photos": "Fotos"
+      "photos": "Fotos",
+      "mobileLayout": "Auf dem Smartphone",
+      "mobileLayoutHint": "Wie Galerien auf kleinen Bildschirmen aufgelistet werden — als Cover-Raster oder als kompakte Zeilen. Am Desktop bleibt es beim Raster."
     },
     "general": {
       "title": "Allgemein",

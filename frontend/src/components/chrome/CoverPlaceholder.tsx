@@ -10,17 +10,32 @@ import { cn } from "@/lib/utils";
  * public `.gallery-scope` (light/dark) automatically. `--muted` and `--accent` resolve to the same
  * value in this design, so the gradient runs `muted → muted-foreground/10` to stay visible.
  */
-export function CoverPlaceholder({ name, className }: { name: string; className?: string }) {
+export function CoverPlaceholder({ name, className, compact = false }: { name: string; className?: string; compact?: boolean }) {
   return (
     <div
       className={cn(
-        "flex h-full w-full items-center justify-center bg-gradient-to-br from-muted to-muted-foreground/10 px-4",
+        "flex h-full w-full items-center justify-center bg-gradient-to-br from-muted to-muted-foreground/10",
+        compact ? "px-1" : "px-4",
         className,
       )}
+      title={compact ? name : undefined}
     >
-      <span className="line-clamp-3 text-center text-base font-semibold tracking-tight text-foreground/55">
-        {name}
-      </span>
+      {compact ? (
+        // A thumbnail-sized tile (list rows) has no room for the name — a monogram stands in.
+        <span className="text-sm font-semibold tracking-tight text-foreground/55" aria-hidden>
+          {monogram(name)}
+        </span>
+      ) : (
+        <span className="line-clamp-3 text-center text-base font-semibold tracking-tight text-foreground/55">
+          {name}
+        </span>
+      )}
     </div>
   );
+}
+
+/** First letter of the first two words, e.g. "Familie Müller 2026" → "FM". */
+export function monogram(name: string): string {
+  const words = name.trim().split(/\s+/).filter(Boolean);
+  return words.slice(0, 2).map((w) => Array.from(w)[0]?.toUpperCase() ?? "").join("");
 }

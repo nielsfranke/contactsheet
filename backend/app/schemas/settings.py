@@ -136,6 +136,7 @@ class AppSettingsUpdate(BaseModel):
     overview_corners: Literal["round", "square"] | None = None
     overview_sort: Literal["created", "name", "photos"] | None = None
     overview_sort_dir: Literal["asc", "desc"] | None = None
+    overview_mobile_layout: Literal["grid", "list"] | None = None
     gallery_sort: Literal["manual", "filename", "date", "captured"] | None = None
     gallery_sort_dir: Literal["asc", "desc"] | None = None
     # Public branding footer.
@@ -211,6 +212,7 @@ class AppSettingsResponse(BaseModel):
     overview_corners: str = "round"
     overview_sort: str = "created"
     overview_sort_dir: str = "desc"
+    overview_mobile_layout: str = "grid"
     gallery_sort: str = "captured"
     gallery_sort_dir: str = "asc"
     footer_enabled: bool = False

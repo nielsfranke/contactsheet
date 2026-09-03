@@ -13,6 +13,7 @@ import { BarTimeseries } from "@/components/admin/analytics/BarTimeseries";
 import { TotalsRow } from "@/components/admin/analytics/TotalsRow";
 import { RangeToggle } from "@/components/admin/analytics/RangeToggle";
 import { ViewsDisabledNote } from "@/components/admin/analytics/ViewsDisabledNote";
+import { ReviewersTable } from "@/components/admin/analytics/ReviewersTable";
 
 export default function InstanceAnalyticsPage() {
   const t = useTranslations("admin.analytics");
@@ -41,15 +42,16 @@ export default function InstanceAnalyticsPage() {
         </div>
       ) : (
         <div className="space-y-6">
-          <TotalsRow totals={data.totals} viewsAvailable={data.views_available} />
+          <TotalsRow totals={data.totals} previous={data.previous_totals} days={days} viewsAvailable={data.views_available} />
 
           {!data.views_available && <ViewsDisabledNote />}
 
-          <div className="grid gap-3 sm:grid-cols-2">
+          <div className={`grid gap-3 ${data.views_available ? "sm:grid-cols-3" : "sm:grid-cols-2"}`}>
             {data.views_available && (
               <BarTimeseries data={data.views_series} label={t("viewsOverTime")} totalLabel={t("total")} />
             )}
             <BarTimeseries data={data.downloads_series} label={t("downloadsOverTime")} totalLabel={t("total")} />
+            <BarTimeseries data={data.engagement_series} label={t("engagementOverTime")} totalLabel={t("total")} />
           </div>
 
           <div>
@@ -79,14 +81,21 @@ export default function InstanceAnalyticsPage() {
                           {data.views_available ? g.totals.views : "—"}
                         </td>
                         <td className="px-3 py-2 text-right tabular-nums text-muted-foreground">{g.totals.downloads}</td>
-                        <td className="px-3 py-2 text-right tabular-nums text-muted-foreground">
-                          {g.totals.likes + g.totals.flags + g.totals.ratings + g.totals.comments + g.totals.annotations + g.totals.votes}
-                        </td>
+                        <td className="px-3 py-2 text-right tabular-nums text-muted-foreground">{g.engagement}</td>
                       </tr>
                     ))}
                   </tbody>
                 </table>
               </div>
+            )}
+          </div>
+
+          <div>
+            <h2 className="mb-2 text-sm font-medium text-foreground">{t("reviewers")}</h2>
+            {data.top_reviewers.length === 0 ? (
+              <p className="text-xs text-muted-foreground">{t("noReviewers")}</p>
+            ) : (
+              <ReviewersTable reviewers={data.top_reviewers} />
             )}
           </div>
         </div>

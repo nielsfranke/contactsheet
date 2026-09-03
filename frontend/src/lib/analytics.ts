@@ -28,3 +28,22 @@ export function chartBars(points: TimeseriesPoint[]): ChartBar[] {
 export function seriesTotal(points: TimeseriesPoint[]): number {
   return points.reduce((sum, p) => sum + p.count, 0);
 }
+
+export type Trend = { kind: "up" | "down" | "flat"; pct: number } | { kind: "new" } | { kind: "none" };
+
+/**
+ * Period-over-period change for a stat tile. `new` = activity where the previous window had
+ * none (no meaningful percentage); `none` = both windows empty. Percentages are rounded and
+ * relative to the previous window.
+ */
+export function trend(current: number, previous: number): Trend {
+  if (previous === 0) return current === 0 ? { kind: "none" } : { kind: "new" };
+  const pct = Math.round(((current - previous) / previous) * 100);
+  if (pct === 0) return { kind: "flat", pct: 0 };
+  return { kind: pct > 0 ? "up" : "down", pct: Math.abs(pct) };
+}
+
+/** Share of `part` in `total` as a 0..100 integer; 0 when total is 0 (no divide-by-zero). */
+export function pctOf(part: number, total: number): number {
+  return total > 0 ? Math.round((part / total) * 100) : 0;
+}
