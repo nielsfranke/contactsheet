@@ -7,7 +7,10 @@ pulls it, and the feature stays off until an admin enables it.
 ## What it is
 
 A tiny FastAPI service wrapping a multilingual **SigLIP 2 (base)** encoder, run via ONNX Runtime —
-**no PyTorch**, so the image stays small. The backend calls it over the internal Docker network:
+**no PyTorch, no `transformers`**, so the image stays small (~434 MB). Pre-processing lives in
+`runtime.py`: SigLIP image normalisation in Pillow + NumPy (driven by the model repo's
+`preprocessor_config.json`) and tokenisation straight from its `tokenizer.json` via the `tokenizers`
+library. The backend calls it over the internal Docker network:
 
 | Endpoint | Purpose |
 |---|---|
@@ -45,7 +48,15 @@ The model weights (~a few hundred MB, INT8) download once on first request into 
 `input_ids`, and the repo ships **only quantized** graphs plus a **fast `tokenizer.json`** (no
 SentencePiece). If you point `MODEL_ID` at a different export, its ONNX input/output names may
 differ — adjust `_VISION_OUTPUT` / `_TEXT_OUTPUT` and the input keys in `runtime.py` (the single
-place that knows the graph shape). Quick check once the container is up:
+place that knows the graph shape). A different export must also ship a `tokenizer.json`, and its
+`preprocessor_config.json` must describe a plain resize/rescale/normalise pipeline — anything
+fancier (centre crop, aspect-preserving resize) needs a matching branch in `ImagePreprocessor`.
+
+**Changing pre-processing changes the vectors.** Every stored embedding was produced by the pipeline
+in `runtime.py`, so a change there silently makes old and new vectors incomparable. Even a one-ULP
+pixel shift is enough: the INT8 graph amplifies it to cosine ≈ 0.99 against the same photo's stored
+vector. If you touch `ImagePreprocessor`, diff the output against the previous build before shipping
+— or re-index the library. Quick check once the container is up:
 
 ```bash
 curl -s localhost:8001/health

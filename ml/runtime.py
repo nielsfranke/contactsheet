@@ -5,10 +5,17 @@
 
 Loads a multilingual SigLIP 2 (base) encoder as two ONNX graphs — a vision tower and a text
 tower — and runs them on the CPU via ONNX Runtime. No PyTorch: the only heavy dependency is
-`onnxruntime`, which keeps the image small enough to justify a separate optional container. The
-HuggingFace processor/tokenizer handle pre-processing (image resize/normalise, text tokenise);
-ONNX Runtime does the forward pass; we L2-normalise the result so the backend can rank by dot
-product.
+`onnxruntime`, which keeps the image small enough to justify a separate optional container.
+Pre-processing is done here (image resize/normalise with Pillow + NumPy, text tokenised by the
+`tokenizers` Rust library); ONNX Runtime does the forward pass; we L2-normalise the result so the
+backend can rank by dot product.
+
+No `transformers` dependency: its 5.x image processors hard-require PyTorch/Torchvision, and its
+4.x line ended at 4.57.6 (so its advisories are unfixable by pin). Both pieces we used are small
+and fully specified by files the model repo ships — `preprocessor_config.json` and
+`tokenizer.json` — so we read those directly. Verified bit-identical to
+`SiglipImageProcessor`/`AutoTokenizer` against the pinned repo (pixel maxdiff 0.0, same token ids),
+which matters: existing vectors in the backend's database must stay comparable to new ones.
 
 Model resolution: `MODEL_ID` is a HuggingFace repo in the Transformers.js ONNX layout (default
 `onnx-community/siglip2-base-patch16-256-ONNX`), which ships `onnx/vision_model.onnx` and
@@ -20,11 +27,12 @@ NOTE: ONNX graph input/output names differ between exports. Verified against
 as `pooler_output`; the vision tower takes `pixel_values`, the text tower takes `input_ids` only.
 This module is the single place that knows the graph shape — if a future model differs, adjust the
 `_*_OUTPUT` constants and input keys here. That repo also ships *only* the quantized graphs and a
-fast `tokenizer.json` (no SentencePiece `spiece.model`), so we force the fast tokenizer.
+`tokenizer.json` (no SentencePiece `spiece.model`), which is exactly what the Rust tokenizer reads.
 """
 
 from __future__ import annotations
 
+import json
 import logging
 import os
 import threading
@@ -33,7 +41,7 @@ import numpy as np
 import onnxruntime as ort
 from huggingface_hub import hf_hub_download
 from PIL import Image
-from transformers import AutoImageProcessor, AutoTokenizer
+from tokenizers import Tokenizer
 
 logger = logging.getLogger("contactsheet-ml")
 
@@ -48,10 +56,56 @@ _INTRA_THREADS = int(os.environ.get("ORT_INTRA_THREADS", "4"))
 _VISION_OUTPUT = "pooler_output"
 _TEXT_OUTPUT = "pooler_output"
 
+# SigLIP defaults, used when the repo ships no preprocessor_config.json.
+_DEFAULT_SIZE = 256
+_DEFAULT_MEAN = (0.5, 0.5, 0.5)
+_DEFAULT_STD = (0.5, 0.5, 0.5)
+# `resample` in preprocessor_config.json is a PIL filter number (2 = BILINEAR, SigLIP's default).
+_RESAMPLE = {
+    0: Image.NEAREST,
+    1: Image.LANCZOS,
+    2: Image.BILINEAR,
+    3: Image.BICUBIC,
+    4: Image.BOX,
+    5: Image.HAMMING,
+}
+
 
 def _l2(vec: np.ndarray) -> np.ndarray:
     norm = float(np.linalg.norm(vec))
     return vec / norm if norm > 0 else vec
+
+
+class ImagePreprocessor:
+    """The `SiglipImageProcessor` pipeline in NumPy: resize → rescale → normalise → CHW."""
+
+    def __init__(self, config: dict) -> None:
+        size = config.get("size") or {}
+        if "height" in size and "width" in size:
+            self.width, self.height = int(size["width"]), int(size["height"])
+        else:
+            edge = int(size.get("shortest_edge", _DEFAULT_SIZE))
+            self.width = self.height = edge
+        self.resample = _RESAMPLE.get(config.get("resample", 2), Image.BILINEAR)
+        self.rescale = float(config.get("rescale_factor", 1 / 255)) if config.get("do_rescale", True) else 1.0
+        if config.get("do_normalize", True):
+            self.mean = np.asarray(config.get("image_mean") or _DEFAULT_MEAN, dtype=np.float32)
+            self.std = np.asarray(config.get("image_std") or _DEFAULT_STD, dtype=np.float32)
+        else:
+            self.mean = np.zeros(3, dtype=np.float32)
+            self.std = np.ones(3, dtype=np.float32)
+
+    def __call__(self, img: Image.Image) -> np.ndarray:
+        img = img.convert("RGB").resize((self.width, self.height), self.resample)
+        # Arithmetic order matters and is deliberate: rescale the uint8 array by a Python float
+        # (NumPy promotes to float64) and round to float32 *once*, then normalise in float32 —
+        # exactly what transformers' rescale()/normalize() did. Multiplying in float32 instead
+        # shifts pixels by one ULP, and the INT8 graph amplifies that into a visible embedding
+        # drift (cosine ~0.99 against the same photo's stored vector). Verified bit-identical.
+        arr = (np.asarray(img) * self.rescale).astype(np.float32)
+        arr = ((arr - self.mean) / self.std).astype(np.float32)
+        # HWC → NCHW, the layout every SigLIP vision export expects.
+        return arr.transpose(2, 0, 1)[None]
 
 
 class Encoder:
@@ -62,8 +116,8 @@ class Encoder:
         self._ready = False
         self._vision: ort.InferenceSession | None = None
         self._text: ort.InferenceSession | None = None
-        self._processor = None
-        self._tokenizer = None
+        self._processor: ImagePreprocessor | None = None
+        self._tokenizer: Tokenizer | None = None
 
     # -- loading -------------------------------------------------------------------------------
     def _session(self, filename: str) -> ort.InferenceSession:
@@ -72,6 +126,30 @@ class Encoder:
         opts.intra_op_num_threads = _INTRA_THREADS
         opts.graph_optimization_level = ort.GraphOptimizationLevel.ORT_ENABLE_ALL
         return ort.InferenceSession(path, sess_options=opts, providers=["CPUExecutionProvider"])
+
+    def _load_processor(self) -> ImagePreprocessor:
+        try:
+            path = hf_hub_download(repo_id=MODEL_ID, filename="preprocessor_config.json")
+            with open(path, encoding="utf-8") as fh:
+                config = json.load(fh)
+        except Exception:  # noqa: BLE001 — a repo without the file is fine; SigLIP defaults apply.
+            logger.warning("No preprocessor_config.json for %s — using SigLIP defaults.", MODEL_ID)
+            config = {}
+        return ImagePreprocessor(config)
+
+    def _load_tokenizer(self) -> Tokenizer:
+        tokenizer = Tokenizer.from_file(hf_hub_download(repo_id=MODEL_ID, filename="tokenizer.json"))
+        # The repo's tokenizer.json already pads to the trained length, but pin both ends anyway so
+        # a repo that omits them still feeds the text tower a fixed-width batch.
+        padding = tokenizer.padding or {}
+        tokenizer.enable_padding(
+            length=TEXT_MAX_LEN,
+            pad_id=int(padding.get("pad_id", 0)),
+            pad_token=str(padding.get("pad_token", "<pad>")),
+            direction=str(padding.get("direction", "right")),
+        )
+        tokenizer.enable_truncation(max_length=TEXT_MAX_LEN)
+        return tokenizer
 
     def load(self) -> None:
         if self._ready:
@@ -83,10 +161,8 @@ class Encoder:
             logger.info("Loading %s (quantized=%s)…", MODEL_ID, QUANTIZED)
             self._vision = self._session(f"onnx/vision_model{suffix}.onnx")
             self._text = self._session(f"onnx/text_model{suffix}.onnx")
-            # Image processor only (decoupled from the tokenizer); fast tokenizer for text since
-            # the ONNX repos ship tokenizer.json but no SentencePiece vocab.
-            self._processor = AutoImageProcessor.from_pretrained(MODEL_ID)
-            self._tokenizer = AutoTokenizer.from_pretrained(MODEL_ID, use_fast=True)
+            self._processor = self._load_processor()
+            self._tokenizer = self._load_tokenizer()
             self._ready = True
             logger.info("Encoder ready.")
 
@@ -98,24 +174,18 @@ class Encoder:
     def embed_image(self, image_path: str) -> list[float]:
         self.load()
         with Image.open(image_path) as img:
-            img = img.convert("RGB")
-            inputs = self._processor(images=img, return_tensors="np")
-        feeds = {"pixel_values": inputs["pixel_values"].astype(np.float32)}
+            pixel_values = self._processor(img)
+        feeds = {"pixel_values": pixel_values.astype(np.float32)}
         out = self._vision.run([_VISION_OUTPUT], feeds)[0]
         return _l2(np.asarray(out[0], dtype=np.float32)).tolist()
 
     def embed_text(self, text: str) -> list[float]:
         self.load()
-        enc = self._tokenizer(
-            text,
-            return_tensors="np",
-            padding="max_length",
-            max_length=TEXT_MAX_LEN,
-            truncation=True,
-        )
-        feeds = {"input_ids": enc["input_ids"].astype(np.int64)}
-        if "attention_mask" in enc:
-            feeds["attention_mask"] = enc["attention_mask"].astype(np.int64)
+        enc = self._tokenizer.encode(text)
+        feeds = {
+            "input_ids": np.asarray([enc.ids], dtype=np.int64),
+            "attention_mask": np.asarray([enc.attention_mask], dtype=np.int64),
+        }
         # Some SigLIP text exports take only input_ids; drop unknown feeds defensively.
         feeds = {k: v for k, v in feeds.items() if k in {i.name for i in self._text.get_inputs()}}
         out = self._text.run([_TEXT_OUTPUT], feeds)[0]

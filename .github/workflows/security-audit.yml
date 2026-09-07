@@ -59,15 +59,10 @@ jobs:
         uses: pypa/gh-action-pip-audit@v1.1.0
         with:
           inputs: ml/requirements.txt
-          # Residual transformers advisories on the latest 4.x pin. The sidecar loads a fixed, trusted
-          # SigLIP repo (not user-supplied models), so these are low-relevance here; two require the
-          # transformers 5.x major bump (deferred until the container can be re-tested), two have no
-          # upstream fix yet. Revisit when moving to transformers 5.x.
-          ignore-vulns: |
-            PYSEC-2026-2288
-            PYSEC-2026-2289
-            PYSEC-2025-217
-            PYSEC-2026-2290
+          # No ignore list on purpose. The sidecar used to carry `transformers` and a growing set of
+          # ignored advisories against it; it now does its own SigLIP pre-processing/tokenisation
+          # instead (see ml/requirements.txt), so this job should stay green on its own merits. If it
+          # goes red, fix the pin rather than adding an exception.
 
   npm-audit:
     if: ${{ github.server_url == 'https://github.com' }}

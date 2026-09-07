@@ -9,8 +9,10 @@ native extension; revisit if a library ever outgrows it.
 **What on-host validation caught** (fixed in `ml/runtime.py`): for
 `onnx-community/siglip2-base-patch16-256-ONNX`, both towers expose the embedding as
 **`pooler_output`** (not `image_embeds`/`text_embeds`); the text tower takes only `input_ids`; the
-repo ships **only quantized** graphs and a **fast `tokenizer.json`** (no SentencePiece `spiece.model`),
-so we load `AutoImageProcessor` + a fast `AutoTokenizer`. Also recalibrated: SigLIP cosines are
+repo ships **only quantized** graphs and a **fast `tokenizer.json`** (no SentencePiece `spiece.model`).
+Pre-processing originally went through `transformers` (`AutoImageProcessor` + a fast `AutoTokenizer`);
+since 2026-09 the sidecar does it itself — see [transformers-free ML sidecar](#transformers-free-ml-sidecar).
+Also recalibrated: SigLIP cosines are
 small (a real match ≈ 0.08–0.12, noise ≈ 0.03–0.05), so the default threshold is **0.05** and the
 settings slider operates in a 0–30% band — a 0.2 default would have filtered out every result.
 
@@ -89,8 +91,8 @@ Inference is CPU-bound and the box also serves the app. Guardrails:
 
 This is the "wenn das Docker-Image zu groß wird, lassen wir es" gate. Concrete numbers:
 
-- **Baked into backend image:** +ONNX Runtime (~150 MB) +model (~400 MB) +numpy/transformers
-  tokenizer bits → **~+0.6–0.8 GB** to *every* deploy, even users who never enable search.
+- **Baked into backend image:** +ONNX Runtime (~150 MB) +model (~400 MB) +numpy/tokenizer bits
+  → **~+0.6–0.8 GB** to *every* deploy, even users who never enable search.
 - **Optional sidecar `contactsheet-ml`** *(recommended)*: a separate image that only people who want
   the feature pull. The main backend stays byte-for-byte as today and talks to the sidecar over
   localhost HTTP (`POST /embed/image`, `POST /embed/text`). Mirrors Immich's `immich-machine-learning`
@@ -200,3 +202,36 @@ Medium. All the scaffolding exists (background-job pattern, settings-JSON patter
 toolbar, migration flow). The genuinely new pieces are the ONNX embedder + (optional) sidecar
 container and the `sqlite-vec` integration. The model/packaging decisions above are the gate; the
 rest is wiring into established patterns.
+
+## transformers-free ML sidecar
+
+**2026-09-07.** The sidecar no longer depends on `transformers` (or `sentencepiece`). It does the
+two things it used the library for itself, in `ml/runtime.py`:
+
+- **Image pre-processing** — `ImagePreprocessor` reads the model repo's `preprocessor_config.json`
+  and runs the SigLIP pipeline in Pillow + NumPy: convert RGB → resize → rescale → normalise → NCHW.
+- **Tokenisation** — `tokenizers.Tokenizer.from_file(tokenizer.json)`, the same Rust library
+  `transformers` wrapped. The repo's `tokenizer.json` already carries the pad token and the trained
+  64-token length; `runtime.py` pins padding and truncation anyway.
+
+**Why.** `transformers` 4.57.6 is the end of the 4.x line, so advisories against it can never be
+fixed by a pin — four had already accumulated in `security-audit.yml`'s `ignore-vulns` list and a
+fifth (`CVE-2026-9856`) turned the job red. The 5.x branch clears all of them but its image
+processors **hard-require PyTorch/Torchvision** (`use_fast=False` needs Torchvision too), which
+would defeat the entire point of this container. Dropping the dependency was the only exit: the
+audit job now runs with **no ignore list**, and the image went **548 MB → 434 MB**.
+
+**Vector compatibility — the constraint that shaped the code.** Existing vectors in
+`image_embeddings` must stay comparable to newly produced ones, so the replacement had to be
+bit-identical, not merely close. Validated by running the old (4.57.6) and new containers
+side by side against the same shared model cache and diffing outputs: six images (JPEG/PNG, RGB and
+RGBA, landscape/portrait/extreme aspect ratios) and seven queries (German, English, Japanese,
+punctuation, whitespace, over-length) — **max element-wise difference 0.0** on every one.
+
+One non-obvious detail earned a comment in the code: **the arithmetic order in the rescale step is
+load-bearing.** `transformers` multiplied the `uint8` array by a Python float (NumPy promotes to
+float64) and rounded to float32 once; multiplying in float32 directly shifts pixels by a single ULP
+(1.2e-7). That is invisible in the tensor and *not* invisible downstream — the INT8 quantized graph
+amplified it into cosine ≈ 0.985–0.993 against the same photo's stored vector, which would have
+silently degraded every pre-existing embedding's comparability. The first draft had this wrong; the
+side-by-side diff is what caught it.

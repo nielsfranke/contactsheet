@@ -12,6 +12,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- **The optional ML sidecar no longer depends on `transformers`.** It now does SigLIP image
+  pre-processing (Pillow + NumPy, driven by the model repo's `preprocessor_config.json`) and
+  tokenisation (the `tokenizers` library reading the repo's `tokenizer.json`) itself. The
+  `transformers` 4.x line ended at 4.57.6, so its advisories can never be fixed by a pin — five had
+  accumulated, and 5.x is not an option because its image processors hard-require PyTorch. The
+  sidecar image drops **548 MB → 434 MB**, and the `ml-pip-audit` CI job runs with **no ignore
+  list** again. Embeddings are **bit-identical** to the previous build (verified side by side over
+  six images and seven multilingual queries), so existing vectors stay valid — no re-indexing.
+
 ## [1.11.0] - 2026-09-03
 
 Analytics grows up, and the admin gallery overview gets a phone-friendly list. **A migration

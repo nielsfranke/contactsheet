@@ -3,13 +3,13 @@
 fastapi==0.139.0
 uvicorn[standard]==0.32.1
 onnxruntime==1.20.1
-# transformers pinned to the latest 4.x: clears every fixable advisory without the 5.0 major bump.
-# Only AutoImageProcessor/AutoTokenizer + from_pretrained are used (stable across 4→5); the model is
-# a fixed, trusted SigLIP repo, not user input. Two residual advisories need transformers 5.x
-# (PYSEC-2026-2288/2289) — deferred until the container can be re-tested against a 5.x release.
-transformers==4.57.6
 huggingface_hub==0.36.2
 Pillow==12.3.0
 numpy==2.2.1
-# SigLIP uses a SentencePiece tokenizer.
-sentencepiece==0.2.2
+# No `transformers`: 5.x image processors hard-require PyTorch/Torchvision (which would defeat the
+# purpose of this container) and the 4.x line ended at 4.57.6, so its advisories are unfixable by
+# pin. runtime.py does the two things we used itself — SigLIP image pre-processing in NumPy, and
+# tokenisation straight from the repo's tokenizer.json via this Rust library (which is what
+# transformers wrapped anyway). Verified bit-identical on both paths. `sentencepiece` went with it:
+# the ONNX repos ship tokenizer.json, never a spiece.model.
+tokenizers==0.23.2
