@@ -12,6 +12,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.11.2] - 2026-09-07
+
+Bugfix release for photographers who create galleries from outside the browser.
+
+### Fixed
+
+- **Galleries created through the REST API now appear in the admin UI live.** A gallery or
+  sub-gallery created with an API token (Lightroom / Capture One plug-ins, a desktop uploader)
+  while the admin overview was open didn't show up until a manual refresh — retrying "because it
+  didn't work" produced real duplicates. The live-update socket only had per-gallery rooms, so a
+  *new* gallery had nobody to notify. There is now an instance-wide admin socket
+  (`WS /api/ws/admin`, same cookie auth as the per-gallery one) carrying thin `gallery` signals on
+  create / rename / move / delete / share-link / cover / header changes; the admin shell subscribes
+  once, so the overview, the sidebar tree and an open gallery's sub-gallery list all refresh.
+- `POST /api/galleries` with `"parent_id": ""` created a top-level gallery's row with an empty
+  parent and failed with a 500 (foreign-key constraint); an empty string is now treated as
+  "top level", like `null`.
+
 ## [1.11.1] - 2026-09-07
 
 A dependency-hygiene release for the optional semantic-search sidecar. Nothing changes for
