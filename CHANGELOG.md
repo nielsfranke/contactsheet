@@ -12,6 +12,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.11.1] - 2026-09-07
+
+A dependency-hygiene release for the optional semantic-search sidecar. Nothing changes for
+installs that don't run it, and nothing changes behaviourally for those that do.
+
 ### Changed
 
 - **The optional ML sidecar no longer depends on `transformers`.** It now does SigLIP image
@@ -1234,7 +1239,8 @@ contract are considered stable as of this release.
   caps (stricter for public uploads).
 - Docker Compose deployment (backend + frontend + nginx); SQLite + local filesystem.
 
-[Unreleased]: https://github.com/nielsfranke/contactsheet/compare/v1.11.0...HEAD
+[Unreleased]: https://github.com/nielsfranke/contactsheet/compare/v1.11.1...HEAD
+[1.11.1]: https://github.com/nielsfranke/contactsheet/compare/v1.11.0...v1.11.1
 [1.11.0]: https://github.com/nielsfranke/contactsheet/compare/v1.10.0...v1.11.0
 [1.10.0]: https://github.com/nielsfranke/contactsheet/compare/v1.9.4...v1.10.0
 [1.9.4]: https://github.com/nielsfranke/contactsheet/compare/v1.9.3...v1.9.4
