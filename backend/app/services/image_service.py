@@ -15,7 +15,7 @@ from app.config import settings
 from app.errors import CodedHTTPException
 from app.models.gallery import Gallery
 from app.models.image import Image
-from app.realtime import publish as realtime_publish
+from app.realtime import publish as realtime_publish, publish_admin as realtime_publish_admin
 from app.repositories import activity_repo, collection_repo, comment_repo, gallery_repo, image_repo, like_repo, vote_repo
 from app.schemas.image import GlobalSearchResult, ImageResponse, ImageUpdate, PhotoPage, UploadResponse
 from app.services import gallery_service, notification_service
@@ -774,6 +774,7 @@ def use_image_as_header(
 
     old_filename = gallery.header_image_filename
     gallery_repo.update(db, gallery, header_image_filename=filename)
+    realtime_publish_admin("gallery", gallery_id)
 
     if old_filename:
         try:

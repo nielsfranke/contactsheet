@@ -281,6 +281,7 @@ Key non-obvious constraints — full details in `docs/architecture/`.
 ### Real-time (WebSocket)
 - Signals carry `{type, gallery_id, image_id?}` only — the client invalidates React Query keys and refetches via REST. No data in the signal.
 - Admin WS auth uses the httponly cookie (same-origin handshake). Public WS passes the gallery JWT in `?token=` (browsers can't set WS auth headers).
+- **Two kinds of rooms.** Per-gallery rooms (`/api/ws/admin/galleries/{id}`, `/api/ws/public/g/{token}`) carry in-gallery signals; the reserved `ADMIN_ROOM` (`WS /api/ws/admin`, opened once by the admin shell via `useAdminRealtime`) carries `gallery` signals for **list** changes — create/rename/move/delete emitted from `gallery_service` via `publish_admin`. A new gallery has no room yet, which is why out-of-band (API-token) creates need this. Invalidation coalescing is shared in `lib/realtime-invalidate.ts`.
 
 ### Collections
 - `collection_service._authorize` enforces **creator-or-admin** on both update and delete. Public reviewer name must match `created_by`; admin bypasses.

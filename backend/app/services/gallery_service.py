@@ -19,6 +19,7 @@ from app.errors import CodedHTTPException
 
 from app.auth.password import hash_password
 from app.models.gallery import Gallery
+from app.realtime import publish_admin as realtime_publish_admin
 from app.repositories import gallery_repo
 from app.repositories import activity_repo
 from app.repositories import comment_repo
@@ -322,16 +323,19 @@ def get_gallery(db: Session, gallery_id: str, storage: StorageProvider) -> Galle
 
 
 def create_gallery(db: Session, data: GalleryCreate, storage: StorageProvider) -> GalleryResponse:
+    # "" means top-level, same as null — an API client that serialises an unset parent as an empty
+    # string must not hit the FK constraint (a 500) on a row with parent_id="".
+    parent_id = data.parent_id or None
     parent = None
-    if data.parent_id:
-        parent = gallery_repo.get_by_id(db, data.parent_id)
+    if parent_id:
+        parent = gallery_repo.get_by_id(db, parent_id)
         if not parent:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Parent gallery not found")
 
     now = datetime.now(timezone.utc)
     kwargs = dict(
         id=str(uuid.uuid4()),
-        parent_id=data.parent_id,
+        parent_id=parent_id,
         name=data.name,
         description=data.description,
         password_hash=hash_password(data.password) if data.password else None,
@@ -350,6 +354,10 @@ def create_gallery(db: Session, data: GalleryCreate, storage: StorageProvider) -
     # request set explicitly are never in the resolved dict.
     kwargs.update(_resolve_create_defaults(db, data, parent))
     gallery = gallery_repo.create(db, **kwargs)
+    # Gallery-list changes go to the admin-wide room: a new gallery has no room of its own yet, and
+    # the overview / nav tree (which watch no particular gallery) must learn about out-of-band
+    # creates — an API-token client (Lightroom, a desktop uploader) never touches the browser's cache.
+    realtime_publish_admin("gallery", gallery.id)
     return _build_response(gallery, db, storage)
 
 
@@ -489,6 +497,8 @@ def update_gallery(
                 descendant_ids = [c.id for c in gallery_repo.get_descendants(db, gallery.id)]
                 gallery_repo.bulk_update(db, descendant_ids, **cascade)
 
+        realtime_publish_admin("gallery", gallery.id)
+
     return _build_response(gallery, db, storage)
 
 
@@ -530,6 +540,7 @@ def move_gallery(
     else:
         siblings = [g for g in gallery_repo.get_children(db, target_parent_id) if g.id != gallery_id]
     gallery = gallery_repo.update(db, gallery, parent_id=target_parent_id, sort_order=len(siblings))
+    realtime_publish_admin("gallery", gallery.id)
     return _build_response(gallery, db, storage)
 
 
@@ -575,6 +586,7 @@ def set_share_token(
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Unknown strategy")
 
     gallery = gallery_repo.update(db, gallery, share_token=token)
+    realtime_publish_admin("gallery", gallery.id)
     return _build_response(gallery, db, storage)
 
 
@@ -583,6 +595,7 @@ def delete_gallery(db: Session, gallery_id: str) -> None:
     if not gallery:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Gallery not found")
     gallery_repo.soft_delete(db, gallery)
+    realtime_publish_admin("gallery", gallery_id)
 
 
 def empty_gallery(db: Session, gallery_id: str) -> None:
@@ -590,6 +603,8 @@ def empty_gallery(db: Session, gallery_id: str) -> None:
     if not gallery:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Gallery not found")
     gallery_repo.empty(db, gallery)
+    # Emptying soft-deletes the whole descendant subtree, so the tree changes too.
+    realtime_publish_admin("gallery", gallery_id)
 
 
 def get_public_gallery(
@@ -872,7 +887,9 @@ def store_branding_image(db: Session, gallery_id: str, data: bytes, kind: str) -
     updates = {attr: filename}
     if kind == "cover":
         updates["cover_image_id"] = None
-    return gallery_repo.update(db, gallery, **updates)
+    gallery = gallery_repo.update(db, gallery, **updates)
+    realtime_publish_admin("gallery", gallery.id)
+    return gallery
 
 
 def remove_branding_image(db: Session, gallery_id: str, kind: str) -> None:
@@ -887,6 +904,7 @@ def remove_branding_image(db: Session, gallery_id: str, kind: str) -> None:
     if os.path.exists(old):
         os.unlink(old)
     gallery_repo.update(db, gallery, **{attr: None})
+    realtime_publish_admin("gallery", gallery.id)
 
 
 # --- Watermark image file --------------------------------------------------------------------------

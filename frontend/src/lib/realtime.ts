@@ -18,7 +18,9 @@ export type RealtimeEventType =
   | "flag"
   | "vote"
   | "collection"
-  | "image";
+  | "image"
+  // Gallery created / renamed / moved / deleted — only ever sent on the admin-wide socket.
+  | "gallery";
 
 export interface RealtimeEvent {
   type: RealtimeEventType;
@@ -48,6 +50,11 @@ export function publicGalleryWsUrl(shareToken: string, galleryToken: string | nu
 
 export function adminGalleryWsUrl(galleryId: string): string {
   return `${wsBase()}/api/ws/admin/galleries/${encodeURIComponent(galleryId)}`;
+}
+
+/** Instance-wide admin socket: gallery-list changes (create/rename/move/delete). */
+export function adminWsUrl(): string {
+  return `${wsBase()}/api/ws/admin`;
 }
 
 type Listener = (event: RealtimeEvent) => void;

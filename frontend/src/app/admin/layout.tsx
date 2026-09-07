@@ -13,6 +13,7 @@ import { GalleryTree } from "@/components/admin/GalleryTree";
 import { AdminThemeProvider } from "@/components/admin/AdminThemeProvider";
 import { AdminDndProvider } from "@/components/admin/AdminDnd";
 import { useAdminMobileHeader } from "@/store/adminMobileHeader";
+import { useAdminRealtime } from "@/hooks/useAdminRealtime";
 import { resolveOpenerFont } from "@/lib/gallery-fonts";
 import { Button, buttonVariants } from "@/components/ui/button";
 import {
@@ -98,6 +99,9 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   }, [drawerOpen]);
 
   const pathname = usePathname();
+
+  // Instance-wide live updates (gallery created / renamed / moved / deleted out of band).
+  useAdminRealtime(checked);
 
   const { data: galleries = [] } = useQuery({
     queryKey: ["galleries"],

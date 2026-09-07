@@ -11,6 +11,7 @@ import {
   publicGalleryWsUrl,
   type RealtimeEvent,
 } from "@/lib/realtime";
+import { createCoalescedInvalidator } from "@/lib/realtime-invalidate";
 
 type Args =
   | { kind: "public"; shareToken: string; galleryToken: string | null }
@@ -30,24 +31,10 @@ export function useGalleryRealtime(args: Args): void {
         ? publicGalleryWsUrl(args.shareToken, args.galleryToken)
         : adminGalleryWsUrl(args.adminGalleryId);
 
-    // Coalesce invalidations. A bulk upload emits one WS signal per image (~100 in a few seconds);
-    // invalidating — and thus refetching — /images per signal hammers the backend and its DB pool
-    // (see docs/architecture/db-connection-pool-under-bulk-upload.md). Collect the distinct query
-    // keys touched within a short window and flush them once, capping refetches to a few per second
-    // instead of one per event. 400 ms is imperceptible for other-users'-activity updates.
-    const FLUSH_MS = 400;
-    const pending = new Map<string, readonly unknown[]>();
-    let flushTimer: ReturnType<typeof setTimeout> | undefined;
-    const invalidate = (queryKey: readonly unknown[]) => {
-      pending.set(JSON.stringify(queryKey), queryKey);
-      if (flushTimer) return;
-      flushTimer = setTimeout(() => {
-        flushTimer = undefined;
-        const keys = [...pending.values()];
-        pending.clear();
-        for (const qk of keys) qc.invalidateQueries({ queryKey: qk as unknown[] });
-      }, FLUSH_MS);
-    };
+    // Coalesced: a bulk upload emits one signal per image — see lib/realtime-invalidate.ts.
+    const { invalidate, dispose } = createCoalescedInvalidator((qk) =>
+      qc.invalidateQueries({ queryKey: qk as unknown[] }),
+    );
 
     const handle = (event: RealtimeEvent) => {
       if (args.kind === "public") {
@@ -107,7 +94,7 @@ export function useGalleryRealtime(args: Args): void {
 
     const unsubscribe = connectRealtime(url, handle);
     return () => {
-      if (flushTimer) clearTimeout(flushTimer);
+      dispose();
       unsubscribe();
     };
     // `key` captures the identity of the connection target; args fields are read fresh on each event.

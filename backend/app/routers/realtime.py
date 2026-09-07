@@ -3,7 +3,8 @@
 
 """WebSocket endpoints for live gallery updates.
 
-Both endpoints subscribe a socket to one gallery's room in the connection hub. They carry no
+The two gallery endpoints subscribe a socket to one gallery's room in the connection hub; the
+instance-wide admin endpoint subscribes to ``ADMIN_ROOM`` (gallery list changes). None carry
 application data upstream — the server ignores inbound frames (they only keep the socket alive).
 See ``docs/architecture/realtime-updates.md``.
 """
@@ -17,7 +18,7 @@ from fastapi import APIRouter, Cookie, Query, WebSocket, WebSocketDisconnect
 from app.auth.dependencies import gallery_id_from_token_value, _is_valid_admin
 from app.auth.jwt import decode_token
 from app.database import SessionLocal
-from app.realtime.hub import hub
+from app.realtime.hub import ADMIN_ROOM, hub
 from app.repositories import gallery_repo
 
 _log = logging.getLogger(__name__)
@@ -71,21 +72,17 @@ def _cross_origin(websocket: WebSocket) -> bool:
     return not origin_host or not request_host or origin_host.lower() != request_host.lower()
 
 
-@router.websocket("/admin/galleries/{gallery_id}")
-async def admin_gallery_ws(
-    websocket: WebSocket,
-    gallery_id: str,
-    access_token: str | None = Cookie(default=None),
-) -> None:
-    """Live updates for the admin in-gallery view. Authed via the httponly admin cookie that the
-    same-origin handshake carries — validated exactly like ``get_current_admin``."""
-    # Accept first so an auth failure can close with a meaningful code (4401) the client can read —
-    # otherwise a pre-accept close is a bare handshake rejection (code 1006) and the client can't
-    # tell "rejected, stop retrying" from "network blip, reconnect".
+async def _accept_admin(websocket: WebSocket, access_token: str | None) -> bool:
+    """Accept the handshake, then validate the admin cookie exactly like ``get_current_admin``.
+    Returns False after closing the socket with 4401 when the caller must bail out.
+
+    Accept first so an auth failure can close with a meaningful code (4401) the client can read —
+    otherwise a pre-accept close is a bare handshake rejection (code 1006) and the client can't
+    tell "rejected, stop retrying" from "network blip, reconnect"."""
     await websocket.accept()
     if _cross_origin(websocket):
         await websocket.close(code=_CLOSE_UNAUTHORIZED)
-        return
+        return False
     payload = None
     if access_token:
         try:
@@ -94,6 +91,32 @@ async def admin_gallery_ws(
             payload = None
     if not payload or not _is_valid_admin(payload):
         await websocket.close(code=_CLOSE_UNAUTHORIZED)
+        return False
+    return True
+
+
+@router.websocket("/admin")
+async def admin_ws(
+    websocket: WebSocket,
+    access_token: str | None = Cookie(default=None),
+) -> None:
+    """Instance-wide live updates for the admin shell (gallery created / renamed / moved / deleted).
+    One socket per admin tab, opened by the shell layout — not per page. Authed via the httponly
+    admin cookie like the per-gallery admin socket."""
+    if not await _accept_admin(websocket, access_token):
+        return
+    await _serve(ADMIN_ROOM, websocket)
+
+
+@router.websocket("/admin/galleries/{gallery_id}")
+async def admin_gallery_ws(
+    websocket: WebSocket,
+    gallery_id: str,
+    access_token: str | None = Cookie(default=None),
+) -> None:
+    """Live updates for the admin in-gallery view. Authed via the httponly admin cookie that the
+    same-origin handshake carries — validated exactly like ``get_current_admin``."""
+    if not await _accept_admin(websocket, access_token):
         return
     await _serve(gallery_id, websocket)
 
