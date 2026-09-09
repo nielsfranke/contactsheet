@@ -3,7 +3,7 @@ fastapi==0.138.1
 # fastapi pulled had several CVEs (DoS + multipart). 1.3.1 clears them; fastapi 0.138 supports it.
 starlette==1.3.1
 uvicorn[standard]==0.49.0
-sqlalchemy==2.0.51
+sqlalchemy==2.0.52
 alembic==1.18.5
 pydantic==2.13.4
 pydantic-settings==2.14.2
