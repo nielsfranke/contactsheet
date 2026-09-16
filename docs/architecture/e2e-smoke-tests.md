@@ -12,8 +12,8 @@ workstream, item 1 of 2 (the other is [observability](observability.md)).
 > (`e2e/conftest.py`) boots an ephemeral backend + `next build`/`next start`
 > frontend on random ports; the spec (`e2e/test_core_loop.py`) drives auth + the
 > public render through the browser and the data steps through Playwright's request
-> context. Test-only deps live in `backend/requirements-dev.txt` (pytest pinned to
-> 8.x — `pytest-playwright` caps pytest <9). CI is `.github/workflows/tests.yml`
+> context. Test-only deps live in `backend/requirements-dev.txt` (pytest 9.x, which
+> needs `pytest-playwright` >= 0.9.0 — 0.7.x capped pytest <9). CI is `.github/workflows/tests.yml`
 > (backend-unit / frontend-unit / e2e). See `e2e/README.md`.
 
 ## Goal

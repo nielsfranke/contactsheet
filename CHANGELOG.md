@@ -33,6 +33,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **The test suite moves to pytest 9.1.1.** It had been pinned to 8.x because `pytest-playwright`
+  0.7.1 capped pytest below 9; 0.9.0 lifts that cap (and brings Playwright 1.62), so the unit suite
+  and the browser-driven e2e smoke test now run on the current pytest. Test-only — nothing in the
+  shipped image changes.
 - Dependency refresh across the stack: `alembic` 1.20.0, `sentry-sdk` 2.69.1, the frontend
   minor-and-patch group (React 19.3.0, `next-intl` 4.14.4, `lucide-react` 1.45.0, Tailwind 4.3.3,
   TanStack Query 5.102.8, `@base-ui/react` 1.8.0 and 14 more), the dev-only `@types/node` 26.x and
