@@ -12,6 +12,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.11.3] - 2026-09-16
+
+A security release. Two critical Next.js advisories affected the pinned 16.3.0, one of them
+on the image pipeline every public gallery uses — **upgrading is recommended for any
+internet-facing instance.** No migration, no configuration change, nothing to do but pull.
+
 ### Security
 
 - **Next.js updated to 16.3.5, closing two critical RCEs.** The pinned 16.3.0 was affected by
@@ -1290,7 +1296,9 @@ contract are considered stable as of this release.
   caps (stricter for public uploads).
 - Docker Compose deployment (backend + frontend + nginx); SQLite + local filesystem.
 
-[Unreleased]: https://github.com/nielsfranke/contactsheet/compare/v1.11.1...HEAD
+[Unreleased]: https://github.com/nielsfranke/contactsheet/compare/v1.11.3...HEAD
+[1.11.3]: https://github.com/nielsfranke/contactsheet/compare/v1.11.2...v1.11.3
+[1.11.2]: https://github.com/nielsfranke/contactsheet/compare/v1.11.1...v1.11.2
 [1.11.1]: https://github.com/nielsfranke/contactsheet/compare/v1.11.0...v1.11.1
 [1.11.0]: https://github.com/nielsfranke/contactsheet/compare/v1.10.0...v1.11.0
 [1.10.0]: https://github.com/nielsfranke/contactsheet/compare/v1.9.4...v1.10.0
