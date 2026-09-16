@@ -20,7 +20,7 @@ os.environ["UPLOAD_DIR"] = os.path.join(_TMP, "uploads")
 os.environ["EXPORTS_DIR"] = os.path.join(_TMP, "exports")
 os.environ["BRANDING_DIR"] = os.path.join(_TMP, "branding")
 os.environ["WATERMARKS_DIR"] = os.path.join(_TMP, "watermarks")
-os.environ["SECRET_KEY"] = "test-secret-key-deterministic"
+os.environ["SECRET_KEY"] = "test-secret-key-deterministic-32-bytes-min"
 os.environ["COOKIE_SECURE"] = "false"
 # Clear any env that would auto-complete setup so tests drive the wizard explicitly.
 os.environ.pop("ADMIN_PASSWORD", None)

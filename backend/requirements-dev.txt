@@ -19,4 +19,4 @@ pytest-playwright==0.7.1
 # Kill a hung test (a socket left open, a thread that never joins) instead of hanging CI for 6 h.
 pytest-timeout==2.3.1
 # One retry for the browser-driven e2e suite only (`--reruns 1` in CI); the unit suite never retries.
-pytest-rerunfailures==15.0
+pytest-rerunfailures==16.6.1

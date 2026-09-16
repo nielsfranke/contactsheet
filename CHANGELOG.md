@@ -12,6 +12,35 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Security
+
+- **Next.js updated to 16.3.5, closing two critical RCEs.** The pinned 16.3.0 was affected by
+  [GHSA-2xp9-vwfh-vxw4](https://github.com/advisories/GHSA-2xp9-vwfh-vxw4) — unauthenticated remote
+  code execution in the **Image Optimization API when AVIF files are used**, which is the code path
+  every public gallery thumbnail goes through — and by
+  [GHSA-p293-qw3h-jr36](https://github.com/advisories/GHSA-p293-qw3h-jr36) (unauthenticated RCE on
+  Windows-hosted servers; not reachable on the Docker deploy). `sharp` moves to 0.35.4+ in the same
+  step, clearing the bundled libheif advisories
+  ([GHSA-rgj7-g3m4-5g8c](https://github.com/advisories/GHSA-rgj7-g3m4-5g8c)). The `npm-audit` CI job
+  is green again.
+- **PyJWT updated to 2.14.0**, a security release for the library that signs and verifies every admin
+  session and gallery share token. It hardens HMAC key validation against public-key material
+  (JWK/JWKS/PEM/DER) being passed as a secret, enforces compact JWS encoding on decode, rejects
+  detached-payload arguments for attached JWS input, and handles deeply nested / malformed JWS and
+  JWK input without uncaught recursion. ContactSheet uses HS256 with a locally generated
+  `secrets.token_hex(32)` key, so none of the advisories were exploitable here — this is
+  defence-in-depth on the token layer.
+
+### Changed
+
+- Dependency refresh across the stack: `alembic` 1.20.0, `sentry-sdk` 2.69.1, the frontend
+  minor-and-patch group (React 19.3.0, `next-intl` 4.14.4, `lucide-react` 1.45.0, Tailwind 4.3.3,
+  TanStack Query 5.102.8, `@base-ui/react` 1.8.0 and 14 more), the dev-only `@types/node` 26.x and
+  `pytest-rerunfailures` 16.6.1, and the GitHub Actions used by CI and the release pipeline
+  (`checkout` v7, `setup-python` v7, `setup-node` v7, `cache` v6, `upload-artifact` v7,
+  `download-artifact` v8, `docker/login-action` v4 — which also clears the Node 20 deprecation
+  warnings on every run). No behavioural change.
+
 ## [1.11.2] - 2026-09-07
 
 Bugfix release for photographers who create galleries from outside the browser.
