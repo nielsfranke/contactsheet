@@ -22,7 +22,7 @@ zipstream-ng==1.9.2
 # Semantic search: NumPy powers the brute-force cosine ranking over stored embeddings; httpx is
 # the client for the optional ML sidecar. The encoder model itself lives in the sidecar image, not
 # here — the backend stays free of any ML runtime.
-numpy==2.5.0
+numpy==2.5.3
 httpx==0.28.1
 # Optional error tracking: dormant unless SENTRY_DSN is set (see app/observability.py). Pure-Python,
 # its transitive deps (certifi/urllib3) are already present. Works against self-hosted Sentry/GlitchTip.
