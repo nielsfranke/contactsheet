@@ -12,6 +12,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.11.4] - 2026-10-08
+
+A security and maintenance release. The weekly dependency audit flagged Next.js 16.3.5 and PyJWT
+2.14.0; none of the advisories were reachable on a stock deploy, but both gates were red.
+No migration, no configuration change, nothing to do but pull.
+
 ### Security
 
 - **Next.js updated to 16.4.0**, closing seven high/critical advisories against 16.3.5, among them
@@ -1337,7 +1343,8 @@ contract are considered stable as of this release.
   caps (stricter for public uploads).
 - Docker Compose deployment (backend + frontend + nginx); SQLite + local filesystem.
 
-[Unreleased]: https://github.com/nielsfranke/contactsheet/compare/v1.11.3...HEAD
+[Unreleased]: https://github.com/nielsfranke/contactsheet/compare/v1.11.4...HEAD
+[1.11.4]: https://github.com/nielsfranke/contactsheet/compare/v1.11.3...v1.11.4
 [1.11.3]: https://github.com/nielsfranke/contactsheet/compare/v1.11.2...v1.11.3
 [1.11.2]: https://github.com/nielsfranke/contactsheet/compare/v1.11.1...v1.11.2
 [1.11.1]: https://github.com/nielsfranke/contactsheet/compare/v1.11.0...v1.11.1
