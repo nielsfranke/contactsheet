@@ -158,6 +158,7 @@ export function BackupRestore() {
       // Server rotated the runtime key from the restored settings → this cookie is dead.
       clearAuthenticated();
       toast.success(t("restoreSuccess"));
+      // eslint-disable-next-line @next/next/no-location-assign-relative-destination -- full reload drops every cache from the pre-restore instance
       window.location.href = "/login";
     } catch (err: unknown) {
       const code = getErrorCode(err);

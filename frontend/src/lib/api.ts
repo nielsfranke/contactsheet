@@ -50,6 +50,7 @@ function errorDetail(body: { detail?: unknown }, fallback: string): string {
 function handleUnauthorized(status: number): void {
   if (status === 401 && typeof window !== "undefined" && window.location.pathname.startsWith("/admin")) {
     clearAuthenticated();
+    // eslint-disable-next-line @next/next/no-location-assign-relative-destination -- runs outside React (no router); a full reload also drops stale admin caches
     window.location.href = "/login";
   }
 }

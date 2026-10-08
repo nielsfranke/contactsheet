@@ -53,6 +53,7 @@ export function ResetDangerZone() {
       // every React Query cache and the stale cookie).
       clearAuthenticated();
       toast.success(t("success"));
+      // eslint-disable-next-line @next/next/no-location-assign-relative-destination -- intentional hard reload, see above
       window.location.href = "/setup";
     } catch (err: unknown) {
       const code = getErrorCode(err);

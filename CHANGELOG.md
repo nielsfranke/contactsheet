@@ -12,6 +12,47 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Security
+
+- **Next.js updated to 16.4.0**, closing seven high/critical advisories against 16.3.5, among them
+  remote code execution in `next/og` `ImageResponse`
+  ([GHSA-vcvr-r3jv-pc5j](https://github.com/advisories/GHSA-vcvr-r3jv-pc5j)), SSRF in Image
+  Optimization ([GHSA-cjq9-62q9-8jv4](https://github.com/advisories/GHSA-cjq9-62q9-8jv4)) and two
+  SSG/ISR cache-poisoning issues. ContactSheet uses neither `next/og` nor the image optimizer
+  (`images.unoptimized`) and renders every route dynamically, so none were reachable on a stock
+  deploy; this is defence-in-depth. It brings `sharp` 0.35.5
+  ([GHSA-wq5f-xc86-pv6w](https://github.com/advisories/GHSA-wq5f-xc86-pv6w), bundled librsvg) and a
+  patched `source-map-js`. The weekly `npm-audit` job is green again.
+- **PyJWT updated to 2.15.1**: fixes an unauthenticated `RecursionError` DoS when parsing a token
+  before verification ([GHSA-42vr-xj54-vc7v](https://github.com/advisories/GHSA-42vr-xj54-vc7v)) and
+  an OKP private-JWK import check ([GHSA-x33g-cr3x-6449](https://github.com/advisories/GHSA-x33g-cr3x-6449)).
+  ContactSheet verifies HS256 tokens against a local secret, so neither path is used; the weekly
+  `pip-audit` job is green again.
+- **vitest 5** (dev-only) replaces vitest 2, whose `tinypool` carried two critical prototype-pollution
+  advisories. Test tooling only; nothing in the shipped image changes.
+
+### Changed
+
+- **bcrypt 5.0.** bcrypt 5 raises on passwords longer than 72 bytes instead of silently truncating
+  them, which would have turned a long admin or gallery password into a 500. `app/auth/password.py`
+  now truncates to 72 bytes explicitly, so long passwords keep working and every hash written under
+  bcrypt 4 still verifies.
+- Backend dependency refresh: FastAPI 0.142.4, Starlette 1.7.0, uvicorn 0.54.0, SQLAlchemy 2.1.4,
+  pydantic 2.13.5, pydantic-settings 2.15.0, Apprise 2.0.1, NumPy 2.5.3, rawpy 0.27.1,
+  zipstream-ng 1.9.3, sentry-sdk 2.71.0; dev: pytest-timeout 2.4.0, pytest-rerunfailures 16.7.
+- Frontend minor-and-patch refresh (next-intl 4.14.9, TanStack Query 5.104.1, lucide-react 1.52.0,
+  shadcn 4.21.4 and more) and `eslint-config-next` 16.4.0. Its new
+  `no-location-assign-relative-destination` rule flags the three deliberate hard reloads (after a
+  factory reset, a restore and an admin 401); they keep the full reload and say why inline.
+- Release pipeline: `docker/setup-buildx-action` v4 and `docker/build-push-action` v7 (Node 24 runtime).
+- **Dependabot runs monthly, grouped.** GitHub is a push mirror, so its PRs can't merge there and
+  are auto-closed on the next mirror sync. The config now opens at most one grouped PR per ecosystem
+  and update kind each month instead of one per package per week, also covers `ml/requirements.txt`,
+  and skips the two majors blocked upstream (eslint 10, TypeScript 7) with the reason inline.
+- Local builds: `@swc/core` 1.16.13 (pulled in by next-intl's plugin) refuses to load when
+  `~/.cache` is group- or world-writable. Docker and CI are unaffected; on such a dev machine run
+  `chmod 700 ~/.cache` or point `SWC_NATIVE_BINDING_CACHE` at a private (0700) directory.
+
 ## [1.11.3] - 2026-09-16
 
 A security release. Two critical Next.js advisories affected the pinned 16.3.0, one of them
