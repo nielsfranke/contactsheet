@@ -1,11 +1,11 @@
 # ContactSheet ML sidecar — CPU-only ONNX inference. No PyTorch (that's the whole point: it keeps
 # the image small enough to ship as an optional add-on).
-fastapi==0.139.0
-uvicorn[standard]==0.32.1
-onnxruntime==1.20.1
-huggingface_hub==0.36.2
+fastapi==0.142.2
+uvicorn[standard]==0.54.0
+onnxruntime==1.30.0
+huggingface_hub==2.1.1
 Pillow==12.3.0
-numpy==2.2.1
+numpy==2.5.3
 # No `transformers`: 5.x image processors hard-require PyTorch/Torchvision (which would defeat the
 # purpose of this container) and the 4.x line ended at 4.57.6, so its advisories are unfixable by
 # pin. runtime.py does the two things we used itself — SigLIP image pre-processing in NumPy, and
