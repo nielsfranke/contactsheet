@@ -12,6 +12,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.12.1] - 2026-10-20
+
+Clearer sub-gallery inheritance. No migration.
+
+### Changed
+
+- ***Apply to all sub-galleries* now asks first.** The confirmation names how many sub-galleries
+  (at every depth) will be overwritten and spells out what is *not* applied — mode, password and
+  "Allow large files" stay per gallery. Previously one click silently rewrote the whole subtree,
+  and a child keeping its own mode looked like inheritance failing.
+- The "Allow large files" hint now says it applies to this gallery only.
+
+### Fixed
+
+- **A sub-gallery created in a different mode than its parent now keeps the parent's client
+  upload, moderation and expiry date.** It still starts from the mode preset for its look and
+  review features, but those job-level settings used to fall back silently to off / no expiry.
+- **Photos whose processing failed can be deleted again.** A tile showing *Failed* had no hover
+  menu, so the only way out was multi-select; it now shows a delete button on hover.
+
 ## [1.12.0] - 2026-10-20
 
 Client uploads can now carry high-res originals and Photoshop working files, opt-in per gallery.
