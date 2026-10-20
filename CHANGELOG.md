@@ -12,6 +12,37 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.12.0] - 2026-10-20
+
+Client uploads can now carry high-res originals and Photoshop working files, opt-in per gallery.
+One migration (0050), applied automatically on start.
+
+### Added
+
+- **"Allow large files" for client uploads.** A new switch under *Client upload* in a gallery's
+  settings lifts the guest limits for that gallery only: PSD, PSB and TIFF are accepted, files may
+  be as large as on the photographer's own upload (300 MB images, 8 GB PSD/PSB/TIFF), the 250 MB
+  per-request total is dropped, and the pixel ceiling rises from 50 MP to the admin 250 MP — a
+  60 MP original no longer fails processing. Off by default; it reopens the PSD/TIFF decoders to
+  that gallery's visitors, so pair it with a gallery password. Camera RAW and video stay
+  photographer-only, and the switch is never copied to sub-galleries (neither by *Apply to
+  sub-galleries* nor on creation).
+- **Free-space reserve for client uploads.** A client upload is refused (507, "out of storage
+  space") if it would leave less than 5 GB free on the data or media volume
+  (`CLIENT_UPLOAD_MIN_FREE_BYTES`), so a visitor can never fill the disk the database lives on.
+
+### Fixed
+
+- The client "Add photos" file picker offered TIFF, PSD and camera RAW files the server then
+  refused. It now offers only what the gallery accepts, and a refused file says "This gallery
+  doesn't accept that file type" instead of suggesting formats the visitor can't use.
+- Client uploads of many photos no longer fail with "too large": the browser now splits a selection
+  into requests under the 250 MB per-request limit (previously only by count, 50 files), waits out
+  the upload rate limit instead of aborting halfway, and, if a later batch does fail, reports and
+  shows the photos that were already saved so a retry doesn't duplicate them.
+- Uploads are no longer buffered in the container's `/tmp` before processing; request bodies spool
+  on the data volume (`exports/.tmp`), so a multi-GB PSB can't fill a small container filesystem.
+
 ## [1.11.4] - 2026-10-08
 
 A security and maintenance release. The weekly dependency audit flagged Next.js 16.3.5 and PyJWT
@@ -1343,7 +1374,8 @@ contract are considered stable as of this release.
   caps (stricter for public uploads).
 - Docker Compose deployment (backend + frontend + nginx); SQLite + local filesystem.
 
-[Unreleased]: https://github.com/nielsfranke/contactsheet/compare/v1.11.4...HEAD
+[Unreleased]: https://github.com/nielsfranke/contactsheet/compare/v1.12.0...HEAD
+[1.12.0]: https://github.com/nielsfranke/contactsheet/compare/v1.11.4...v1.12.0
 [1.11.4]: https://github.com/nielsfranke/contactsheet/compare/v1.11.3...v1.11.4
 [1.11.3]: https://github.com/nielsfranke/contactsheet/compare/v1.11.2...v1.11.3
 [1.11.2]: https://github.com/nielsfranke/contactsheet/compare/v1.11.1...v1.11.2
