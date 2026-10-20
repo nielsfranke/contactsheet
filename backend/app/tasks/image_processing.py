@@ -300,7 +300,7 @@ def process_image(image_id: str, gallery_id: str, stored_filename: str) -> None:
     previews). The argument is kept only as a fallback if the row vanished (deleted mid-flight).
     """
     from app.database import SessionLocal
-    from app.repositories import image_repo, settings_repo
+    from app.repositories import gallery_repo, image_repo, settings_repo
 
     db = SessionLocal()
     try:
@@ -339,10 +339,13 @@ def process_image(image_id: str, gallery_id: str, stored_filename: str) -> None:
         # Decompression-bomb / giant-dimension guard: reject on the header-declared dimensions
         # before any pixel buffer is allocated (img.copy()/thumbnail in _save_resized). A crafted
         # highly-compressible file can be tiny on disk yet huge in memory; bail early → status error.
-        # Client (public) uploads get the stricter ceiling since that path is attacker-reachable.
+        # Client (public) uploads get the stricter ceiling since that path is attacker-reachable —
+        # unless the gallery opted into large client files (high-res originals, e.g. 60 MP).
         max_pixels = settings.max_image_pixels
         if image is not None and image.uploaded_by:
-            max_pixels = min(max_pixels, settings.client_upload_max_pixels)
+            gallery = gallery_repo.get_by_id(db, gallery_id)
+            if not (gallery and gallery.client_upload_large_files):
+                max_pixels = min(max_pixels, settings.client_upload_max_pixels)
         w, h = img.size
         if w * h > max_pixels:
             raise ValueError(f"Image exceeds the {max_pixels}px area limit ({w}x{h})")

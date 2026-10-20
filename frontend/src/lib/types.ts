@@ -87,6 +87,8 @@ export interface GallerySettings {
   sets_enabled: boolean;
   client_upload_enabled: boolean;
   client_upload_moderation: boolean;
+  // Guest uploads get admin-tier caps here: PSD/PSB/TIFF accepted, no 25 MB / 50 MP guest limits.
+  client_upload_large_files: boolean;
   show_filename: boolean;
   show_filename_lightbox: boolean;
   show_exif: boolean;

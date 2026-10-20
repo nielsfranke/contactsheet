@@ -4,6 +4,7 @@
 import glob
 import json
 import os
+import shutil
 import tempfile
 import uuid
 from datetime import datetime, timezone
@@ -42,10 +43,42 @@ CLIENT_UPLOAD_MAX_FILES = 50
 # Formats a public visitor may upload (format_detect keys): the browser-native trio. Working
 # documents and camera RAW stay admin-only — their decoders are the attack surface, not the need.
 CLIENT_UPLOAD_FORMATS = frozenset({"jpeg", "png", "webp"})
+# A gallery with `client_upload_large_files` on (photographer opt-in, per gallery) additionally
+# accepts working documents — e.g. a client delivering retouched PSB masters. RAW stays admin-only.
+CLIENT_UPLOAD_LARGE_FORMATS = CLIENT_UPLOAD_FORMATS | {"psd", "psb", "tiff"}
 
 # Large working-document formats that get the multi-GB `max_document_bytes` ceiling (admin uploads
 # only) rather than the regular image cap. Keyed on the detected format's `key`.
 _LARGE_DOCUMENT_KEYS = {"psd", "psb", "tiff"}
+
+
+def _ensure_free_space(needed: int) -> None:
+    """507 unless both the upload spool and the media volume have `needed` bytes free. Client
+    uploads pass a reserve: an anonymous uploader must never fill the disk the database lives on."""
+    for path in (settings.exports_dir, settings.upload_dir):
+        if shutil.disk_usage(path).free < needed:
+            raise CodedHTTPException(
+                status_code=status.HTTP_507_INSUFFICIENT_STORAGE,
+                code="storage_full",
+                detail="Not enough storage space for this upload",
+            )
+
+
+def _unsupported_type(allowed_keys: frozenset[str] | None) -> CodedHTTPException:
+    """415 for a file outside the accepted set. Client uploads (`allowed_keys` set) get their own
+    code so the visitor isn't told to try TIFF/PSD/RAW the gallery won't take."""
+    if allowed_keys is None:
+        return CodedHTTPException(
+            status_code=status.HTTP_415_UNSUPPORTED_MEDIA_TYPE,
+            code="upload_unsupported_type",
+            detail=f"Unsupported file type. Allowed: {_ACCEPTED_LABEL}",
+        )
+    label = ", ".join(sorted(k.upper() for k in allowed_keys))
+    return CodedHTTPException(
+        status_code=status.HTTP_415_UNSUPPORTED_MEDIA_TYPE,
+        code="client_upload_unsupported_type",
+        detail=f"Unsupported file type. Allowed: {label}",
+    )
 
 
 def _image_to_response(
@@ -378,6 +411,7 @@ def upload_images(
     allow_video: bool = True,
     allowed_keys: frozenset[str] | None = None,
     duplicate_actions: dict[str, str] | None = None,
+    min_free_bytes: int | None = None,
 ) -> list[UploadResponse]:
     """`duplicate_actions` maps an incoming `original_filename` → "replace" | "keep_both" | "skip".
     A name absent from the map keeps the legacy behaviour (silent append) — the backward-compat
@@ -404,11 +438,7 @@ def upload_images(
         file.file.seek(0)
         fmt = format_detect.detect_format(header, file.filename or "")
         if fmt is None:
-            raise CodedHTTPException(
-                status_code=status.HTTP_415_UNSUPPORTED_MEDIA_TYPE,
-                code="upload_unsupported_type",
-                detail=f"Unsupported file type. Allowed: {_ACCEPTED_LABEL}",
-            )
+            raise _unsupported_type(allowed_keys)
         is_video = fmt.kind == "video"
         if is_video and not allow_video:
             raise CodedHTTPException(
@@ -419,16 +449,14 @@ def upload_images(
         if allowed_keys is not None and fmt.key not in allowed_keys:
             # The public path never reaches the PSD/TIFF/RAW decoders (Pillow plugins + LibRaw):
             # they're the historically fuzz-rich ones and an anonymous visitor doesn't need them.
-            raise CodedHTTPException(
-                status_code=status.HTTP_415_UNSUPPORTED_MEDIA_TYPE,
-                code="upload_unsupported_type",
-                detail="Unsupported file type. Allowed: JPEG, PNG, WebP",
-            )
+            # (Exception: PSD/PSB/TIFF in a gallery the photographer opted into large files.)
+            raise _unsupported_type(allowed_keys)
 
         mime = fmt.mime
         # Per-format size ceiling: videos are stored as-is (large cap); large working documents
-        # (PSD/PSB/TIFF) get the multi-GB document cap on the admin path only — client uploads keep
-        # their own small per-file cap (max_image_bytes is set → not None). Everything else = 300 MB.
+        # (PSD/PSB/TIFF) get the multi-GB document cap on the admin path (and client uploads to a
+        # large-files gallery) — other client uploads keep their own small per-file cap
+        # (max_image_bytes is set → not None). Everything else = 300 MB.
         if is_video:
             size_cap = settings.max_video_bytes
         elif max_image_bytes is None and fmt.key in _LARGE_DOCUMENT_KEYS:
@@ -456,6 +484,9 @@ def upload_images(
             live_names.add(original_filename)
 
         relative_path = f"{gallery_id}/original/{stored_filename}"
+
+        if min_free_bytes is not None:
+            _ensure_free_space(min_free_bytes + (file.size or 0))
 
         _CHUNK = 1024 * 1024
         file_size = 0
@@ -570,14 +601,18 @@ def client_upload_images(
     # Moderated galleries hold client uploads in the approval queue until the photographer reviews;
     # otherwise they're public the moment processing finishes (legacy behaviour).
     pending = bool(gallery.client_upload_moderation)
+    # Large-files opt-in: the admin tier's caps (300 MB images / multi-GB PSD/PSB/TIFF, no
+    # per-request total). Otherwise the strict guest caps bound attacker-controlled disk use.
+    large = bool(gallery.client_upload_large_files)
     results = upload_images(
         db, gallery.id, files, storage,
         uploaded_by=name,
         moderation_status="pending" if pending else "approved",
-        max_image_bytes=settings.client_upload_max_file_bytes,
-        max_total_bytes=settings.client_upload_max_total_bytes,
+        max_image_bytes=None if large else settings.client_upload_max_file_bytes,
+        max_total_bytes=None if large else settings.client_upload_max_total_bytes,
         allow_video=False,
-        allowed_keys=CLIENT_UPLOAD_FORMATS,
+        allowed_keys=CLIENT_UPLOAD_LARGE_FORMATS if large else CLIENT_UPLOAD_FORMATS,
+        min_free_bytes=settings.client_upload_min_free_bytes,
     )
     if results:
         # Record the client contribution in the activity log (admin uploads go a different path

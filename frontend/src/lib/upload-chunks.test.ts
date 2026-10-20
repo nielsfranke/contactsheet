@@ -26,6 +26,11 @@ describe("chunkByBytes", () => {
     expect(chunks.map((c) => c.length)).toEqual([1, 1, 1]);
   });
 
+  it("caps items per chunk when maxCount is given", () => {
+    const chunks = chunkByBytes([f(1), f(1), f(1), f(1), f(1)], 100, 2); // 2 | 2 | 1
+    expect(chunks.map((c) => c.length)).toEqual([2, 2, 1]);
+  });
+
   it("gives an oversized single item its own chunk", () => {
     const chunks = chunkByBytes([f(30), f(250), f(30)], 100); // 30 | 250 | 30
     expect(chunks.map((c) => c.length)).toEqual([1, 1, 1]);

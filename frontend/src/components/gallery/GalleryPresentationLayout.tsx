@@ -200,6 +200,7 @@ export function GalleryPresentationLayout({
                 shareToken={shareToken}
                 galleryToken={galleryToken}
                 moderation={gallery.client_upload_moderation}
+                largeFiles={gallery.client_upload_large_files}
                 className={`inline-flex items-center gap-2 rounded-full px-6 py-2.5 text-sm font-medium border transition-colors disabled:opacity-60 ${
                   bright ? "border-zinc-300 text-zinc-800 hover:bg-zinc-100" : "border-zinc-700 text-zinc-100 hover:bg-zinc-800"
                 }`}
@@ -256,6 +257,7 @@ export function GalleryPresentationLayout({
                     shareToken={shareToken}
                     galleryToken={galleryToken}
                     moderation={gallery.client_upload_moderation}
+                    largeFiles={gallery.client_upload_large_files}
                     className={`inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium border transition-colors disabled:opacity-60 ${
                       bright ? "border-zinc-300 text-zinc-800 hover:bg-zinc-100" : "border-zinc-700 text-zinc-100 hover:bg-zinc-800"
                     }`}

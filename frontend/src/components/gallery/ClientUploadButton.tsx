@@ -12,20 +12,37 @@ import { useReviewerStore } from "@/store/reviewer";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useTranslations } from "next-intl";
-import { ACCEPTED_IMAGE_EXT_ATTR } from "@/hooks/useImageUpload";
+import { CLIENT_UPLOAD_EXT_ATTR, CLIENT_UPLOAD_LARGE_EXT_ATTR } from "@/hooks/useImageUpload";
+import { chunkByBytes, UPLOAD_CHUNK_TARGET_BYTES } from "@/lib/upload-chunks";
 
 // Mirrors `image_service.CLIENT_UPLOAD_MAX_FILES` on the backend.
 const CLIENT_UPLOAD_BATCH = 50;
+// Bytes per request: under the backend's 250 MB guest per-request total (client_upload_max_total_bytes)
+// by default; a large-files gallery has no total, so it uses the admin upload's proxy-safe target.
+const CLIENT_UPLOAD_BATCH_BYTES = 200 * 1024 * 1024;
+// The endpoint allows 10 requests/minute per IP. A big large-files drop needs more, so a 429 waits
+// out the window and retries the same batch instead of abandoning a half-finished upload.
+const RATE_LIMIT_WAIT_MS = 61_000;
+const RATE_LIMIT_RETRIES = 5;
 
-// Images only on the public path (no video for client uploads); RAW/TIFF/PSD arrive with no
-// usable MIME, so accept by extension. The backend re-validates by magic and rejects video.
-const ACCEPT = ACCEPTED_IMAGE_EXT_ATTR;
+function sleep(ms: number, signal: AbortSignal): Promise<void> {
+  return new Promise((resolve, reject) => {
+    const id = setTimeout(resolve, ms);
+    signal.addEventListener("abort", () => { clearTimeout(id); reject({ aborted: true }); }, { once: true });
+  });
+}
+
+// Images only on the public path (no video, no RAW). Accept by extension — TIFF/PSD arrive with no
+// usable MIME. JPEG/PNG/WebP by default; a large-files gallery adds TIFF/PSD/PSB. The backend
+// re-validates by magic either way.
 
 interface Props {
   shareToken: string;
   galleryToken?: string;
   /** When the gallery requires approval, uploads land pending — message accordingly, don't refetch. */
   moderation?: boolean;
+  /** Gallery opted into large client files (PSD/PSB/TIFF, admin-tier size caps). */
+  largeFiles?: boolean;
   /** Button classes so the trigger matches the surrounding layout (collab / presentation). */
   className?: string;
 }
@@ -35,7 +52,7 @@ interface Props {
  * (reused from the voting store) on first use, then uploads via the public endpoint with progress
  * and refreshes the gallery so the new photos appear.
  */
-export function ClientUploadButton({ shareToken, galleryToken, moderation, className }: Props) {
+export function ClientUploadButton({ shareToken, galleryToken, moderation, largeFiles, className }: Props) {
   const t = useTranslations("gallery.upload");
   const tc = useTranslations("common");
   const te = useTranslations("errors");
@@ -73,6 +90,20 @@ export function ClientUploadButton({ shareToken, galleryToken, moderation, class
     e.target.value = ""; // allow re-selecting the same files later
     if (files.length === 0) return;
 
+    let n = 0;
+    const reportAdded = (count: number) => {
+      if (moderation) {
+        // Held in the approval queue — it won't appear publicly yet, so don't refetch the grid.
+        toast.success(t("addedPending", { count }));
+      } else {
+        toast.success(t("added", { count }));
+        const refresh = () => qc.invalidateQueries({ queryKey: ["public-images", shareToken, galleryToken] });
+        refresh();
+        // Thumbnails are generated in the background — refresh again once they're likely ready.
+        setTimeout(refresh, 3000);
+      }
+    };
+
     const controller = new AbortController();
     abortRef.current = controller;
     setUploading(true);
@@ -80,37 +111,42 @@ export function ClientUploadButton({ shareToken, galleryToken, moderation, class
     try {
       // The backend caps a client-upload request at 50 files: send a big phone-roll selection in
       // sequential batches (aggregate progress) instead of streaming hundreds of MB and then
-      // getting the whole thing rejected.
+      // getting the whole thing rejected. Large-files galleries also bound each request by bytes
+      // (like the admin upload) so multi-GB PSB batches clear an outer proxy's body cap.
       const uploader = useReviewerStore.getState().name ?? "Guest";
-      const batches: File[][] = [];
-      for (let i = 0; i < files.length; i += CLIENT_UPLOAD_BATCH) batches.push(files.slice(i, i + CLIENT_UPLOAD_BATCH));
+      const batches = chunkByBytes(
+        files,
+        largeFiles ? UPLOAD_CHUNK_TARGET_BYTES : CLIENT_UPLOAD_BATCH_BYTES,
+        CLIENT_UPLOAD_BATCH,
+      );
       const totalBytes = files.reduce((sum, f) => sum + f.size, 0) || 1;
       let doneBytes = 0;
-      let n = 0;
       for (const batch of batches) {
         const batchBytes = batch.reduce((sum, f) => sum + f.size, 0);
-        const uploaded = await api.public.uploadImages(
-          shareToken,
-          batch,
-          uploader,
-          galleryToken,
-          (p) => setPct(Math.round(((doneBytes + (batchBytes * p) / 100) / totalBytes) * 100)),
-          controller.signal,
-        );
+        for (let attempt = 0; ; attempt++) {
+          try {
+            const uploaded = await api.public.uploadImages(
+              shareToken,
+              batch,
+              uploader,
+              galleryToken,
+              (p) => setPct(Math.round(((doneBytes + (batchBytes * p) / 100) / totalBytes) * 100)),
+              controller.signal,
+            );
+            n += uploaded.length;
+            break;
+          } catch (err) {
+            if (getErrorCode(err) !== "rate_limited" || attempt >= RATE_LIMIT_RETRIES) throw err;
+            await sleep(RATE_LIMIT_WAIT_MS, controller.signal);
+          }
+        }
         doneBytes += batchBytes;
-        n += uploaded.length;
       }
-      if (moderation) {
-        // Held in the approval queue — it won't appear publicly yet, so don't refetch the grid.
-        toast.success(t("addedPending", { count: n }));
-      } else {
-        toast.success(t("added", { count: n }));
-        const refresh = () => qc.invalidateQueries({ queryKey: ["public-images", shareToken, galleryToken] });
-        refresh();
-        // Thumbnails are generated in the background — refresh again once they're likely ready.
-        setTimeout(refresh, 3000);
-      }
+      reportAdded(n);
     } catch (err) {
+      // Earlier batches may already be saved — say so and show them, so a retry isn't a blind
+      // re-upload of everything (which would duplicate those photos).
+      if (n > 0) reportAdded(n);
       if (err && typeof err === "object" && "aborted" in err) {
         // User-initiated cancel — a quiet info toast, not an error.
         toast.info(t("cancelled"));
@@ -137,7 +173,7 @@ export function ClientUploadButton({ shareToken, galleryToken, moderation, class
       <input
         ref={inputRef}
         type="file"
-        accept={ACCEPT}
+        accept={largeFiles ? CLIENT_UPLOAD_LARGE_EXT_ATTR : CLIENT_UPLOAD_EXT_ATTR}
         multiple
         hidden
         onChange={handleFiles}

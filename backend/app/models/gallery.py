@@ -89,6 +89,9 @@ class Gallery(Base):
     client_upload_enabled: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)  # client uploads (built)
     # Require photographer approval before client uploads become public (approval queue).
     client_upload_moderation: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    # Lift the guest caps to the admin tier for this gallery: PSD/PSB/TIFF accepted, admin per-file
+    # size caps, no per-request total, admin pixel ceiling. Off by default (see client-uploads.md).
+    client_upload_large_files: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     show_filename: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     show_filename_lightbox: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     show_exif: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)

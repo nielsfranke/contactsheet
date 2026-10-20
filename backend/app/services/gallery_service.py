@@ -65,6 +65,7 @@ _PASSTHROUGH_UPDATE_FIELDS = (
     "preview_corners", "bg_brightness",
     "color_flags_enabled", "likes_enabled", "comments_enabled", "annotations_enabled",
     "sets_enabled", "client_upload_enabled", "client_upload_moderation",
+    "client_upload_large_files",
     "show_filename", "show_filename_lightbox", "show_exif", "show_iptc",
     "hide_parent_nav",
 )
@@ -77,7 +78,12 @@ _PASSTHROUGH_UPDATE_FIELDS = (
 # See docs/proposals/gallery-per-container-mode-presets.md.
 # `sort_order` is the sibling rank (identity, like the name) — cascading it would give every
 # descendant the same rank and scramble their ordering.
-_CASCADE_FIELDS = (frozenset(_PASSTHROUGH_UPDATE_FIELDS) | {"bg_dimmed_color", "expires_at"}) - {"mode", "sort_order"}
+# `client_upload_large_files` relaxes a security boundary (PSD/TIFF decoders + multi-GB caps for
+# anonymous uploaders), so like the password it stays a deliberate per-gallery choice: never
+# cascaded, and (being absent here) never inherited by new sub-galleries either.
+_CASCADE_FIELDS = (frozenset(_PASSTHROUGH_UPDATE_FIELDS) | {"bg_dimmed_color", "expires_at"}) - {
+    "mode", "sort_order", "client_upload_large_files",
+}
 
 # Copied from the parent when a sub-gallery is created (sort_order ranks siblings, so not that).
 # hide_parent_nav is excluded — a new sub-gallery shouldn't silently inherit standalone scoping.

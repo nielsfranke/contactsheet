@@ -20,13 +20,14 @@ export const UPLOAD_CHUNK_TARGET_BYTES = 256 * 1024 * 1024; // 256 MB
  * Greedily pack items into byte-bounded groups, preserving order. A single item larger than
  * `maxBytes` gets its own group — one file can't be split across requests (the server needs whole
  * files), so the operator's proxy must still admit that lone file. An empty input yields no groups.
+ * `maxCount` additionally caps items per group (the client-upload endpoint takes ≤ 50 files).
  */
-export function chunkByBytes<T extends { size: number }>(items: T[], maxBytes: number): T[][] {
+export function chunkByBytes<T extends { size: number }>(items: T[], maxBytes: number, maxCount = Infinity): T[][] {
   const chunks: T[][] = [];
   let current: T[] = [];
   let size = 0;
   for (const item of items) {
-    if (current.length > 0 && size + item.size > maxBytes) {
+    if (current.length > 0 && (size + item.size > maxBytes || current.length >= maxCount)) {
       chunks.push(current);
       current = [];
       size = 0;

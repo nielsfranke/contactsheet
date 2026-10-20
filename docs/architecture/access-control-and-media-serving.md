@@ -65,6 +65,19 @@ Protection rests on `gallery_id` + `stored_filename` being unguessable UUIDv4s. 
 - **Client-upload disk caps** — public uploads are capped tighter than admin: per-file
   `client_upload_max_file_bytes` (25 MB) and per-request `client_upload_max_total_bytes` (250 MB),
   both aborting mid-stream, on top of the 50-file count cap and the `10/minute` rate limit.
+- **Large-files opt-in** — `galleries.client_upload_large_files` (per gallery, off by default) lifts
+  the guest tier to the admin caps for that one gallery: PSD/PSB/TIFF accepted, admin per-file caps
+  (300 MB / 8 GB documents), no per-request total, the 250 MP pixel ceiling. It exists for clients
+  who deliver retouched masters (e.g. 60 MP originals, PSB). It deliberately re-opens the PSD/TIFF
+  decoders to visitors of that gallery, so pair it with a password (moderation doesn't bound disk —
+  pending files are already stored). Camera RAW (LibRaw) and video stay admin-only even then. It is
+  never cascaded to or inherited by sub-galleries.
+- **Free-space reserve** — every client upload must leave `client_upload_min_free_bytes` (5 GB,
+  env-overridable) free on both the spool (`exports_dir`) and media volumes, else 507
+  `storage_full`. This is the backstop for the large-files tier, which has no per-request total.
+- **Multipart spool** — Starlette writes request bodies to tempfile's default dir before the
+  handler runs; `tempfile.tempdir` is pointed at `settings.spool_dir` (`exports_dir/.tmp`) at
+  startup so multi-GB uploads land on the data volume, not the container's `/tmp`.
 
 ## Moderation
 

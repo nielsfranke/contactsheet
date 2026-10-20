@@ -64,6 +64,9 @@ def factory_reset(password: str, db: Session) -> None:
     # 2. Wipe media/branding/export/watermark files from disk.
     for root in _MEDIA_DIRS:
         _clear_dir(root)
+    # The process-wide tempfile dir lives under exports_dir — recreate it, or the next multipart
+    # upload fails to spool.
+    os.makedirs(settings.spool_dir, exist_ok=True)
 
     # 3. Reset settings to defaults: drop the singleton and recreate it, then rotate the
     #    secret key. This clears setup_complete + admin credentials and invalidates every

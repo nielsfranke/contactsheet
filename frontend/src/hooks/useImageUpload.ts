@@ -39,8 +39,11 @@ const ACCEPTED_IMAGE_EXT = [
   ".cr2", ".cr3", ".nef", ".nrw", ".arw", ".sr2", ".srf", ".dng", ".raf", ".orf",
   ".rw2", ".pef", ".srw", ".rwl", ".dcr", ".kdc", ".mrw", ".x3f", ".3fr", ".mef", ".iiq",
 ];
-// Image extensions only — reused by the public client-upload picker (no video there).
-export const ACCEPTED_IMAGE_EXT_ATTR = ACCEPTED_IMAGE_EXT.join(",");
+// Public client-upload picker (no video there) — mirrors the backend's CLIENT_UPLOAD_FORMATS /
+// CLIENT_UPLOAD_LARGE_FORMATS, so the dialog only offers what the server will accept.
+const CLIENT_UPLOAD_EXT = [".jpg", ".jpeg", ".png", ".webp"];
+export const CLIENT_UPLOAD_EXT_ATTR = CLIENT_UPLOAD_EXT.join(",");
+export const CLIENT_UPLOAD_LARGE_EXT_ATTR = [...CLIENT_UPLOAD_EXT, ".tif", ".tiff", ".psd", ".psb"].join(",");
 export const ACCEPTED_EXT = [...ACCEPTED_IMAGE_EXT, ...ACCEPTED_VIDEO_EXT].join(",");
 
 const MAX_IMAGE_BYTES = 300 * 1024 * 1024; // 300 MB — matches backend max_upload_bytes

@@ -116,6 +116,103 @@ def test_client_upload_total_request_cap(admin_client, monkeypatch):
     assert r.status_code == 413 and r.json()["code"] == "upload_too_large"
 
 
+# --- Large-files opt-in (client_upload_large_files): admin-tier caps for one gallery ----------
+
+def _client_post(admin_client, g, files):
+    return admin_client.post(
+        f"/api/public/g/{g['share_token']}/images", files=files, data={"uploader": "Alice"},
+    )
+
+
+def _large_files_gallery(admin_client, on: bool):
+    g = make_gallery(admin_client, "G", mode="collaboration")
+    admin_client.patch(
+        f"/api/galleries/{g['id']}",
+        json={"client_upload_enabled": True, "client_upload_large_files": on},
+    )
+    return g
+
+
+def test_client_upload_rejects_working_documents_by_default(admin_client):
+    g = _large_files_gallery(admin_client, on=False)
+    for name, data in (("art.psb", psb_bytes()), ("scan.tif", tiff_bytes())):
+        r = _client_post(admin_client, g, [("files", (name, data, "application/octet-stream"))])
+        assert r.status_code == 415 and r.json()["code"] == "client_upload_unsupported_type"
+
+
+def test_client_upload_large_files_accepts_psb_and_tiff(admin_client):
+    g = _large_files_gallery(admin_client, on=True)
+    r = _client_post(admin_client, g, [
+        ("files", ("art.psb", psb_bytes(with_thumbnail=True), "application/octet-stream")),
+        ("files", ("scan.tif", tiff_bytes(), "image/tiff")),
+    ])
+    assert r.status_code == 201, r.text
+    imgs = admin_client.get(f"/api/galleries/{g['id']}/images").json()
+    assert sorted(i["original_filename"] for i in imgs) == ["art.psb", "scan.tif"]
+    assert all(i["processing_status"] == "done" and i["uploaded_by"] == "Alice" for i in imgs)
+
+
+def test_client_upload_large_files_still_rejects_raw_and_video(admin_client):
+    g = _large_files_gallery(admin_client, on=True)
+    # Camera RAW (LibRaw) stays admin-only even with the opt-in; so does video.
+    raw = b"II*\x00\x10\x00\x00\x00CR\x02\x00" + b"\x00" * 64
+    r = _client_post(admin_client, g, [("files", ("x.cr2", raw, "application/octet-stream"))])
+    assert r.status_code == 415
+    mp4 = b"\x00\x00\x00\x18ftypmp42" + b"\x00" * 64
+    r = _client_post(admin_client, g, [("files", ("v.mp4", mp4, "video/mp4"))])
+    assert r.status_code == 415 and r.json()["code"] == "client_upload_video"
+
+
+def test_client_upload_large_files_lifts_byte_caps(admin_client, monkeypatch):
+    g = _large_files_gallery(admin_client, on=True)
+    monkeypatch.setattr(app_settings, "client_upload_max_file_bytes", 10)
+    monkeypatch.setattr(app_settings, "client_upload_max_total_bytes", 10)
+    r = _client_post(admin_client, g, [
+        ("files", ("a.png", png_bytes(), "image/png")),
+        ("files", ("b.png", png_bytes(), "image/png")),
+    ])
+    assert r.status_code == 201, r.text
+
+
+def test_client_upload_large_files_lifts_pixel_cap(admin_client, monkeypatch):
+    monkeypatch.setattr(app_settings, "client_upload_max_pixels", 10)  # 16x16 = 256 px > 10
+    strict = _large_files_gallery(admin_client, on=False)
+    large = _large_files_gallery(admin_client, on=True)
+    for g in (strict, large):
+        assert _client_post(admin_client, g, [("files", ("p.png", png_bytes(), "image/png"))]).status_code == 201
+    status_of = lambda g: admin_client.get(f"/api/galleries/{g['id']}/images").json()[0]["processing_status"]
+    assert status_of(strict) == "error"
+    assert status_of(large) == "done"
+
+
+def test_client_upload_large_files_exposed_publicly(admin_client):
+    g = _large_files_gallery(admin_client, on=True)
+    pub = admin_client.get(f"/api/public/g/{g['share_token']}").json()
+    assert pub["client_upload_large_files"] is True
+
+
+def test_client_upload_refused_when_storage_low(admin_client, monkeypatch):
+    g = _large_files_gallery(admin_client, on=True)
+    monkeypatch.setattr(app_settings, "client_upload_min_free_bytes", 1 << 62)  # more than any disk
+    r = _client_post(admin_client, g, [("files", ("p.png", png_bytes(), "image/png"))])
+    assert r.status_code == 507 and r.json()["code"] == "storage_full"
+    # Admin uploads carry no reserve.
+    assert _upload(admin_client, g["id"]).status_code == 201
+
+
+def test_client_upload_large_files_never_cascades_or_inherits(admin_client):
+    parent = make_gallery(admin_client, "P", mode="collaboration")
+    child = make_gallery(admin_client, "C", parent_id=parent["id"], mode="collaboration")
+    admin_client.patch(f"/api/galleries/{parent['id']}", json={
+        "client_upload_enabled": True, "client_upload_large_files": True, "apply_to_subgalleries": True,
+    })
+    got = admin_client.get(f"/api/galleries/{child['id']}").json()
+    assert got["client_upload_enabled"] is True  # the regular toggle cascades…
+    assert got["client_upload_large_files"] is False  # …the security relaxation doesn't
+    new_child = make_gallery(admin_client, "N", parent_id=parent["id"], mode="collaboration")
+    assert new_child["client_upload_large_files"] is False
+
+
 # --- Broad format support (Phase 1): TIFF accepted, PSB rejected ------------------------------
 
 def test_tiff_upload_processes_to_done(admin_client):

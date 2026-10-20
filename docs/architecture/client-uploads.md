@@ -81,4 +81,5 @@ noted, not solved here.
 - Per-IP rate limiting on the public endpoint.
 - Configuring client upload via instance presets; filtering the admin grid by uploader.
 - A dedicated "Client uploads" sub-gallery destination.
-- Video / RAW uploads (same format set as admin today).
+- Video / RAW uploads. (PSD/PSB/TIFF + admin-tier size/pixel caps are available per gallery via
+  `client_upload_large_files` — see access-control-and-media-serving.md.)

@@ -181,6 +181,7 @@ class GalleryUpdate(BaseModel):
     sets_enabled: bool | None = None
     client_upload_enabled: bool | None = None
     client_upload_moderation: bool | None = None
+    client_upload_large_files: bool | None = None
     show_filename: bool | None = None
     show_filename_lightbox: bool | None = None
     show_exif: bool | None = None
@@ -276,6 +277,7 @@ class GalleryResponse(BaseModel):
     sets_enabled: bool = False
     client_upload_enabled: bool = False
     client_upload_moderation: bool = False
+    client_upload_large_files: bool = False
     show_filename: bool = False
     show_filename_lightbox: bool = False
     show_exif: bool = False
@@ -371,6 +373,7 @@ class GalleryPublicResponse(BaseModel):
     client_upload_enabled: bool = False
     # Public UI cue: when on, uploads land in the approval queue (uploader sees "awaiting review").
     client_upload_moderation: bool = False
+    client_upload_large_files: bool = False
     show_filename: bool = False
     show_filename_lightbox: bool = False
     show_exif: bool = False

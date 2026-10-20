@@ -5,6 +5,7 @@ import logging
 import os
 import secrets
 import shutil
+import tempfile
 from contextlib import asynccontextmanager
 from datetime import datetime, timedelta, timezone
 
@@ -36,6 +37,12 @@ async def _lifespan(app: FastAPI):
     os.makedirs(settings.exports_dir, exist_ok=True)
     os.makedirs(settings.branding_dir, exist_ok=True)
     os.makedirs(settings.watermarks_dir, exist_ok=True)
+    # Starlette spools multipart bodies (>1 MB) to tempfile's default dir *before* the handler runs,
+    # so a multi-GB PSB upload would land in the container's /tmp (overlay or tmpfs) first. Point it
+    # at the data volume instead, next to the upload spool in image_service (exports_dir is never
+    # backed up). The files are unlinked on close, so nothing accumulates.
+    os.makedirs(settings.spool_dir, exist_ok=True)
+    tempfile.tempdir = settings.spool_dir
     app.mount("/uploads", StaticFiles(directory=settings.upload_dir), name="uploads")
     app.mount("/branding", StaticFiles(directory=settings.branding_dir), name="branding")
 

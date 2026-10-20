@@ -747,7 +747,7 @@ def test_client_upload_accepts_web_formats_only(admin_client):
     _PIL.new("RGB", (8, 8)).save(buf, format="TIFF")
     r = _pub().post(f"/api/public/g/{g['share_token']}/images",
                     files=[("files", ("scan.tif", buf.getvalue(), "image/tiff"))], data={"uploader": "Bob"})
-    assert r.status_code == 415 and r.json()["code"] == "upload_unsupported_type"
+    assert r.status_code == 415 and r.json()["code"] == "client_upload_unsupported_type"
     r = _pub().post(f"/api/public/g/{g['share_token']}/images",
                     files=[("files", ("p.png", png_bytes(), "image/png"))], data={"uploader": "Bob"})
     assert r.status_code == 201

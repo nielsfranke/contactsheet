@@ -198,6 +198,7 @@ export function CollabSidebar({
                 shareToken={shareToken}
                 galleryToken={galleryToken}
                 moderation={gallery.client_upload_moderation}
+                largeFiles={gallery.client_upload_large_files}
                 className={cn(buttonVariants({ variant: "outline", size: "sm" }), "w-full justify-start gap-3")}
               />
             )}

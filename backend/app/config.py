@@ -1,6 +1,7 @@
 # SPDX-FileCopyrightText: 2026 Niels Franke
 # SPDX-License-Identifier: AGPL-3.0-or-later
 
+import os
 from typing import Literal
 
 from pydantic import field_validator
@@ -34,6 +35,11 @@ class Settings(BaseSettings):
     db_pool_timeout: int = 30
     upload_dir: str = "/data/uploads"
     exports_dir: str = "/data/exports"
+
+    @property
+    def spool_dir(self) -> str:
+        """Process-wide tempfile dir (set at startup) — on the data volume, never backed up."""
+        return os.path.join(self.exports_dir, ".tmp")
     branding_dir: str = "/data/branding"
     watermarks_dir: str = "/data/watermarks"
     zip_ttl_hours: int = 24
@@ -110,6 +116,10 @@ class Settings(BaseSettings):
     # ~width*height*3 bytes. 50 MP bounds per-image decode memory on the attacker-reachable path
     # while comfortably covering phone/camera photos.
     client_upload_max_pixels: int = 50_000_000
+    # Free space every client upload must leave on the spool and media volumes (507 otherwise) —
+    # chiefly for galleries with `client_upload_large_files`, where per-file caps reach 8 GB and
+    # there is no per-request total. Moderation doesn't help: pending uploads are already on disk.
+    client_upload_min_free_bytes: int = 5_368_709_120  # 5 GB
 
     # Semantic search (optional). Inference runs in a separate `contactsheet-ml` sidecar so the
     # main backend image stays lean and the feature is opt-in at deploy time. The backend never

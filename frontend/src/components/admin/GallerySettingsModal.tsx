@@ -110,6 +110,7 @@ export function GallerySettingsModal({
 
   const [clientUpload, setClientUpload] = useState(gallery.client_upload_enabled);
   const [clientUploadModeration, setClientUploadModeration] = useState(gallery.client_upload_moderation);
+  const [clientUploadLargeFiles, setClientUploadLargeFiles] = useState(gallery.client_upload_large_files);
   const [subgalleryPresets, setSubgalleryPresets] = useState(gallery.subgallery_presets);
 
   // Security
@@ -377,6 +378,12 @@ export function GallerySettingsModal({
                     hint={t("clientUploadModerationHint")}
                     checked={clientUploadModeration}
                     onChange={(v) => { setClientUploadModeration(v); save({ client_upload_moderation: v }); }}
+                  />
+                  <Toggle
+                    label={t("clientUploadLargeFilesLabel")}
+                    hint={t("clientUploadLargeFilesHint")}
+                    checked={clientUploadLargeFiles}
+                    onChange={(v) => { setClientUploadLargeFiles(v); save({ client_upload_large_files: v }); }}
                   />
                 </div>
               )}

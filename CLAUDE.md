@@ -186,6 +186,7 @@ Migrations live in `backend/alembic/versions/`. Always create a new file — nev
 0047 — legal pages + support link: app_settings.impressum / privacy / support_link_enabled
 0048 — galleries.header_focus_x/y NOT NULL (aligns 0012 with the model; drift caught by tests/test_migrations_match_models.py)
 0049 — overview_mobile_layout on app_settings (grid | list for the admin gallery overview on phones)
+0050 — client upload large files: galleries.client_upload_large_files
 ```
 
 ## Feature invariants
@@ -225,6 +226,8 @@ Key non-obvious constraints — full details in `docs/architecture/`.
 ### Client uploads & moderation
 - `image_service.client_upload_images` enforces `client_upload_enabled` (403) and a per-request cap of 50 files.
 - When `client_upload_moderation` is on, uploads land with `moderation_status="pending"` and are invisible to the public until approved. `image_repo.get_by_gallery` takes an `only_approved` flag — the public path passes it; the admin path does not.
+- Guest caps (JPEG/PNG/WebP only, `client_upload_max_file_bytes` 25 MB, `client_upload_max_total_bytes` 250 MB/request, `client_upload_max_pixels` 50 MP) are lifted **per gallery** by `client_upload_large_files` (photographer opt-in, nested under Client upload): PSD/PSB/TIFF accepted (`CLIENT_UPLOAD_LARGE_FORMATS`), admin per-file caps, no request total, admin pixel ceiling (checked in `process_image` against the live gallery). **Camera RAW and video stay admin-only** regardless. It is **never cascaded nor inherited** by sub-galleries (excluded from `_CASCADE_FIELDS`, like a security setting). Every client upload must leave `client_upload_min_free_bytes` (5 GB) free on the spool + media volumes (507 `storage_full`). The public picker's `accept` list mirrors the allowed set; it chunks requests by bytes (200 MB guest / 256 MB large) and ≤ 50 files, and waits out a 429 (10/min) instead of aborting.
+- Process-wide `tempfile.tempdir` = `settings.spool_dir` (`exports_dir/.tmp`, set in lifespan, recreated by factory reset): Starlette spools multipart bodies there *before* the handler runs, so multi-GB uploads never hit the container's `/tmp`.
 
 ### Annotations
 - An annotation **is a comment** with a nullable `anchor` JSON column. `annotation_count` counts only rows where `anchor` is not null (via `json_extract`). Anchored comments still increment `comment_count`.
