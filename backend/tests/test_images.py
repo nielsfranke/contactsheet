@@ -60,6 +60,15 @@ def test_delete_image_soft_deletes(admin_client):
     assert admin_client.get(f"/api/galleries/{g['id']}/images").json() == []
 
 
+
+def test_delete_failed_image(admin_client):
+    """A photo whose processing failed (no renditions on disk) must stay deletable — otherwise a
+    broken upload is stuck in the gallery for good."""
+    g = make_gallery(admin_client, "G")
+    img = add_image(g["id"], status="error")
+    assert admin_client.delete(f"/api/images/{img}").status_code == 204
+    assert admin_client.get(f"/api/galleries/{g['id']}/images").json() == []
+
 def test_move_image_between_galleries(admin_client):
     a = make_gallery(admin_client, "A")
     b = make_gallery(admin_client, "B")

@@ -139,6 +139,24 @@ def test_subgallery_divergent_mode_uses_instance_preset(admin_client):
     assert admin_client.get(f"/api/galleries/{child['id']}").json()["preview_size"] == "large"
 
 
+def test_subgallery_divergent_mode_still_inherits_mode_independent_fields(admin_client):
+    """Client upload, moderation and expiry aren't Review-vs-Showcase look — a divergent-mode child
+    still copies them from its parent instead of silently dropping to off. The large-files opt-in
+    stays per gallery (never inherited) either way."""
+    parent = make_gallery(admin_client, "P", mode="presentation")
+    admin_client.patch(f"/api/galleries/{parent['id']}", json={
+        "client_upload_enabled": True, "client_upload_moderation": True,
+        "client_upload_large_files": True, "expires_at": "2030-01-01T00:00:00Z",
+    })
+    child = admin_client.get(
+        f"/api/galleries/{make_gallery(admin_client, 'C', parent_id=parent['id'], mode='collaboration')['id']}"
+    ).json()
+    assert child["client_upload_enabled"] is True
+    assert child["client_upload_moderation"] is True
+    assert child["expires_at"].startswith("2030-01-01")
+    assert child["client_upload_large_files"] is False
+
+
 # --- per-container sub-gallery presets (Part 2) ----------------------------------------------
 
 def test_subgallery_presets_roundtrip_and_validation(admin_client):

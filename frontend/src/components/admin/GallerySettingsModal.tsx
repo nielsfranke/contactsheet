@@ -30,6 +30,7 @@ import {
 import { HeaderImageUpload } from "./HeaderImageUpload";
 import { SubgalleryPresetsSection } from "./SubgalleryPresetsSection";
 import { SaveStatus } from "./SaveStatus";
+import { ConfirmDialog } from "@/components/chrome/ConfirmDialog";
 import { useGallerySettingsAutosave } from "@/hooks/useGallerySettingsAutosave";
 import {
   ImageIcon,
@@ -119,6 +120,11 @@ export function GallerySettingsModal({
   const [hideParentNav, setHideParentNav] = useState(gallery.hide_parent_nav);
 
   const hasChildren = gallery.children.length > 0;
+  // The cascade rewrites the whole subtree, not just direct children — confirm with the real count.
+  const descendantCount = (function count(gs: GalleryResponse[]): number {
+    return gs.reduce((n, g) => n + 1 + count(g.children), 0);
+  })(gallery.children);
+  const [confirmApplyOpen, setConfirmApplyOpen] = useState(false);
   const [wmSettings, setWmSettings] = useState<WatermarkSettings>(() => {
     try {
       const parsed = gallery.watermark_settings ? JSON.parse(gallery.watermark_settings) : {};
@@ -206,9 +212,12 @@ export function GallerySettingsModal({
     }
   }
 
-  // Explicit cascade: re-apply the current look & behaviour to direct children in one PATCH (the
-  // backend filters to its cascade-eligible field set). Never part of an autosave patch.
+  // Explicit cascade: re-apply the current look & behaviour to the whole subtree in one PATCH (the
+  // backend filters to its cascade-eligible field set). Never part of an autosave patch. Confirmed
+  // first: it overwrites every descendant, and what it leaves out (mode, password, large files)
+  // isn't otherwise visible.
   function applyToSubgalleries() {
+    setConfirmApplyOpen(false);
     save({
       mode,
       ...look,
@@ -479,7 +488,7 @@ export function GallerySettingsModal({
         {/* Footer */}
         <div className="flex items-center justify-between gap-4 pt-2 border-t border-border">
           {hasChildren ? (
-            <Button variant="outline" size="sm" onClick={applyToSubgalleries}>
+            <Button variant="outline" size="sm" onClick={() => setConfirmApplyOpen(true)}>
               {t("applyToSub")}
             </Button>
           ) : (
@@ -493,6 +502,14 @@ export function GallerySettingsModal({
           </div>
         </div>
       </DialogContent>
+      <ConfirmDialog
+        open={confirmApplyOpen}
+        onOpenChange={setConfirmApplyOpen}
+        title={t("applyToSubConfirmTitle", { count: descendantCount })}
+        description={t("applyToSubConfirmBody")}
+        confirmLabel={t("applyToSubConfirm")}
+        onConfirm={applyToSubgalleries}
+      />
     </Dialog>
   );
 }

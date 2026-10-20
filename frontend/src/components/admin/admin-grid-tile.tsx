@@ -262,6 +262,25 @@ export function AdminTile({
           </OverlayPill>
         )}
 
+        {/* Failed / stuck tiles get no full overlay (nothing to rate or open) — but they must stay
+            deletable, or a broken upload is stuck in the gallery. */}
+        {img.processing_status !== "done" && !selectionMode && (
+          <OverlayPill
+            as="button"
+            variant="control"
+            size="sm"
+            shape="iconPill"
+            disabled={deleting}
+            onPointerDown={(e) => e.stopPropagation()}
+            onClick={(e) => { e.stopPropagation(); onDelete(img); }}
+            title={t("delete")}
+            aria-label={t("delete")}
+            className="absolute bottom-2 right-2 opacity-0 group-hover:opacity-100 focus-visible:opacity-100 transition-opacity"
+          >
+            <Trash2 size={13} />
+          </OverlayPill>
+        )}
+
         {/* Hover overlay */}
         {img.processing_status === "done" && !selectionMode && (
           <div

@@ -103,13 +103,19 @@ _PRESET_FIELDS = frozenset({
     "show_filename", "show_filename_lightbox", "show_exif", "show_iptc",
 })
 
+# Inherited fields a mode preset can't express (client upload, moderation, expiry): properties of
+# the job, not of Review vs Showcase. A divergent-mode sub-gallery still copies these from its
+# parent — otherwise they'd silently fall back to their column defaults (off / no expiry).
+_MODE_INDEPENDENT_INHERIT_FIELDS = _INHERIT_CREATE_FIELDS - _PRESET_FIELDS - {"mode"}
+
 
 def _resolve_create_defaults(db: Session, data: GalleryCreate, parent: Gallery | None) -> dict:
     """Look & behaviour for a new gallery, for fields the request didn't set explicitly.
 
     Sub-galleries copy their parent's look & behaviour — UNLESS created with an explicit mode that
-    differs from the parent's, in which case the parent's (other-mode) settings don't fit and we
-    fall back to the instance standard preset for the chosen mode, exactly like a top-level gallery.
+    differs from the parent's, in which case the parent's (other-mode) look doesn't fit and we
+    fall back to the instance standard preset for the chosen mode, exactly like a top-level gallery
+    (mode-independent fields — client upload, moderation, expiry — still come from the parent).
     Top-level galleries always start from the instance preset for their mode. Explicit merge only —
     never **-splat stored JSON. See docs/proposals/gallery-per-container-mode-presets.md.
     """
@@ -134,6 +140,10 @@ def _resolve_create_defaults(db: Session, data: GalleryCreate, parent: Gallery |
         for field in _PRESET_FIELDS:
             if field in preset and field not in explicit:
                 defaults[field] = preset[field]
+        if parent is not None:
+            for field in _MODE_INDEPENDENT_INHERIT_FIELDS:
+                if field not in explicit:
+                    defaults[field] = getattr(parent, field)
     # Carry the container's per-mode sub-gallery presets down the tree so an immediate-parent lookup
     # keeps working at any nesting depth (they're not in _INHERIT_CREATE_FIELDS / _PRESET_FIELDS).
     if parent is not None and parent.subgallery_presets:
