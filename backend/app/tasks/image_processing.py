@@ -9,11 +9,12 @@ from concurrent.futures import ThreadPoolExecutor
 
 from PIL import IptcImagePlugin
 from PIL import Image as PilImage
+from PIL import UnidentifiedImageError
 from PIL.ExifTags import IFD, TAGS
 
 from app import maintenance
 from app.config import settings
-from app.storage import format_detect, psd_thumbnail
+from app.storage import format_detect, psd_composite, psd_thumbnail
 
 logger = logging.getLogger(__name__)
 
@@ -316,7 +317,16 @@ def process_image(image_id: str, gallery_id: str, stored_filename: str) -> None:
         targets = preview_targets(settings_repo.get(db).high_res_previews)
 
         is_psb = format_detect.is_psb_filename(stored_filename)
-        if is_psb:
+        img = None
+        if format_detect.is_psd_filename(stored_filename):
+            # Pillow's PSD plugin only opens 8-bit files; a 16-bit PSD (the usual retouch export)
+            # raises UnidentifiedImageError. Decode its composite ourselves, else fall through to
+            # the embedded thumbnail like a PSB — a PSD must never end up as a processing error.
+            try:
+                img = PilImage.open(original_path)
+            except UnidentifiedImageError:
+                img = psd_composite.open_composite(original_path, settings.max_image_pixels)
+        if img is None and (is_psb or format_detect.is_psd_filename(stored_filename)):
             # PSB preview comes from the embedded thumbnail (read from the file header — never the
             # multi-GB image data). No thumbnail (saved without "Maximize Compatibility") → store it
             # as a download-only asset with no renditions ("no_preview").
@@ -329,10 +339,10 @@ def process_image(image_id: str, gallery_id: str, stored_filename: str) -> None:
                 image_repo.set_embedding_status(db, image_id, "skipped")
                 from app.realtime import publish as realtime_publish
                 realtime_publish(gallery_id, "image", image_id=image_id)
-                logger.info("Stored PSB without preview: %s", image_id)
+                logger.info("Stored PSD/PSB without preview: %s", image_id)
                 return
             img = PilImage.open(io.BytesIO(data))
-        else:
+        elif img is None:
             img = _open_source(original_path, stored_filename)
         # Capture the source ICC profile before any transform so we can colour-manage to sRGB below.
         icc_profile = img.info.get("icc_profile")

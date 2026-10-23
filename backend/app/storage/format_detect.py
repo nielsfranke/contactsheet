@@ -135,6 +135,11 @@ def is_psb_filename(stored_filename: str) -> bool:
     return _ext_of(stored_filename) == ".psb"
 
 
+def is_psd_filename(stored_filename: str) -> bool:
+    """Whether a stored file is a PSD (Pillow opens 8-bit only; see storage/psd_composite)."""
+    return _ext_of(stored_filename) == ".psd"
+
+
 def ml_can_read_original(stored_filename: str) -> bool:
     """Whether the ML sidecar (plain Pillow) can read this file's *original* for embedding.
 

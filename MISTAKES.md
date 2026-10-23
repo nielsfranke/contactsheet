@@ -3,6 +3,22 @@
 Log of what broke and why. The agent appends entries here (newest first) when it
 breaks something or is corrected. Repeat entries graduate into hard rules in CLAUDE.md.
 
+## 2026-10-23 — "Pillow reads PSD" was only true for 8-bit files
+
+**What happened.** An external operator's client uploaded a `.psd` into a large-files gallery; the
+upload returned 201 but processing failed with `PIL.UnidentifiedImageError: cannot identify image
+file`. Every 16-bit PSD (the usual photographer export) failed this way — admin uploads too.
+
+**Root cause.** The format-support design assumed Pillow's `PsdImagePlugin` reads PSD. Its `MODES`
+table only has 1- and 8-bit entries; any other depth is a `KeyError` that `Image.open` turns into
+"cannot identify". The test fixtures were all 8-bit (or PSB, which takes the thumbnail path), so
+the gap never showed.
+
+**Prevention.** When relying on a library decoder for a format, check its supported *variants*
+(bit depth, colour mode, compression), not just the extension, and build at least one fixture at
+the variant real users produce (16-bit for photo work). Any decode path for a user-supplied format
+needs a terminal fallback (`no_preview`) rather than `error`.
+
 ## 2026-09-07 — Realtime rooms were per-gallery only, so API-created galleries never showed up
 
 **What happened.** Galleries and sub-galleries created through the REST API (a desktop app on an

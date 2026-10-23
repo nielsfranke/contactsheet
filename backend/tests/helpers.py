@@ -80,6 +80,46 @@ def psb_bytes(with_thumbnail: bool = True) -> bytes:
     return header + color_mode + struct.pack(">I", len(resources)) + resources
 
 
+def psd16_bytes(color=(200, 100, 50), size=(6, 4), *, mode=3, rle=True, depth=16,
+                thumbnail=False, icc: bytes | None = None) -> bytes:
+    """A minimal 16-bit PSD (8BPS v1) with a flat composite of one colour — the depth Pillow can't open.
+
+    ``mode`` is the Photoshop colour mode (1 gray, 3 RGB, 4 CMYK — stored inverted, as Photoshop
+    does). ``rle`` picks PackBits vs raw composite data; ``depth`` lets a test build an unsupported
+    (e.g. 32-bit) file; ``thumbnail`` adds the 1036 JPEG resource the worker falls back to."""
+    w, h = size
+    channels = {1: 1, 3: 3, 4: 4}[mode]
+    values = list(color)[:channels]
+    if mode == 4:
+        values = [255 - v for v in values]
+    header = (
+        b"8BPS" + b"\x00\x01" + b"\x00" * 6
+        + struct.pack(">HIIHH", channels, h, w, depth, mode)
+    )
+    resources = b""
+    if icc:
+        resources += b"8BIM" + struct.pack(">H", 1039) + b"\x00\x00" + struct.pack(">I", len(icc)) + icc
+        if len(icc) % 2:
+            resources += b"\x00"
+    if thumbnail:
+        resources += psb_bytes(with_thumbnail=True)[34:]  # reuse the PSB builder's 1036 resource
+    sample = 2 if depth == 16 else depth // 8
+    rows = [[struct.pack(">H", v * 257) * w if depth == 16 else bytes(sample * w)] for v in values]
+    if rle:
+        # PackBits literal runs (header n → n+1 literal bytes), at most 128 bytes per run.
+        def packbits(row: bytes) -> bytes:
+            return b"".join(bytes([len(c) - 1]) + c for c in (row[i:i + 128] for i in range(0, len(row), 128)))
+        encoded = [packbits(r[0]) for r in rows]
+        counts = b"".join(struct.pack(">H", len(e)) * h for e in encoded)
+        image_data = struct.pack(">H", 1) + counts + b"".join(e * h for e in encoded)
+    else:
+        image_data = struct.pack(">H", 0) + b"".join(r[0] * h for r in rows)
+    return (
+        header + struct.pack(">I", 0) + struct.pack(">I", len(resources)) + resources
+        + struct.pack(">I", 0) + image_data
+    )
+
+
 def add_image(gallery_id: str, *, status="done", filename="photo.jpg", sort_order=0,
               moderation_status="approved", uploaded_by=None, is_video=False) -> str:
     """Insert an Image row directly (no processing pipeline). Returns its id."""

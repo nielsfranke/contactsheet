@@ -55,6 +55,11 @@ served for download exactly as today.
   pixels.
 - **TIFF and PSD need zero new dependencies** — Pillow (already bundled) reads both: TIFF natively,
   PSD via `PsdImagePlugin` (the flattened composite — no layers, which is what delivery wants).
+  *Correction (2026-10-23):* `PsdImagePlugin` only maps **1/8-bit** PSDs; a **16-bit** PSD (the
+  normal retouch export) raises `UnidentifiedImageError`. `storage/psd_composite.py` decodes the
+  16-bit composite itself (Gray/RGB/CMYK, raw or RLE, via Pillow's C decoders with rawmode
+  `L;16B`); anything else (32-bit, Lab) falls back to the embedded thumbnail, then `no_preview` —
+  same chain as PSB, so a PSD never ends as a processing `error`.
 - **RAW uses the embedded preview, not a demosaic.** Every RAW file carries a camera-rendered JPEG
   preview (often full-res). Extracting it is ~milliseconds and *no* sensor decode — and it shows the
   photographer's own rendering, which is the right thing for a delivery app. The only new dependency
