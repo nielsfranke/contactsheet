@@ -12,6 +12,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.12.3] - 2026-10-23
+
+Security update. No migration.
+
+### Security
+
+- **Next.js 16.4.0 → 16.4.1**: fixes two critical remote-code-execution advisories
+  (GHSA-2464-fhr4-w9xw, GHSA-673q-mjm6-r5xr) and a high-severity denial of service in Server
+  Actions (GHSA-p3m5-59mp-jv5r).
+- **Pillow 12.3.0 → 13.0.0** (backend and ML sidecar): fixes several image-decoder CVEs
+  (incl. GHSA-78g4-xqwv-q3g8). The uploaded-image pipeline is exactly where these decoders run.
+
 ## [1.12.2] - 2026-10-23
 
 16-bit Photoshop files get previews. No migration.
@@ -1407,7 +1419,8 @@ contract are considered stable as of this release.
   caps (stricter for public uploads).
 - Docker Compose deployment (backend + frontend + nginx); SQLite + local filesystem.
 
-[Unreleased]: https://github.com/nielsfranke/contactsheet/compare/v1.12.2...HEAD
+[Unreleased]: https://github.com/nielsfranke/contactsheet/compare/v1.12.3...HEAD
+[1.12.3]: https://github.com/nielsfranke/contactsheet/compare/v1.12.2...v1.12.3
 [1.12.2]: https://github.com/nielsfranke/contactsheet/compare/v1.12.1...v1.12.2
 [1.12.1]: https://github.com/nielsfranke/contactsheet/compare/v1.12.0...v1.12.1
 [1.12.0]: https://github.com/nielsfranke/contactsheet/compare/v1.11.4...v1.12.0
