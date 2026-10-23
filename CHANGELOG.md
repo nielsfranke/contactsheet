@@ -12,6 +12,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.12.2] - 2026-10-23
+
+16-bit Photoshop files get previews. No migration.
+
+### Fixed
+
+- **16-bit PSD uploads no longer fail processing.** Pillow only reads 8-bit PSDs, so a 16-bit
+  file (the usual retouch export) ended as a failed photo with `cannot identify image file`, by
+  client upload and admin upload alike. ContactSheet now decodes the 16-bit composite itself
+  (grayscale / RGB / CMYK). Anything it still can't read (32-bit HDR, Lab) falls back to the
+  embedded Photoshop thumbnail, or else is stored as a download-only file like a PSB without a
+  preview, never as an error. Already-failed PSDs need to be uploaded again.
+
 ## [1.12.1] - 2026-10-20
 
 Clearer sub-gallery inheritance. No migration.
@@ -1394,7 +1407,9 @@ contract are considered stable as of this release.
   caps (stricter for public uploads).
 - Docker Compose deployment (backend + frontend + nginx); SQLite + local filesystem.
 
-[Unreleased]: https://github.com/nielsfranke/contactsheet/compare/v1.12.0...HEAD
+[Unreleased]: https://github.com/nielsfranke/contactsheet/compare/v1.12.2...HEAD
+[1.12.2]: https://github.com/nielsfranke/contactsheet/compare/v1.12.1...v1.12.2
+[1.12.1]: https://github.com/nielsfranke/contactsheet/compare/v1.12.0...v1.12.1
 [1.12.0]: https://github.com/nielsfranke/contactsheet/compare/v1.11.4...v1.12.0
 [1.11.4]: https://github.com/nielsfranke/contactsheet/compare/v1.11.3...v1.11.4
 [1.11.3]: https://github.com/nielsfranke/contactsheet/compare/v1.11.2...v1.11.3
