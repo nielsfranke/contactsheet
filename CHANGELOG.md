@@ -12,6 +12,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.12.4] - 2026-10-26
+
+Client links keep the capture-date order. No migration.
+
+### Fixed
+
+- **"Capture Date" sort now carries over to client links.** The sort picked in the admin was
+  already the client default, but sorting by capture date needs the photos' EXIF, which a gallery
+  only hands out with "Show EXIF" on (off by default). Without it the client view silently fell
+  back to file name, so photos from several cameras looked shuffled. The image listing now carries
+  a capture-date rank (order only — no timestamp, camera or GPS), so the client sees the same
+  order whether or not EXIF is shown.
+
 ## [1.12.3] - 2026-10-23
 
 Security update. No migration.
