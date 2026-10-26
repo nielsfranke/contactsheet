@@ -90,6 +90,19 @@ session state (not persisted).
 | `routers/admin_settings.py` | persist the two new scalars (existing PATCH loop) |
 | `services/gallery_service.py` | populate `default_sort` / `default_sort_dir` on the public response |
 
+## Capture Date on a client link with EXIF off (fix 2026-10-26)
+
+"Capture Date" compares EXIF `DateTimeOriginal`, but the public serializer withholds `exif_data`
+unless the gallery has `show_exif` on (off by default — EXIF carries GPS). The client view then saw
+no dated photo and silently fell back to **File Name**, so a gallery sorted by capture date in the
+admin showed up "shuffled" for clients (reported by an external operator).
+
+Fix: the listing (`image_service.list_images`, admin + public) carries `capture_rank` — each
+image's position by `DateTimeOriginal` (ties share a rank, undated → `null`). It reveals only the
+order, which the sorted grid shows anyway, so it is not gated by `show_exif`. `compareCaptureDate`
+(`lib/image-sort.ts`) prefers the rank and falls back to the raw EXIF string; `hasCaptureDate`
+accepts either. Single-image echoes (flag/rate/like) carry `null` — they never feed the sort.
+
 ## Out of scope
 
 - Per-gallery (rather than instance-wide) default sort.

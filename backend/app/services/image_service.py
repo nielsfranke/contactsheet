@@ -92,6 +92,7 @@ def _image_to_response(
     proxy_variants: bool = False,
     include_exif: bool = True,
     include_iptc: bool = True,
+    capture_rank: int | None = None,
 ) -> ImageResponse:
     gallery_id = image.gallery_id
     sf = image.stored_filename
@@ -154,7 +155,28 @@ def _image_to_response(
         "video_url": video_url,
         "comment_count": comment_count,
         "annotation_count": annotation_count,
+        "capture_rank": capture_rank,
     })
+
+
+def _capture_ranks(images: list[Image]) -> dict[str, int]:
+    """Rank each image by its EXIF capture timestamp (`DateTimeOriginal`, fixed-width so the raw
+    string orders chronologically); equal timestamps share a rank, undated images are absent.
+
+    Lets the "Capture Date" sort work on the public surface even when `show_exif` is off: the rank
+    reveals only the order — which the sorted grid shows anyway — not the time, camera or GPS."""
+    keys: dict[str, str] = {}
+    for img in images:
+        if not img.exif_data:
+            continue
+        try:
+            v = json.loads(img.exif_data).get("DateTimeOriginal")
+        except Exception:
+            continue
+        if isinstance(v, str) and v.strip():
+            keys[img.id] = v
+    order = {k: i for i, k in enumerate(sorted(set(keys.values())))}
+    return {iid: order[k] for iid, k in keys.items()}
 
 
 def _public_serializer_kwargs(gallery: Gallery, watermark_enabled: bool) -> dict:
@@ -213,11 +235,13 @@ def list_images(
     image_ids = [img.id for img in images]
     counts = comment_repo.counts_for_images(db, image_ids)
     anno_counts = comment_repo.anchored_counts_for_images(db, image_ids)
+    ranks = _capture_ranks(images)
     return [
         _image_to_response(
             img, storage, include_original_url, counts.get(img.id, 0),
             anno_counts.get(img.id, 0), watermarked, share_token,
             proxy_variants=proxy_variants, include_exif=include_exif, include_iptc=include_iptc,
+            capture_rank=ranks.get(img.id),
         )
         for img in images
     ]

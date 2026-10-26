@@ -43,6 +43,9 @@ class ImageResponse(BaseModel):
     exif_data: dict[str, Any] | None = None
     iptc_data: dict[str, Any] | None = None
     sort_order: int
+    # Position by EXIF capture date in the gallery listing (ties share a rank; null when undated or
+    # outside a listing). Drives the "Capture Date" sort where `exif_data` is withheld.
+    capture_rank: int | None = None
     color_flag: str
     rating: int = 0
     likes: int

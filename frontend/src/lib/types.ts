@@ -512,6 +512,9 @@ export interface ImageResponse {
   exif_data: Record<string, unknown> | null;
   iptc_data: Record<string, string | string[]> | null;
   sort_order: number;
+  /** Position by capture date within the listing (ties share a rank); null when undated. Present
+   *  even when `exif_data` is withheld from a client, so the Capture Date sort still works. */
+  capture_rank?: number | null;
   color_flag: ColorFlag;
   rating: Rating;
   likes: number;

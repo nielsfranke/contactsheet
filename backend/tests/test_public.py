@@ -679,6 +679,27 @@ def test_exif_and_iptc_hidden_unless_enabled(admin_client, db):
     assert r.status_code == 200 and r.json()["exif_data"] is None
 
 
+def test_capture_rank_survives_exif_off(admin_client, db):
+    """The Capture Date sort must work in a client link with EXIF off: the listing carries a
+    rank derived from DateTimeOriginal (order only — no timestamp, no GPS)."""
+    import json as _json
+    from app.models.image import Image
+    g = make_gallery(admin_client, "Order", mode="collaboration")
+    dates = {"b.jpg": "2024:06:15 09:30:00", "a.jpg": "2024:06:15 08:00:00",
+             "c.jpg": "2024:06:15 08:00:00", "d.jpg": None}
+    for i, (name, dto) in enumerate(dates.items()):
+        iid = add_image(g["id"], filename=name, sort_order=i)
+        if dto:
+            row = db.query(Image).filter(Image.id == iid).one()
+            row.exif_data = _json.dumps({"DateTimeOriginal": dto, "GPSLatitude": [52, 31, 0]})
+    db.commit()
+
+    imgs = _pub().get(f"/api/public/g/{g['share_token']}/images").json()
+    ranks = {i["original_filename"]: i["capture_rank"] for i in imgs}
+    assert ranks == {"a.jpg": 0, "c.jpg": 0, "b.jpg": 1, "d.jpg": None}  # ties share a rank
+    assert all(i["exif_data"] is None for i in imgs)  # the gate itself is unchanged
+
+
 # --- Gallery tokens are bound to the password they were issued against --------
 
 def test_gallery_token_dies_with_the_password(admin_client):

@@ -65,3 +65,26 @@ describe("hasCaptureDate", () => {
     expect(hasCaptureDate(img("   "))).toBe(false);
   });
 });
+
+describe("capture_rank (public gallery with EXIF withheld)", () => {
+  function ranked(rank: number | null): ImageResponse {
+    return { exif_data: null, capture_rank: rank } as unknown as ImageResponse;
+  }
+
+  it("orders by rank when EXIF is absent", () => {
+    const list = [ranked(2), ranked(null), ranked(0), ranked(1)];
+    const sorted = [...list].sort((x, y) => compareCaptureDate(x, y, 1));
+    expect(sorted.map((i) => i.capture_rank)).toEqual([0, 1, 2, null]);
+  });
+
+  it("respects direction and keeps unranked photos last", () => {
+    const list = [ranked(0), ranked(null), ranked(2)];
+    const sorted = [...list].sort((x, y) => compareCaptureDate(x, y, -1));
+    expect(sorted.map((i) => i.capture_rank)).toEqual([2, 0, null]);
+  });
+
+  it("counts a rank as a capture date", () => {
+    expect(hasCaptureDate(ranked(0))).toBe(true);
+    expect(hasCaptureDate(ranked(null))).toBe(false);
+  });
+});

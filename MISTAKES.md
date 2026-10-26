@@ -3,6 +3,22 @@
 Log of what broke and why. The agent appends entries here (newest first) when it
 breaks something or is corrected. Repeat entries graduate into hard rules in CLAUDE.md.
 
+## 2026-10-26 — Client links ignored the "Capture Date" sort when EXIF display was off
+
+**What happened.** An external operator sorted a gallery by capture date in the admin; the client
+link showed the photos "shuffled". The sort setting *was* shared — but the public payload strips
+`exif_data` unless `show_exif` is on (default off), so the client's comparator had nothing to sort
+on and silently fell back to file name.
+
+**Root cause.** The privacy gate on the public serializer (EXIF carries GPS) and the sort feature
+(which reads EXIF on the client) were built independently; nobody checked that the sort's input
+survives the gate. Tests covered the comparator with full EXIF only.
+
+**Prevention.** When a client-side feature reads a field the public serializer can null out, either
+derive a privacy-neutral signal server-side (here: `capture_rank`) or gate the feature on it
+visibly — never let it fall back silently. Test public-surface features with the gates at their
+*defaults*, not the admin payload.
+
 ## 2026-10-23 — "Pillow reads PSD" was only true for 8-bit files
 
 **What happened.** An external operator's client uploaded a `.psd` into a large-files gallery; the
