@@ -12,6 +12,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.12.5] - 2026-10-28
+
+Uploads survive NAS reboots that strip write permissions. No migration.
+
+### Fixed
+
+- **The backend restores missing write permissions on start.** Some NAS systems (seen on UGREEN
+  UGOS) re-apply share permissions on boot and remove the write bit from the upload folder —
+  even the owner's — while leaving the owner unchanged. ContactSheet only corrected the owner, so
+  uploads failed with `Permission denied` until the permissions were fixed by hand. On start
+  (as root, the default) it now also restores owner-write on the data folders and on anything
+  under `uploads` it owns but can't write, and logs how many paths it repaired. A periodic
+  permission-fix script is no longer needed, so the disks can spin down.
+
 ## [1.12.4] - 2026-10-26
 
 Client links keep the capture-date order. No migration.
