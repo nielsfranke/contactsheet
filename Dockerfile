@@ -1,7 +1,7 @@
 # =============================================================================
 # Stage 1: Build Next.js frontend
 # =============================================================================
-FROM node:24-alpine AS frontend-builder
+FROM node:26-alpine AS frontend-builder
 WORKDIR /frontend
 
 COPY frontend/package*.json ./
@@ -13,7 +13,7 @@ RUN npm run build
 # =============================================================================
 # Stage 2: Python / FastAPI backend
 # =============================================================================
-FROM python:3.12-slim AS backend
+FROM python:3.15-slim AS backend
 WORKDIR /app
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
@@ -38,7 +38,7 @@ CMD ["/start.sh"]
 # =============================================================================
 # Stage 3: Next.js standalone runner
 # =============================================================================
-FROM node:24-alpine AS frontend
+FROM node:26-alpine AS frontend
 WORKDIR /app
 
 ENV NODE_ENV=production
