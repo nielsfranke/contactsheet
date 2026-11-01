@@ -12,6 +12,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.12.6] - 2026-11-01
+
+Dependency refresh. No migration.
+
+### Changed
+
+- **Updated dependencies.** Next.js 16.4.3 and React 19.3.1 in the frontend; FastAPI 0.162,
+  Starlette 1.10, Pydantic 2.14 and SQLAlchemy 2.1.6 in the backend; onnxruntime 1.31 and
+  huggingface_hub 2.3 in the optional semantic-search sidecar. The frontend image now builds on
+  Node.js 26 (LTS). Python stays on 3.12 until all native dependencies ship 3.15 wheels.
+
 ## [1.12.5] - 2026-10-28
 
 Uploads survive NAS reboots that strip write permissions. No migration.
@@ -1446,7 +1457,10 @@ contract are considered stable as of this release.
   caps (stricter for public uploads).
 - Docker Compose deployment (backend + frontend + nginx); SQLite + local filesystem.
 
-[Unreleased]: https://github.com/nielsfranke/contactsheet/compare/v1.12.3...HEAD
+[Unreleased]: https://github.com/nielsfranke/contactsheet/compare/v1.12.6...HEAD
+[1.12.6]: https://github.com/nielsfranke/contactsheet/compare/v1.12.5...v1.12.6
+[1.12.5]: https://github.com/nielsfranke/contactsheet/compare/v1.12.4...v1.12.5
+[1.12.4]: https://github.com/nielsfranke/contactsheet/compare/v1.12.3...v1.12.4
 [1.12.3]: https://github.com/nielsfranke/contactsheet/compare/v1.12.2...v1.12.3
 [1.12.2]: https://github.com/nielsfranke/contactsheet/compare/v1.12.1...v1.12.2
 [1.12.1]: https://github.com/nielsfranke/contactsheet/compare/v1.12.0...v1.12.1
