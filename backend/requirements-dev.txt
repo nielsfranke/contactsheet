@@ -8,11 +8,11 @@
 # drives a real browser via Playwright against live backend + frontend servers. After installing,
 # fetch the browser once with: playwright install chromium
 
-pytest==9.1.1
+pytest==9.2.0
 # Playwright's pytest plugin brings the `page`/`context`/`browser` fixtures. The `playwright`
 # wheel is a transitive dep (already present in this venv for screenshot verification).
 # 0.9.0 is the floor for pytest 9 — 0.7.x capped pytest <9 and blocked the whole suite's upgrade.
-pytest-playwright==0.9.0
+pytest-playwright==0.10.0
 # httpx is also a runtime dep (pinned in requirements.txt); the e2e harness uses it to poll the
 # backend/frontend health endpoints while booting the servers.
 

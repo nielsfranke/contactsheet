@@ -1,12 +1,12 @@
-fastapi==0.142.4
+fastapi==0.162.0
 # Pinned explicitly (normally a transitive dep of fastapi): the 0.41.x starlette that older
 # fastapi pulled had several CVEs (DoS + multipart). 1.x clears them; fastapi 0.142 supports 1.7.
-starlette==1.7.0
+starlette==1.10.0
 uvicorn[standard]==0.54.0
-sqlalchemy==2.1.4
-alembic==1.20.0
-pydantic==2.13.5
-pydantic-settings==2.15.0
+sqlalchemy==2.1.6
+alembic==1.20.1
+pydantic==2.14.1
+pydantic-settings==2.16.2
 PyJWT==2.15.1
 bcrypt==5.0.0
 python-multipart==0.0.32
@@ -15,18 +15,18 @@ Pillow==13.0.0
 # Wheels bundle libraw, so no system packages are needed. NumPy (below) covers the bitmap-thumb path.
 rawpy==0.27.1
 slowapi==0.1.10
-apprise==2.0.1
+apprise==2.1.0
 # Streaming ZIP downloads: generates the archive on the fly (no temp file) and, in sized mode with
 # STORED, exposes the exact total length up front so the response can set a real Content-Length.
 zipstream-ng==1.9.3
 # Semantic search: NumPy powers the brute-force cosine ranking over stored embeddings; httpx is
 # the client for the optional ML sidecar. The encoder model itself lives in the sidecar image, not
 # here — the backend stays free of any ML runtime.
-numpy==2.5.3
+numpy==2.5.4
 httpx==0.28.1
 # Optional error tracking: dormant unless SENTRY_DSN is set (see app/observability.py). Pure-Python,
 # its transitive deps (certifi/urllib3) are already present. Works against self-hosted Sentry/GlitchTip.
-sentry-sdk==2.71.0
+sentry-sdk==2.73.0
 # Optional vector search: ~160 KB native SQLite extension, loaded only when SEMANTIC_SEARCH_VEC is on
 # (see app/vector_index.py). Accelerates instance-wide KNN; NumPy remains the default + fallback.
 sqlite-vec==0.1.9
