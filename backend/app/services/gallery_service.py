@@ -160,16 +160,48 @@ def review_active(gallery: Gallery) -> bool:
     return gallery.mode == "collaboration" or gallery.client_mode_switch_enabled
 
 
-def _header_image_url(gallery: Gallery) -> str | None:
-    if not gallery.header_image_filename:
-        return None
-    return f"/branding/gallery-headers/{gallery.id}/{gallery.header_image_filename}"
+def branding_assets_protected(gallery: Gallery) -> bool:
+    """Whether a gallery's uploaded header/cover must go through the access-checked
+    `/api/public/g/{token}/{header,cover}-image` route instead of the unauthenticated static
+    `/branding` mount: **password** (a static URL opens without it) or **expiry** (it would outlive
+    the gallery, 7-day nginx cache included). Downloads/watermark don't apply — these are the
+    photographer's own presentation images, never a client deliverable."""
+    return bool(gallery.password_hash or gallery.expires_at)
 
 
-def _uploaded_cover_url(gallery: Gallery) -> str | None:
-    if not gallery.cover_image_filename:
+def _branding_asset_url(gallery: Gallery, kind: str, public: bool) -> str | None:
+    subdir, attr = _BRANDING_KINDS[kind]
+    filename = getattr(gallery, attr)
+    if not filename:
         return None
-    return f"/branding/gallery-covers/{gallery.id}/{gallery.cover_image_filename}"
+    if public and gallery.share_token and branding_assets_protected(gallery):
+        # `v` busts the browser cache on replacement (the filename changes per upload).
+        return f"/api/public/g/{gallery.share_token}/{kind}-image?v={os.path.splitext(filename)[0][:12]}"
+    return f"/branding/{subdir}/{gallery.id}/{filename}"
+
+
+def _header_image_url(gallery: Gallery, public: bool = False) -> str | None:
+    return _branding_asset_url(gallery, "header", public)
+
+
+def _uploaded_cover_url(gallery: Gallery, public: bool = False) -> str | None:
+    return _branding_asset_url(gallery, "cover", public)
+
+
+def public_branding_asset_path(db: Session, share_token: str, kind: str) -> tuple[Gallery, str]:
+    """(gallery, filesystem path) of a gallery's uploaded header/cover for the access-checked public
+    route. 404 when unknown/absent, 410 when expired — the caller runs the password check."""
+    subdir, attr = _BRANDING_KINDS[kind]
+    gallery = gallery_repo.get_by_share_token(db, share_token)
+    if not gallery:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Gallery not found")
+    if _is_expired(gallery):
+        raise CodedHTTPException(status_code=status.HTTP_410_GONE, code="gallery_expired", detail="This gallery has expired")
+    filename = getattr(gallery, attr)
+    path = os.path.join(app_config.branding_dir, subdir, gallery.id, filename) if filename else None
+    if not path or not os.path.isfile(path):
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Image not found")
+    return gallery, path
 
 
 def _is_expired(gallery: Gallery) -> bool:
@@ -241,7 +273,7 @@ def _effective_cover_url(
     """Cover for the gallery card: an uploaded cover image wins; else the first/pinned photo.
     Public callers set `public=True` so a protected gallery's photo cover routes through the
     access-checked proxy (by image id) instead of leaking the static rendition URL."""
-    uploaded = _uploaded_cover_url(gallery)
+    uploaded = _uploaded_cover_url(gallery, public=public)
     if uploaded:
         return uploaded
     if photo_cover and photo_cover.processing_status == "done":
@@ -717,7 +749,7 @@ def get_public_gallery(
         "rating_mode": app_settings.rating_mode,
         "default_sort": app_settings.gallery_sort,
         "default_sort_dir": app_settings.gallery_sort_dir,
-        "header_image_url": _header_image_url(gallery),
+        "header_image_url": _header_image_url(gallery, public=True),
         "header_image_fallback_url": (
             _auto_header_fallback_url(db, gallery, cover, image_count, watermark_enabled, storage)
             if app_settings.auto_header_enabled else None

@@ -857,3 +857,44 @@ def test_stream_zip_folder_names_are_unique(admin_client):
     r = _pub().get(f"/api/public/g/{parent['share_token']}/zip/stream?subs={a['share_token']},{b['share_token']}")
     names = zipfile.ZipFile(io.BytesIO(r.content)).namelist()
     assert len(set(names)) == 2
+
+
+# --- Header / uploaded cover of protected galleries --------------------------------------------
+
+def test_open_gallery_header_stays_static(admin_client):
+    g = make_gallery(admin_client, "Open")
+    _set_header(admin_client, g["id"])
+    body = _pub().get(f"/api/public/g/{g['share_token']}").json()
+    assert body["header_image_url"].startswith("/branding/gallery-headers/")
+
+
+def test_password_gallery_header_goes_through_access_check(admin_client):
+    """The static /branding mount has no auth: a header URL of a locked gallery, once shared or
+    logged, would open without the password. It must ride the token-checked route instead."""
+    g = make_gallery(admin_client, "Locked")
+    _set_header(admin_client, g["id"])
+    admin_client.patch(f"/api/galleries/{g['id']}", json={"password": "pw"})
+    pub = _pub()
+    tok = pub.post(f"/api/public/g/{g['share_token']}/auth", json={"password": "pw"}).json()["access_token"]
+    body = pub.get(f"/api/public/g/{g['share_token']}", headers={"Authorization": f"Bearer {tok}"}).json()
+    url = body["header_image_url"]
+    assert url.startswith(f"/api/public/g/{g['share_token']}/header-image")
+    assert pub.get(url).status_code == 401
+    r = pub.get(f"{url}&token={tok}")
+    assert r.status_code == 200 and r.headers["content-type"] == "image/jpeg"
+    assert "private" in r.headers["cache-control"]
+
+
+def test_expired_gallery_header_route_is_gone(admin_client):
+    from datetime import datetime, timedelta, timezone
+
+    g = make_gallery(admin_client, "Soon")
+    _set_header(admin_client, g["id"])
+    future = (datetime.now(timezone.utc) + timedelta(days=1)).isoformat()
+    admin_client.patch(f"/api/galleries/{g['id']}", json={"expires_at": future})
+    url = _pub().get(f"/api/public/g/{g['share_token']}").json()["header_image_url"]
+    assert url.startswith("/api/public/") and _pub().get(url).status_code == 200
+
+    past = (datetime.now(timezone.utc) - timedelta(days=1)).isoformat()
+    admin_client.patch(f"/api/galleries/{g['id']}", json={"expires_at": past})
+    assert _pub().get(f"/api/public/g/{g['share_token']}/header-image").status_code == 410

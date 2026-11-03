@@ -2,6 +2,7 @@
 # SPDX-License-Identifier: AGPL-3.0-or-later
 
 import json
+import mimetypes
 import os
 from typing import Literal
 
@@ -408,6 +409,38 @@ def get_watermarked_thumb(
         "thumb", share_token, image_id, request, db, storage,
         gallery_id_from_token or gallery_id_from_token_value(token),
     )
+
+
+@router.get("/g/{share_token}/header-image")
+def get_public_header_image(
+    share_token: str,
+    token: str | None = None,
+    db: Session = Depends(get_db),
+    gallery_id_from_token: GalleryAccess | None = Depends(get_optional_gallery_token),
+):
+    """Access-checked gallery header for password-protected / expiring galleries (see
+    gallery_service.branding_assets_protected) — the static /branding mount has no auth."""
+    return _branding_asset_response(db, share_token, "header", gallery_id_from_token or gallery_id_from_token_value(token))
+
+
+@router.get("/g/{share_token}/cover-image")
+def get_public_cover_image(
+    share_token: str,
+    token: str | None = None,
+    db: Session = Depends(get_db),
+    gallery_id_from_token: GalleryAccess | None = Depends(get_optional_gallery_token),
+):
+    """Access-checked uploaded cover — same rules as the header route above."""
+    return _branding_asset_response(db, share_token, "cover", gallery_id_from_token or gallery_id_from_token_value(token))
+
+
+def _branding_asset_response(db: Session, share_token: str, kind: str, access: GalleryAccess | None):
+    gallery, path = gallery_service.public_branding_asset_path(db, share_token, kind)
+    _require_gallery_access(gallery, access)
+    # New uploads are re-encoded JPEGs (store_branding_image); guess anyway for older files.
+    # `private`: the response is per-token for locked galleries — no shared cache may keep it.
+    media_type = mimetypes.guess_type(path)[0] or "image/jpeg"
+    return FileResponse(path, media_type=media_type, headers={"Cache-Control": "private, max-age=3600"})
 
 
 @router.get("/g/{share_token}/images/{image_id}/original")
