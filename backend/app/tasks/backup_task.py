@@ -112,9 +112,12 @@ def build_backup(job_id: str, scope: str, include_renditions: bool) -> None:
         if scope == "metadata":
             include_dirs.pop("upload_dir", None)
 
+        added: set[str] = set()
+
         def _filter(info: tarfile.TarInfo) -> tarfile.TarInfo | None:
             if scope == "full" and not include_renditions and _is_rendition(info.name):
                 return None
+            added.add(info.name)
             return info
 
         # Build under a `.part` name and publish with os.replace: a failure mid-walk (an image
@@ -129,6 +132,24 @@ def build_backup(job_id: str, scope: str, include_renditions: bool) -> None:
 
             # Snapshot the DB now (after media) and add it + the manifest.
             _vacuum_snapshot(snapshot_path)
+
+            # Media-first alone doesn't close the gap: a photo committed *while* the walk above ran
+            # (after its directory was already passed) is in the snapshot but not in the archive —
+            # restored as a row with no file. Sweep once more for files that appeared meanwhile;
+            # anything committed before the snapshot is on disk by now (files are written before
+            # their row). A file added after the snapshot is a harmless orphan on restore.
+            for attr, arcname in include_dirs.items():
+                root = getattr(settings, attr)
+                for dirpath, _dirs, files in os.walk(root):
+                    for name in files:
+                        path = os.path.join(dirpath, name)
+                        member = os.path.join(arcname, os.path.relpath(path, root)).replace(os.sep, "/")
+                        if member in added:
+                            continue
+                        try:
+                            tar.add(path, arcname=member, recursive=False, filter=_filter)
+                        except FileNotFoundError:
+                            pass  # deleted again in the meantime — nothing in the snapshot needs it
             manifest = {
                 "format_version": FORMAT_VERSION,
                 "app_version": __version__,

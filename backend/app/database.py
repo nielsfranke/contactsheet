@@ -86,14 +86,19 @@ def get_db():
     from app import maintenance
     from app.errors import CodedHTTPException
 
-    if maintenance.restore_in_progress.is_set():
+    try:
+        session = maintenance.request_session()
+        session.__enter__()  # atomic check-and-count; raises while a restore holds the instance
+    except maintenance.RestoreInProgress:
         raise CodedHTTPException(
             status_code=503, code="maintenance", detail="Restore in progress — try again shortly",
             headers={"Retry-After": "10"},
-        )
-    with maintenance.request_session():
+        ) from None
+    try:
         db = SessionLocal()
         try:
             yield db
         finally:
             db.close()
+    finally:
+        session.__exit__(None, None, None)

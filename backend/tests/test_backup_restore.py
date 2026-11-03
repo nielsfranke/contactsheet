@@ -568,3 +568,73 @@ def test_failed_backup_leaves_no_partial_archive(admin_client, monkeypatch):
     backups_dir = os.path.join(cfg.exports_dir, "backups")
     leftovers = [n for n in os.listdir(backups_dir) if job.json()["id"][:8] in n] if os.path.isdir(backups_dir) else []
     assert leftovers == []
+
+
+# --- quiescence is exclusive and atomic ----------------------------------------------------------
+
+def test_second_restore_refused_while_one_holds_the_instance():
+    """Two restores must never swap the same files at once (nor one lower the flag under the other)."""
+    with maintenance.quiesce(0.1) as idle:
+        assert idle
+        with pytest.raises(maintenance.RestoreAlreadyRunning):
+            with maintenance.quiesce(0.1):
+                pass
+        assert maintenance.restore_in_progress.is_set()
+    assert not maintenance.restore_in_progress.is_set()
+
+
+def test_no_new_work_is_counted_once_quiesced():
+    """Check-and-count is one step under the lock: once the flag is up nothing new gets counted."""
+    with maintenance.quiesce(0.1):
+        with pytest.raises(maintenance.RestoreInProgress):
+            with maintenance.request_session():
+                pass
+        with pytest.raises(maintenance.RestoreInProgress):
+            with maintenance.background_work():
+                pass
+        assert maintenance.counts() == (0, 0)
+
+
+def test_preview_sync_thread_is_counted(monkeypatch):
+    """The startup/settings preview sync touches DB + media — a restore must wait for it."""
+    import threading
+
+    from app.tasks import preview_upgrade
+
+    started, release = threading.Event(), threading.Event()
+
+    def slow():
+        started.set()
+        release.wait(5)
+
+    monkeypatch.setattr(preview_upgrade, "_sync_previews", slow)
+    preview_upgrade.upgrade_previews_async()
+    assert started.wait(5)
+    try:
+        assert maintenance.counts()[1] == 1
+    finally:
+        release.set()
+
+
+def test_backup_includes_media_written_during_the_media_walk(admin_client, monkeypatch):
+    """Media is archived before the DB snapshot — but a photo committed while the walk ran (after
+    its dir was passed) is in the snapshot. The post-snapshot sweep must pick its file up, or the
+    restore has a row with no original."""
+    from app.tasks import backup_task
+
+    g = make_gallery(admin_client, "Late")
+    late_dir = os.path.join(cfg.upload_dir, g["id"], "original")
+    real_snapshot = backup_task._vacuum_snapshot
+
+    def snapshot_after_a_late_upload(dest):
+        os.makedirs(late_dir, exist_ok=True)
+        with open(os.path.join(late_dir, "late.jpg"), "wb") as f:
+            f.write(b"late bytes")
+        real_snapshot(dest)
+
+    monkeypatch.setattr(backup_task, "_vacuum_snapshot", snapshot_after_a_late_upload)
+    status = _build_backup(admin_client, "full")
+    with tarfile.open(fileobj=io.BytesIO(_download(admin_client, status["id"]))) as tar:
+        names = tar.getnames()
+    assert f"uploads/{g['id']}/original/late.jpg" in names
+    assert len(names) == len(set(names)), "a file must not be archived twice"

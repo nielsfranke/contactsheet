@@ -38,7 +38,19 @@ def upgrade_previews_async() -> None:
     the files again). Idempotent and cheap when everything is already in sync (image header reads
     only).
     """
-    threading.Thread(target=_sync_previews, name="preview-upgrade", daemon=True).start()
+    threading.Thread(target=_sync_previews_counted, name="preview-upgrade", daemon=True).start()
+
+
+def _sync_previews_counted() -> None:
+    """The background variant, counted as maintenance work so a restore waits for (or refuses on)
+    a running sync instead of swapping the DB/media under it; skipped while a restore holds."""
+    from app import maintenance
+
+    try:
+        with maintenance.background_work():
+            _sync_previews()
+    except maintenance.RestoreInProgress:
+        logger.info("Preview sync skipped: restore in progress")
 
 
 def _sync_previews() -> None:

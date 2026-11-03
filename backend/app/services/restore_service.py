@@ -244,6 +244,15 @@ def _swap_in(extract_dir: str, manifest: dict) -> None:
     (CLI) finishes — strictly better than a half-migrated DB stranded next to swapped media."""
     from app import maintenance
 
+    try:
+        _swap_in_quiesced(extract_dir)
+    except maintenance.RestoreAlreadyRunning:
+        raise _coded("instance_busy", "Another restore is already running", status.HTTP_409_CONFLICT) from None
+
+
+def _swap_in_quiesced(extract_dir: str) -> None:
+    from app import maintenance
+
     with maintenance.quiesce(QUIESCE_TIMEOUT_S) as idle:
         if not idle:
             requests, jobs = maintenance.counts()

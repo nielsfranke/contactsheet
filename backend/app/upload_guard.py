@@ -72,9 +72,12 @@ def _preflight(share_token: str, bearer: str | None, declared: int) -> None:
     from app.repositories import gallery_repo
     from app.services import gallery_service
 
-    if maintenance.restore_in_progress.is_set():
-        raise _Refuse(503, "maintenance", "Restore in progress — try again shortly")
-    with maintenance.request_session():
+    try:
+        counted = maintenance.request_session()
+        counted.__enter__()
+    except maintenance.RestoreInProgress:
+        raise _Refuse(503, "maintenance", "Restore in progress — try again shortly") from None
+    try:
         db = SessionLocal()
         try:
             gallery = gallery_repo.get_by_share_token(db, share_token)
@@ -91,6 +94,8 @@ def _preflight(share_token: str, bearer: str | None, declared: int) -> None:
             large = bool(gallery.client_upload_large_files)
         finally:
             db.close()
+    finally:
+        counted.__exit__(None, None, None)
 
     ceiling = settings.max_document_bytes if large else settings.client_upload_max_total_bytes
     if declared > ceiling + _MULTIPART_SLACK:

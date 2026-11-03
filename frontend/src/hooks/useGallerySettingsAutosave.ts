@@ -39,6 +39,10 @@ export function useGallerySettingsAutosave(galleryId: string) {
   const mutationKey = ["gallery-settings", galleryId];
   const mutation = useMutation({
     mutationKey,
+    // Serialize the PATCHes: parallel requests could reach (or commit on) the server out of order,
+    // so a quick on→off could persist "on" while the UI says "saved: off". Scoped mutations run one
+    // at a time in call order; onMutate (the optimistic flip) still fires immediately.
+    scope: { id: `gallery-settings:${galleryId}` },
     mutationFn: (patch: GalleryUpdate) => api.galleries.update(galleryId, patch),
     onMutate: async (patch) => {
       setStatus("saving");

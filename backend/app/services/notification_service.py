@@ -178,10 +178,11 @@ def _build_summary(
 def _flush_once() -> int:
     """Drain pending rows once. Returns the next sleep interval (seconds)."""
     # A restore is swapping the DB file — sit this tick out rather than write into the old inode.
-    if maintenance.restore_in_progress.is_set():
+    try:
+        with maintenance.background_work():
+            return _flush_tick()
+    except maintenance.RestoreInProgress:
         return 15
-    with maintenance.background_work():
-        return _flush_tick()
 
 
 def _flush_tick() -> int:

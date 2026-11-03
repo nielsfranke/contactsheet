@@ -29,6 +29,9 @@ export function useSettingsAutosave() {
   const mutationKey = ["admin-settings-autosave"];
   const mutation = useMutation({
     mutationKey,
+    // One PATCH at a time, in call order — see useGallerySettingsAutosave (out-of-order commits
+    // could persist an older value than the one the UI shows as saved).
+    scope: { id: "admin-settings-autosave" },
     mutationFn: (patch: AppSettingsUpdate) => api.adminSettings.update(patch),
     onMutate: async (patch) => {
       setStatus("saving");
