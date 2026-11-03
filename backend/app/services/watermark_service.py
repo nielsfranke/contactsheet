@@ -147,8 +147,12 @@ def save_watermark(gallery_id: str, data: bytes, original_ext: str) -> str:
 
 
 def delete_watermark(gallery_id: str, filename: str) -> None:
+    # `filename` comes from admin-editable settings JSON — same confinement as the render path:
+    # a bare file name inside this gallery's own watermark dir, never an absolute or `..` path.
+    if not filename or os.path.basename(filename) != filename or filename.startswith("."):
+        return
     path = os.path.join(settings.watermarks_dir, gallery_id, filename)
-    if os.path.exists(path):
+    if os.path.isfile(path):
         os.unlink(path)
 
 

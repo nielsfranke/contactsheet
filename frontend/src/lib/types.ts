@@ -767,6 +767,12 @@ export interface GalleryRequiresPassword {
 
 export type PublicGalleryResult = GalleryPublicResponse | GalleryRequiresPassword;
 
+/** Whether the client may download clean originals (ZIP / collection download) — mirrors the backend
+ *  `gallery_service.originals_downloadable`: downloads on and no active watermark. */
+export function originalsDownloadable(g: Pick<GalleryPublicResponse, "downloads_enabled" | "watermark_enabled">): boolean {
+  return g.downloads_enabled && !g.watermark_enabled;
+}
+
 export function requiresPassword(r: PublicGalleryResult): r is GalleryRequiresPassword {
   return "requires_password" in r && r.requires_password === true;
 }

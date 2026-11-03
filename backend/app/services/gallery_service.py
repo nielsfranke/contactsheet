@@ -199,24 +199,38 @@ def variants_protected(gallery: Gallery) -> bool:
         return True
     if gallery.password_hash or gallery.expires_at:
         return True
-    if gallery.watermark_settings:
-        try:
-            return watermark_service.is_active(json.loads(gallery.watermark_settings))
-        except Exception:
-            pass
-    return False
+    return watermark_active(gallery)
+
+
+def watermark_active(gallery: Gallery) -> bool:
+    """Whether `gallery` has an active watermark (`watermark_service.is_active` on its settings)."""
+    if not gallery.watermark_settings:
+        return False
+    try:
+        return watermark_service.is_active(json.loads(gallery.watermark_settings))
+    except Exception:
+        return False
+
+
+def originals_downloadable(gallery: Gallery) -> bool:
+    """The single gate for handing a client the *clean original* of a still image: downloads on and
+    no active watermark. Used by the per-photo `/original` proxy, every public ZIP path (stream,
+    job, pre-flight, job download) and `downloadable_children` — a ZIP must never be a side door
+    around a watermark the single-photo download refuses."""
+    return bool(gallery.downloads_enabled) and not watermark_active(gallery)
 
 
 def downloadable_children(db: Session, gallery: Gallery, share_tokens: set[str]) -> list[Gallery]:
     """The direct sub-galleries a public ZIP of `gallery` may bundle, restricted to the requested
     share tokens. A child's own protections apply: a password-protected child (its cover is hidden
-    behind the gate in the nav too), one with downloads off, or an expired one is silently dropped —
+    behind the gate in the nav too), one with downloads off or an active watermark
+    (`originals_downloadable`), or an expired one is silently dropped —
     the parent's token must not become a skeleton key for the child's originals."""
     return [
         c for c in gallery_repo.get_children(db, gallery.id)
         if c.share_token in share_tokens
         and not c.password_hash
-        and c.downloads_enabled
+        and originals_downloadable(c)
         and not _is_expired(c)
     ]
 
@@ -643,12 +657,7 @@ def get_public_gallery(
     cover = gallery_repo.get_cover_image(db, gallery, only_approved=True)
     cover_url = _effective_cover_url(gallery, cover, storage, public=True)
 
-    watermark_enabled = False
-    if gallery.watermark_settings:
-        try:
-            watermark_enabled = watermark_service.is_active(json.loads(gallery.watermark_settings))
-        except Exception:
-            pass
+    watermark_enabled = watermark_active(gallery)
 
     # Build navigation data: direct sub-galleries and parent info. Expired children would only
     # 410 when opened — don't list them.

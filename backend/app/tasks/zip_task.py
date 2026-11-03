@@ -5,7 +5,6 @@ import logging
 import os
 import re
 import zipfile
-from collections import defaultdict
 
 from sqlalchemy.orm import Session
 from zipstream import ZipStream
@@ -45,23 +44,41 @@ def collect_members(
     `only_approved` must be True on public paths so pending (unmoderated) client uploads never leak
     into a download. Shared by the on-disk builders and the streaming download."""
     members: list[tuple[str, str]] = []
+    # Archive-wide, case-insensitive set of member paths already taken: a generated `name-1.ext` can
+    # collide with a real file of that name, and two galleries can sanitize to the same folder —
+    # either would put two entries under one path, and extracting silently overwrites one photo.
+    used: set[str] = set()
+    used_folders: set[str] = set()
     for gallery_id, folder in entries:
+        if folder:
+            folder = _unique(folder, used_folders)
         images = image_repo.get_by_gallery(db, gallery_id, only_approved=only_approved)
         if image_ids is not None:
             images = [img for img in images if img.id in image_ids]
-        name_counts: dict[str, int] = defaultdict(int)
         for img in images:
             src = os.path.join(settings.upload_dir, gallery_id, "original", img.stored_filename)
             if not os.path.exists(src):
                 continue
             base = os.path.basename(img.original_filename)
-            count = name_counts[base]
-            name_counts[base] += 1
-            if count:
-                stem, ext = os.path.splitext(base)
-                base = f"{stem}-{count}{ext}"
-            members.append((src, f"{folder}/{base}" if folder else base))
+            prefix = f"{folder}/" if folder else ""
+            stem, ext = os.path.splitext(base)
+            arcname, n = prefix + base, 0
+            while arcname.lower() in used:
+                n += 1
+                arcname = f"{prefix}{stem}-{n}{ext}"
+            used.add(arcname.lower())
+            members.append((src, arcname))
     return members
+
+
+def _unique(name: str, taken: set[str]) -> str:
+    """`name`, or `name-1`, `name-2`, … — the first not yet in `taken` (case-insensitive); records it."""
+    candidate, n = name, 0
+    while candidate.lower() in taken:
+        n += 1
+        candidate = f"{name}-{n}"
+    taken.add(candidate.lower())
+    return candidate
 
 
 def open_zip_stream(members: list[tuple[str, str]]) -> ZipStream:

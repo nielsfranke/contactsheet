@@ -447,7 +447,7 @@ def get_public_original(
     image = image_repo.get_by_id(db, image_id)
     if not image or image.gallery_id != gallery.id or image.moderation_status != "approved":
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Image not found")
-    if not image.is_video and (not gallery.downloads_enabled or public.watermark_enabled):
+    if not image.is_video and not gallery_service.originals_downloadable(gallery):
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Downloads are disabled for this gallery")
 
     src_path = os.path.join(app_settings.upload_dir, gallery.id, "original", image.stored_filename)
@@ -619,6 +619,16 @@ def public_delete_comment(
 ):
     gallery, _ = gallery_service.get_public_gallery(db, share_token, storage)
     _require_gallery_access(gallery, gallery_id_from_token)
+    # Same gates as creating a comment: every client write goes through review_active, so a gallery
+    # switched to Showcase (or with comments turned off) is read-only for comments too.
+    if not gallery_service.review_active(gallery):
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Gallery is not in collaboration mode")
+    if not gallery.comments_enabled:
+        raise CodedHTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            code="comments_disabled",
+            detail="Comments are not enabled for this gallery",
+        )
     # Public callers may only delete their own (author_name matches the reviewer name they pass).
     comment_service.delete_comment(db, gallery.id, image_id, comment_id, requester_name=reviewer)
 
@@ -637,7 +647,7 @@ def create_public_zip(
 ):
     gallery, _ = gallery_service.get_public_gallery(db, share_token, storage)
     _require_gallery_access(gallery, gallery_id_from_token)
-    if not gallery.downloads_enabled:
+    if not gallery_service.originals_downloadable(gallery):
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Downloads are disabled for this gallery")
 
     # Record + notify the download (skip the photographer's own download).
@@ -684,7 +694,7 @@ def check_public_zip(
     it would show the JSON error instead of the gallery — so the client checks here first."""
     gallery, _ = gallery_service.get_public_gallery(db, share_token, storage)
     _require_gallery_access(gallery, gallery_id_from_token)
-    if not gallery.downloads_enabled:
+    if not gallery_service.originals_downloadable(gallery):
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Downloads are disabled for this gallery")
     image_ids = {i for i in images.split(",") if i}
     if image_ids:
@@ -715,7 +725,7 @@ def stream_public_zip(
     gallery, _ = gallery_service.get_public_gallery(db, share_token, storage)
     # A browser navigation can't carry an Authorization header, so the gallery JWT rides in ?token=.
     _require_gallery_access(gallery, gallery_id_from_token_value(token))
-    if not gallery.downloads_enabled:
+    if not gallery_service.originals_downloadable(gallery):
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Downloads are disabled for this gallery")
 
     image_ids = {i for i in images.split(",") if i}
@@ -774,7 +784,7 @@ def download_public_zip(
 ):
     gallery, _ = gallery_service.get_public_gallery(db, share_token, storage)
     _require_gallery_access(gallery, gallery_id_from_token)
-    if not gallery.downloads_enabled:  # turned off since the job was created
+    if not gallery_service.originals_downloadable(gallery):  # turned off / watermarked since the job was created
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Downloads are disabled for this gallery")
     job = zip_job_repo.get(db, job_id)
     if not job or job.gallery_id != gallery.id:

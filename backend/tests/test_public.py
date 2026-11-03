@@ -811,3 +811,69 @@ def test_zip_check_runs_the_download_gates_without_a_body(admin_client):
     assert pub.get(f"/api/public/g/{g['share_token']}/zip/check", headers={"Authorization": f"Bearer {tok}"}).status_code == 204
     admin_client.patch(f"/api/galleries/{g['id']}", json={"downloads_enabled": False})
     assert pub.get(f"/api/public/g/{g['share_token']}/zip/check", headers={"Authorization": f"Bearer {tok}"}).status_code == 403
+
+
+# --- Watermark: a ZIP must not be a side door around the /original gate ------------------------
+
+_ACTIVE_TEXT_WM = '{"enabled": true, "mode": "text", "text": "PROOF"}'
+
+
+def test_zip_blocked_when_watermark_active(admin_client):
+    """/original refuses clean stills on a watermarked gallery; every public ZIP path must too."""
+    g = make_gallery(admin_client, "Proofs")
+    img_id = _upload(admin_client, g["id"], "a.png").json()[0]["id"]
+    admin_client.patch(f"/api/galleries/{g['id']}", json={"watermark_settings": _ACTIVE_TEXT_WM})
+    t = g["share_token"]
+    pub = _pub()
+    assert pub.get(f"/api/public/g/{t}/images/{img_id}/original").status_code == 403
+    assert pub.get(f"/api/public/g/{t}/zip/stream").status_code == 403
+    assert pub.get(f"/api/public/g/{t}/zip/stream?images={img_id}").status_code == 403
+    assert pub.get(f"/api/public/g/{t}/zip/check").status_code == 403
+    assert pub.post(f"/api/public/g/{t}/zip", json={}).status_code == 403
+
+
+def test_zip_job_download_blocked_once_watermark_enabled(admin_client):
+    g = make_gallery(admin_client, "Later")
+    _upload(admin_client, g["id"], "a.png")
+    t = g["share_token"]
+    pub = _pub()
+    job = pub.post(f"/api/public/g/{t}/zip", json={}).json()
+    assert pub.get(f"/api/public/g/{t}/zip/{job['id']}").json()["status"] == "ready"
+    admin_client.patch(f"/api/galleries/{g['id']}", json={"watermark_settings": _ACTIVE_TEXT_WM})
+    assert pub.get(f"/api/public/g/{t}/zip/{job['id']}/download").status_code == 403
+
+
+def test_stream_zip_skips_watermarked_children(admin_client):
+    parent = make_gallery(admin_client, "Parent")
+    wm = make_gallery(admin_client, "Proofs", parent_id=parent["id"])
+    ok = make_gallery(admin_client, "Open", parent_id=parent["id"])
+    _upload(admin_client, parent["id"], "root.png")
+    _upload(admin_client, wm["id"], "proof.png")
+    _upload(admin_client, ok["id"], "kid.png")
+    admin_client.patch(f"/api/galleries/{wm['id']}", json={"watermark_settings": _ACTIVE_TEXT_WM})
+    subs = f"{wm['share_token']},{ok['share_token']}"
+    r = _pub().get(f"/api/public/g/{parent['share_token']}/zip/stream?subs={subs}")
+    assert r.status_code == 200
+    assert set(zipfile.ZipFile(io.BytesIO(r.content)).namelist()) == {"Parent/root.png", "Open/kid.png"}
+
+
+def test_stream_zip_names_are_unique_across_generated_suffixes(admin_client):
+    """`p.png`, `p.png`, `p-1.png` used to yield two `p-1.png` entries (extract overwrites one)."""
+    g = make_gallery(admin_client, "Dupes")
+    for name in ("p.png", "p.png", "p-1.png"):
+        _upload(admin_client, g["id"], name)
+    r = _pub().get(f"/api/public/g/{g['share_token']}/zip/stream")
+    names = zipfile.ZipFile(io.BytesIO(r.content)).namelist()
+    assert len(names) == 3 and len({n.lower() for n in names}) == 3
+
+
+def test_stream_zip_folder_names_are_unique(admin_client):
+    """Two children whose names sanitize to the same folder must not merge into one."""
+    parent = make_gallery(admin_client, "Parent")
+    a = make_gallery(admin_client, "Day 1", parent_id=parent["id"])
+    b = make_gallery(admin_client, "Day 1!", parent_id=parent["id"])
+    _upload(admin_client, a["id"], "x.png")
+    _upload(admin_client, b["id"], "x.png")
+    r = _pub().get(f"/api/public/g/{parent['share_token']}/zip/stream?subs={a['share_token']},{b['share_token']}")
+    names = zipfile.ZipFile(io.BytesIO(r.content)).namelist()
+    assert len(set(names)) == 2

@@ -12,6 +12,7 @@ import hashlib
 import json
 import logging
 import os
+import secrets
 import shutil
 import sqlite3
 import tarfile
@@ -147,10 +148,14 @@ def _vacuum_into(src_db: str, dest: str) -> None:
 
 
 def _reload_runtime() -> None:
-    """Reload the token generation (and, unless the operator pins ``SECRET_KEY`` in the
-    environment, the secret key) from the restored settings; this invalidates the caller's
-    session, forcing a fresh login. Env wins over the DB exactly as at startup (app/main.py) —
-    otherwise sessions would be signed with the DB key until the next restart flips it back."""
+    """Reload the secret key (unless the operator pins ``SECRET_KEY`` in the environment) from the
+    restored settings and start a **fresh, random token generation**, forcing a fresh login. Env
+    wins over the DB exactly as at startup (app/main.py) — otherwise sessions would be signed with
+    the DB key until the next restart flips it back.
+
+    The generation is never taken from the backup: the archive carries the ``token_version`` of the
+    moment it was made, so restoring it would revive every admin token revoked since ("sign out
+    everywhere", password change). Random (not +1), like factory reset, so no older token can match."""
     from app.database import SessionLocal
     from app.repositories import settings_repo
 
@@ -161,7 +166,9 @@ def _reload_runtime() -> None:
             set_secret_key(settings.secret_key)
         elif s.secret_key:
             set_secret_key(s.secret_key)
-        set_token_version(s.token_version)
+        new_version = secrets.randbelow(2**31 - 2) + 2
+        settings_repo.update(db, token_version=new_version)
+        set_token_version(new_version)
     finally:
         db.close()
 

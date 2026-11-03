@@ -153,3 +153,22 @@ def test_active_text_watermark_changes_the_served_pixels(admin_client, db):
     # The static mount (nginx in production) serves the untouched rendition.
     assert open(os.path.join(cfg.upload_dir, g["id"], "thumb", stored), "rb").read() == on_disk
     assert img["id"]
+
+
+def test_delete_watermark_never_leaves_the_gallery_dir(tmp_path, monkeypatch):
+    """`filename` is admin-editable JSON — deleting must not unlink an absolute or `..` path."""
+    from app.config import settings
+    from app.services import watermark_service
+
+    monkeypatch.setattr(settings, "watermarks_dir", str(tmp_path / "wm"))
+    victim = tmp_path / "victim.txt"
+    victim.write_text("keep me")
+    for bad in (str(victim), "../victim.txt", "../../victim.txt"):
+        watermark_service.delete_watermark("g1", bad)
+    assert victim.exists()
+
+    own = tmp_path / "wm" / "g1" / "mark.png"
+    own.parent.mkdir(parents=True)
+    own.write_bytes(b"x")
+    watermark_service.delete_watermark("g1", "mark.png")
+    assert not own.exists()

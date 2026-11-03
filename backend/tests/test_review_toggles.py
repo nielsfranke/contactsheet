@@ -80,3 +80,25 @@ def test_comments_roundtrip_when_enabled(admin_client):
     assert post.status_code == 201
     listed = admin_client.get(f"/api/public/g/{t}/images/{img}/comments")
     assert listed.status_code == 200 and len(listed.json()) == 1
+
+
+def test_comment_delete_gated_like_create(admin_client):
+    """Deleting your own comment is a client write: once the gallery is Showcase (or comments are
+    off) it is read-only — the same gates as posting one."""
+    g = _review_gallery(admin_client)
+    img = add_image(g["id"])
+    t = g["share_token"]
+    c = admin_client.post(
+        f"/api/public/g/{t}/images/{img}/comments", json={"author_name": "Anna", "text": "hi"}
+    ).json()
+    url = f"/api/public/g/{t}/images/{img}/comments/{c['id']}?reviewer=Anna"
+
+    admin_client.patch(f"/api/galleries/{g['id']}", json={"comments_enabled": False})
+    r = admin_client.delete(url)
+    assert r.status_code == 403 and r.json()["code"] == "comments_disabled"
+
+    admin_client.patch(f"/api/galleries/{g['id']}", json={"comments_enabled": True, "mode": "presentation"})
+    assert admin_client.delete(url).status_code == 400
+
+    admin_client.patch(f"/api/galleries/{g['id']}", json={"mode": "collaboration"})
+    assert admin_client.delete(url).status_code == 204

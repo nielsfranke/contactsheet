@@ -9,6 +9,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { api, getErrorCode } from "@/lib/api";
 import type { ColorFlag, GalleryPublicResponse, ImageResponse, Vote } from "@/lib/types";
+import { originalsDownloadable } from "@/lib/types";
 import { type ToolbarArrange as ArrangeState } from "./GalleryToolbar";
 import { resolveOpenerFont } from "@/lib/gallery-fonts";
 import { compareCaptureDate, hasCaptureDate } from "@/lib/image-sort";
@@ -340,7 +341,7 @@ export function useGalleryView(
   // A "container" gallery has sub-galleries but no photos of its own — show its children as cover
   // cards (a landing page). Galleries with their own photos surface children via the breadcrumb.
   const isContainer = gallery.image_count === 0 && gallery.subgalleries.length > 0;
-  const canDownload = gallery.downloads_enabled && (gallery.image_count > 0 || gallery.subgalleries.length > 0);
+  const canDownload = originalsDownloadable(gallery) && (gallery.image_count > 0 || gallery.subgalleries.length > 0);
   const filterActive =
     arrange.filterName.trim() !== "" || arrange.flagFilters.size > 0 ||
     arrange.ratingFilters.size > 0 || arrange.commentsOnly;

@@ -222,9 +222,51 @@ def test_restore_roundtrip_brings_gallery_back(admin_client, monkeypatch):
     assert r.status_code == 200, r.text
     assert r.json()["ok"] is True
 
+    # Restore starts a fresh token generation → the pre-restore session is dead; log in again.
+    assert admin_client.get(f"/api/galleries/{g['id']}").status_code == 401
+    _relogin(admin_client)
     back = admin_client.get(f"/api/galleries/{g['id']}")
     assert back.status_code == 200
     assert back.json()["name"] == "Wedding"
+
+
+def _relogin(client):
+    from .conftest import ADMIN_USERNAME
+
+    r = client.post("/api/auth/login", json={"username": ADMIN_USERNAME, "password": ADMIN_PASSWORD, "remember": False})
+    assert r.status_code == 200, r.text
+
+
+def test_restore_does_not_revive_revoked_sessions(client, admin_client, monkeypatch):
+    """A backup carries the token generation of its moment. Restoring it must not re-validate
+    tokens revoked since ("sign out everywhere") — restore starts a fresh, random generation."""
+    from fastapi.testclient import TestClient
+
+    from app import migrations
+    from app.main import app
+
+    _stamp_revision()
+    status = _build_backup(admin_client, "metadata")
+    archive = _download(admin_client, status["id"])
+
+    # A second device's session from the backup's generation, then revoked everywhere.
+    other = TestClient(app)
+    _relogin(other)
+    stale_cookie = dict(other.cookies)
+    assert admin_client.post("/api/auth/logout-all").status_code in (200, 204)
+    _relogin(admin_client)
+
+    monkeypatch.setattr(migrations, "upgrade_to_head", lambda: None)
+    r = admin_client.post(
+        RESTORE,
+        files={"file": ("backup.tar", archive, "application/x-tar")},
+        data={"password": ADMIN_PASSWORD},
+    )
+    assert r.status_code == 200, r.text
+
+    revived = TestClient(app)
+    revived.cookies.update(stale_cookie)
+    assert revived.get("/api/auth/me").status_code == 401
 
 
 def test_restore_regenerates_missing_previews(admin_client, monkeypatch):
@@ -410,6 +452,7 @@ def test_metadata_restore_preserves_existing_uploads(admin_client, monkeypatch):
     monkeypatch.setattr(migrations, "upgrade_to_head", lambda: None)
     r = _restore_via_api(admin_client, archive, name="backup.tar.gz", ctype="application/gzip")
     assert r.status_code == 200, r.text
+    _relogin(admin_client)  # restore starts a fresh token generation
 
     # DB row is back, and the metadata restore never wiped the original off disk.
     assert admin_client.get(f"/api/galleries/{g['id']}").status_code == 200
@@ -435,6 +478,7 @@ def test_full_restore_replaces_whole_instance(admin_client, monkeypatch):
     monkeypatch.setattr(migrations, "upgrade_to_head", lambda: None)
     r = _restore_via_api(admin_client, archive)
     assert r.status_code == 200, r.text
+    _relogin(admin_client)  # restore starts a fresh token generation
 
     assert admin_client.get(f"/api/galleries/{kept['id']}").status_code == 200
     assert admin_client.get(f"/api/galleries/{later['id']}").status_code == 404

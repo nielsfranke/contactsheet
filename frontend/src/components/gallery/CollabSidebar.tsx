@@ -10,6 +10,7 @@ import Link from "next/link";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import type { Collection, GalleryPublicResponse, ImageResponse } from "@/lib/types";
+import { originalsDownloadable } from "@/lib/types";
 import type { useGalleryZip } from "@/hooks/useGalleryZip";
 import type { useImageSelection } from "@/hooks/useImageSelection";
 import { ClientUploadButton } from "./ClientUploadButton";
@@ -177,9 +178,9 @@ export function CollabSidebar({
 
         {/* Actions — Download / Add photos. The same shadcn Button as the admin sidebar;
             colors resolve from the gallery scope, so they can't drift from the admin. */}
-        {((gallery.downloads_enabled && lightboxImages.length > 0) || gallery.client_upload_enabled) && (
+        {((originalsDownloadable(gallery) && lightboxImages.length > 0) || gallery.client_upload_enabled) && (
           <div className="space-y-2">
-            {gallery.downloads_enabled && lightboxImages.length > 0 && (
+            {originalsDownloadable(gallery) && lightboxImages.length > 0 && (
               <>
                 <Button className="w-full justify-start" size="sm" onClick={onDownload} disabled={zip.preparing}>
                   {zip.preparing ? <Loader2 size={15} className="mr-2 animate-spin" /> : <Download size={15} className="mr-2" />}
@@ -275,7 +276,7 @@ export function CollabSidebar({
                         </span>
                         {c.created_by && <span className="block text-[10px] text-muted-foreground truncate">{t("collections.by", { name: c.created_by })}</span>}
                       </button>
-                      {gallery.downloads_enabled && (
+                      {originalsDownloadable(gallery) && (
                         <button onClick={() => zip.startImages(c.image_ids)} title={t("collections.downloadCollection")} className="shrink-0 text-muted-foreground hover:text-foreground opacity-0 group-hover:opacity-100 transition-opacity p-1">
                           <Download size={13} />
                         </button>
