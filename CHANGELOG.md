@@ -12,6 +12,52 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.13.0] - 2026-11-03
+
+Security and robustness fixes from a full code review. No migration. After updating, restoring a
+backup now always signs everyone out.
+
+### Security
+
+- **Watermarked galleries no longer hand out clean originals as a ZIP.** Single-photo downloads
+  were already refused when a watermark was active, but "Download all" and downloading a selection
+  bypassed that and delivered the unmarked originals. ZIP downloads now follow the same rule, and
+  watermarked sub-galleries are left out of a parent's ZIP. With a watermark on, the download
+  buttons are hidden.
+- **Restoring a backup no longer revives revoked sessions.** A restore took the sign-in generation
+  from the backup, so sessions ended with "Sign out everywhere" or a password change *after* the
+  backup became valid again. Every restore now signs everyone out.
+- **Uploads by clients are refused before they are written to disk.** Uploads to an unknown,
+  locked, expired or upload-disabled gallery, uploads larger than the gallery allows, and uploads
+  that would eat into the 5 GB free-space reserve are now rejected up front. Previously the whole
+  upload was stored temporarily before being refused, which let anyone fill the disk.
+- **Header and cover images of password-protected or expiring galleries** are now served only to
+  visitors who may open the gallery. Before, their direct link worked without the password and
+  after the expiry date.
+- **Link previews of watermarked galleries carry the watermark** when they fall back to a photo.
+- Clients can no longer delete their comments in a gallery that was switched to Showcase or had
+  comments turned off.
+- Deleting a gallery's watermark can no longer remove files outside its watermark folder.
+
+### Fixed
+
+- **ZIP downloads no longer contain two files with the same name.** `photo.jpg`, `photo.jpg` and
+  `photo-1.jpg` produced two `photo-1.jpg` entries, so unpacking overwrote one photo. Sub-gallery
+  folders whose names differ only in special characters are kept apart too.
+- **Backups include photos uploaded while the backup was running.** Such a photo could end up in
+  the backup's database without its file.
+- **Restores can't overlap or race incoming requests.** A second restore started at the same time
+  is refused, and the background preview check now waits for a restore too.
+- **Settings save in the order you change them.** Flipping a toggle quickly on and off could save
+  the earlier value while the screen showed the later one.
+- **Copying photos that were still processing** no longer produces copies without previews.
+
+### Removed
+
+- **The job-based public ZIP API** (`POST /api/public/g/{token}/zip`, its status and download
+  endpoints). The gallery itself only uses the streaming download (`/zip/stream`), and a
+  prebuilt archive couldn't re-check its contents. The admin export is unchanged.
+
 ## [1.12.6] - 2026-11-01
 
 Dependency refresh. No migration.
