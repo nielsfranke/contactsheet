@@ -129,14 +129,11 @@ def test_public_comment_delete_is_author_only(admin_client):
     assert _pub().get(base).json() == []
 
 
-def test_public_zip_job_status_and_download(admin_client):
+def test_public_zip_job_endpoints_are_gone(admin_client):
+    """The public build-then-poll ZIP jobs were superseded by /zip/stream and removed: a prebuilt
+    archive couldn't re-check what it bundled (a sub-gallery locked or deleted after the build)."""
     g = make_gallery(admin_client, "Zip")
-    admin_client.post(f"/api/galleries/{g['id']}/images", files=[("files", ("a.png", png_bytes(), "image/png"))])
-    job = _pub().post(f"/api/public/g/{g['share_token']}/zip", json={}).json()
-    status = _pub().get(f"/api/public/g/{g['share_token']}/zip/{job['id']}").json()
-    assert status["status"] == "ready" and status["download_url"]
-    r = _pub().get(status["download_url"])
-    assert r.status_code == 200 and r.headers["content-type"] == "application/zip"
+    assert _pub().post(f"/api/public/g/{g['share_token']}/zip", json={}).status_code in (404, 405)
 
 
 def test_admin_zip_job_delete(admin_client):

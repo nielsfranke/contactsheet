@@ -25,7 +25,6 @@ matching the current hardcoded style (no env knobs — keep it simple, single-pr
 | Endpoint | Limit | Rationale |
 |---|---|---|
 | `POST …/images` (client upload) | `10/minute` | Heavy (up to 50 files × size cap each) |
-| `POST …/zip` | `10/minute` | Heavy (spawns a background ZIP job) |
 | `POST …/collections` | `20/minute` | Moderate write |
 | `DELETE …/collections/{id}` | `30/minute` | Cheap but destructive |
 | `POST …/images/{id}/comments` | `30/minute` | Text spam vector |

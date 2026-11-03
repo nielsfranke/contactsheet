@@ -118,8 +118,11 @@ intent; tying it to completion would miss aborted-but-mostly-finished transfers.
 
 - **No resume / Range.** A dropped connection restarts from zero. For huge archives over flaky links
   the old build-to-file path (a `FileResponse` supports ranges) is more robust. **Keep the
-  job-based endpoints** as-is for: the **admin** export (`zip_export.py`), and as an optional
-  fallback. Streaming becomes the default for the public "download all / selection".
+  job-based endpoints** for the **admin** export (`zip_export.py`) only. The *public* job endpoints
+  (`POST /api/public/g/{token}/zip`, `GET …/zip/{job}`, `…/download`) were **removed** (2026-11):
+  the UI never used them as a fallback, and a prebuilt archive can't re-check its contents — a
+  sub-gallery password-locked, expired, watermarked or deleted after the build stayed downloadable
+  through the open parent. The stream re-runs every gate per request.
 - **A worker is held for the transfer duration** (bounded by client bandwidth). Guard with a small
   concurrency **semaphore** on streaming downloads (return 503/“try again” when saturated) plus the
   existing rate limit, so a few slow clients can't exhaust the threadpool on a low-end box.

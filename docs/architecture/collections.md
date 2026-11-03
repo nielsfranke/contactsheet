@@ -58,8 +58,8 @@ Migration `0018`. Two tables (collections hard-delete; the soft-delete rule is G
     access can create/delete — reviewer "identity" is an unauthenticated name, so delete is not
     creator-restricted (noted, not secured).
 - **Download** — no new ZIP work: the cover/members feed the existing
-  `createFilteredZip(image_ids)` on both `/api/galleries/{id}/export/zip` and
-  `/api/public/g/{token}/zip`.
+  `createFilteredZip(image_ids)` on `/api/galleries/{id}/export/zip` (admin) and the public
+  `/api/public/g/{token}/zip/stream?images=…`.
 
 ## Frontend
 

@@ -21,6 +21,7 @@ from app.version import __version__
 from app.errors import CodedHTTPException
 from app.observability import RequestContextMiddleware, configure_logging, init_sentry
 from app.rate_limit import limiter
+from app.upload_guard import ClientUploadGuard
 from app.routers import auth, galleries, images, public
 from app.routers import admin_settings, analytics, api_tokens, branding_icon, collections, realtime, search, setup, zip_export
 
@@ -210,6 +211,10 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Refuses doomed public client uploads from the headers alone, before Starlette spools the body
+# (see app/upload_guard.py). Inside RequestContextMiddleware so refusals are still logged.
+app.add_middleware(ClientUploadGuard)
 
 # Added last → outermost: a request id is bound (and the access line logged) around everything else.
 app.add_middleware(RequestContextMiddleware)

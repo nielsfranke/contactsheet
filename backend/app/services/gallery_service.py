@@ -759,7 +759,13 @@ def _meta_image_path(gallery: Gallery, db: Session, storage: StorageProvider) ->
     if photo and photo.processing_status == "done":
         rel = f"{gallery.id}/medium/{photo.stored_filename}"
         if storage.exists(rel):
-            return os.path.join(app_config.upload_dir, gallery.id, "medium", photo.stored_filename)
+            src = os.path.join(app_config.upload_dir, gallery.id, "medium", photo.stored_filename)
+            # A gallery photo, unlike the header/cover uploads: if the gallery is watermarked, the
+            # preview must be too — never a clean 1200 px copy of what the gallery only shows marked.
+            if watermark_active(gallery):
+                ws = json.loads(gallery.watermark_settings)
+                src, _etag = watermark_service.composited_variant(gallery.id, photo.id, "medium", src, ws)
+            return src
     return None
 
 

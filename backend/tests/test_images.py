@@ -358,3 +358,27 @@ def test_move_drops_membership_in_source_collections(admin_client):
         assert [r.image_id for r in rows] == [keep]
     finally:
         db.close()
+
+
+def test_copy_keeps_real_processing_state_and_renders_pending(admin_client, monkeypatch):
+    """A copy used to be stamped "done" unconditionally: copying a photo whose renditions weren't
+    rendered yet produced a "done" row with no previews (404s), and nothing ever rendered them."""
+    from app.services import image_service
+
+    a = make_gallery(admin_client, "A")
+    b = make_gallery(admin_client, "B")
+    pending = add_image(a["id"], filename="pending.jpg", status="pending", sort_order=0)
+    nopv = add_image(a["id"], filename="raw.psb", status="no_preview", sort_order=1)
+
+    queued: list[str] = []
+    monkeypatch.setattr(image_service, "submit_image_processing", lambda iid, gid, sf: queued.append(iid))
+    r = admin_client.post(
+        f"/api/galleries/{a['id']}/images/transfer",
+        json={"image_ids": [pending, nopv], "target_gallery_id": b["id"], "operation": "copy"},
+    )
+    assert r.status_code == 200
+
+    copies = {i["original_filename"]: i for i in admin_client.get(f"/api/galleries/{b['id']}/images").json()}
+    assert copies["pending.jpg"]["processing_status"] == "pending"
+    assert copies["raw.psb"]["processing_status"] == "no_preview"
+    assert queued == [copies["pending.jpg"]["id"]]

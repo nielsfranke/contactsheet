@@ -19,14 +19,6 @@ class ZipJobCreate(BaseModel):
     image_ids: list[str] = Field(default_factory=list, max_length=10_000)
 
 
-class PublicZipCreate(BaseModel):
-    # Share tokens of the direct sub-galleries to include alongside the gallery's own images.
-    subgallery_share_tokens: list[str] = []
-    # When set, download only these images (a filtered selection) as a flat archive;
-    # sub-galleries are ignored.
-    image_ids: list[str] = Field(default_factory=list, max_length=10_000)
-
-
 class ZipJobResponse(BaseModel):
     model_config = {"from_attributes": True}
 

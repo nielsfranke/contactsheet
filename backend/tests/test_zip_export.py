@@ -52,8 +52,7 @@ def test_public_zip_blocked_when_downloads_disabled(admin_client):
     from fastapi.testclient import TestClient
     from app.main import app
     pub = TestClient(app)
-    r = pub.post(f"/api/public/g/{g['share_token']}/zip", json={})
-    assert r.status_code == 403
+    assert pub.get(f"/api/public/g/{g['share_token']}/zip/stream").status_code == 403
 
 
 def test_zip_job_list_returns_existing_jobs(admin_client):

@@ -639,13 +639,13 @@ def test_stream_zip_skips_protected_children(admin_client):
     assert set(zipfile.ZipFile(io.BytesIO(r.content)).namelist()) == {"Parent/root.png", "Open/kid.png"}
 
 
-def test_zip_job_skips_protected_children(admin_client):
+def test_zip_check_skips_protected_children(admin_client):
     parent = make_gallery(admin_client, "Parent")
     locked = make_gallery(admin_client, "Locked", parent_id=parent["id"])
     _upload(admin_client, locked["id"], "secret.png")
     admin_client.patch(f"/api/galleries/{locked['id']}", json={"password": "secret"})
     # The parent itself is empty, so with the locked child dropped there is nothing to download.
-    r = _pub().post(f"/api/public/g/{parent['share_token']}/zip", json={"subgallery_share_tokens": [locked["share_token"]]})
+    r = _pub().get(f"/api/public/g/{parent['share_token']}/zip/check?subs={locked['share_token']}")
     assert r.status_code == 400
 
 
@@ -777,14 +777,6 @@ def test_client_upload_accepts_web_formats_only(admin_client):
     assert r.status_code == 201
 
 
-def test_public_zip_download_rechecks_download_gate(admin_client):
-    g = make_gallery(admin_client, "Zip")
-    _upload(admin_client, g["id"])
-    job = _pub().post(f"/api/public/g/{g['share_token']}/zip", json={}).json()
-    admin_client.patch(f"/api/galleries/{g['id']}", json={"downloads_enabled": False})
-    assert _pub().get(f"/api/public/g/{g['share_token']}/zip/{job['id']}/download").status_code == 403
-
-
 def test_zip_download_name_survives_non_ascii_gallery_names(admin_client):
     """Starlette encodes headers as latin-1 — a plain `filename="東京.zip"` would 500."""
     g = make_gallery(admin_client, "東京 Café")
@@ -819,7 +811,7 @@ _ACTIVE_TEXT_WM = '{"enabled": true, "mode": "text", "text": "PROOF"}'
 
 
 def test_zip_blocked_when_watermark_active(admin_client):
-    """/original refuses clean stills on a watermarked gallery; every public ZIP path must too."""
+    """/original refuses clean stills on a watermarked gallery; the ZIP stream and its pre-flight must too."""
     g = make_gallery(admin_client, "Proofs")
     img_id = _upload(admin_client, g["id"], "a.png").json()[0]["id"]
     admin_client.patch(f"/api/galleries/{g['id']}", json={"watermark_settings": _ACTIVE_TEXT_WM})
@@ -829,18 +821,6 @@ def test_zip_blocked_when_watermark_active(admin_client):
     assert pub.get(f"/api/public/g/{t}/zip/stream").status_code == 403
     assert pub.get(f"/api/public/g/{t}/zip/stream?images={img_id}").status_code == 403
     assert pub.get(f"/api/public/g/{t}/zip/check").status_code == 403
-    assert pub.post(f"/api/public/g/{t}/zip", json={}).status_code == 403
-
-
-def test_zip_job_download_blocked_once_watermark_enabled(admin_client):
-    g = make_gallery(admin_client, "Later")
-    _upload(admin_client, g["id"], "a.png")
-    t = g["share_token"]
-    pub = _pub()
-    job = pub.post(f"/api/public/g/{t}/zip", json={}).json()
-    assert pub.get(f"/api/public/g/{t}/zip/{job['id']}").json()["status"] == "ready"
-    admin_client.patch(f"/api/galleries/{g['id']}", json={"watermark_settings": _ACTIVE_TEXT_WM})
-    assert pub.get(f"/api/public/g/{t}/zip/{job['id']}/download").status_code == 403
 
 
 def test_stream_zip_skips_watermarked_children(admin_client):

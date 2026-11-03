@@ -5,7 +5,7 @@ import json
 import os
 from typing import Literal
 
-from fastapi import APIRouter, BackgroundTasks, Depends, File, Form, HTTPException, Query, Request, Response, UploadFile, status
+from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, Request, Response, UploadFile, status
 from fastapi.responses import FileResponse, StreamingResponse
 from sqlalchemy.orm import Session
 
@@ -18,7 +18,7 @@ from app.errors import CodedHTTPException
 from app.dependencies import get_storage
 from app.rate_limit import limiter
 from app.realtime import publish as realtime_publish
-from app.repositories import activity_repo, comment_repo, gallery_repo, image_repo, like_repo, settings_repo, vote_repo, zip_job_repo
+from app.repositories import activity_repo, comment_repo, gallery_repo, image_repo, like_repo, settings_repo, vote_repo
 from app.schemas.auth import GalleryAuthRequest, GalleryAuthResponse
 from app.schemas.collection import CollectionCreate, CollectionResponse, CollectionUpdate
 from app.schemas.comment import CommentCreate, CommentResponse
@@ -26,30 +26,12 @@ from app.schemas.gallery import GalleryMetaResponse
 from app.schemas.image import ImageResponse, PublicFlagRequest, PublicLikeRequest, PublicRateRequest, UploadResponse
 from app.schemas.settings import LegalPageResponse
 from app.schemas.vote import VoteCreate, VoteResponse
-from app.schemas.zip_job import PublicZipCreate, ZipJobResponse
 from app.services import activity_service, collection_service, comment_service, gallery_service, image_service, notification_service, watermark_service
 from app.storage.base import StorageProvider
-from app.tasks.zip_task import build_zip_for_images, build_zip_multi, collect_members, open_zip_stream, safe_folder
+from app.tasks.zip_task import collect_members, open_zip_stream, safe_folder
 from app.utils import attachment_disposition
 
 router = APIRouter(prefix="/api/public", tags=["public"])
-
-
-def _public_zip_response(job, share_token: str) -> ZipJobResponse:
-    download_url = None
-    if job.status == "ready":
-        download_url = f"/api/public/g/{share_token}/zip/{job.id}/download"
-    return ZipJobResponse(
-        id=job.id,
-        gallery_id=job.gallery_id,
-        status=job.status,
-        filter_type=job.filter_type,
-        image_count=job.image_count,
-        error_message=job.error_message,
-        created_at=job.created_at,
-        ready_at=job.ready_at,
-        download_url=download_url,
-    )
 
 
 def _has_access(gallery, access: GalleryAccess | None) -> bool:
@@ -633,53 +615,6 @@ def public_delete_comment(
     comment_service.delete_comment(db, gallery.id, image_id, comment_id, requester_name=reviewer)
 
 
-@router.post("/g/{share_token}/zip", response_model=ZipJobResponse, status_code=202)
-@limiter.limit("10/minute")
-def create_public_zip(
-    request: Request,
-    share_token: str,
-    body: PublicZipCreate,
-    background_tasks: BackgroundTasks,
-    db: Session = Depends(get_db),
-    storage: StorageProvider = Depends(get_storage),
-    gallery_id_from_token: GalleryAccess | None = Depends(get_optional_gallery_token),
-    is_admin: bool = Depends(get_optional_admin),
-):
-    gallery, _ = gallery_service.get_public_gallery(db, share_token, storage)
-    _require_gallery_access(gallery, gallery_id_from_token)
-    if not gallery_service.originals_downloadable(gallery):
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Downloads are disabled for this gallery")
-
-    # Record + notify the download (skip the photographer's own download).
-    def _record_download(count: int) -> None:
-        if is_admin:
-            return
-        activity_service.log_download(db, gallery.id, request, count)
-        notification_service.enqueue(db, gallery.id, "download", meta={"count": count})
-
-    # Filtered download: a specific selection of this gallery's own images (sub-galleries ignored).
-    if body.image_ids:
-        gallery_image_ids = {img.id for img in image_repo.get_by_gallery(db, gallery.id, only_approved=True)}
-        wanted = [iid for iid in body.image_ids if iid in gallery_image_ids]
-        if not wanted:
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Nothing to download in the current selection")
-        zip_job_repo.purge_expired(db)
-        job = zip_job_repo.create(db, gallery.id, "all")
-        background_tasks.add_task(build_zip_for_images, job.id, gallery.id, wanted, only_approved=True)
-        _record_download(len(wanted))
-        return _public_zip_response(job, share_token)
-
-    entries, total = gallery_service.public_zip_entries(db, gallery, set(body.subgallery_share_tokens))
-    if total == 0:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Nothing to download in the current selection")
-
-    zip_job_repo.purge_expired(db)
-    job = zip_job_repo.create(db, gallery.id, "all")
-    background_tasks.add_task(build_zip_multi, job.id, entries, only_approved=True)
-    _record_download(total)
-    return _public_zip_response(job, share_token)
-
-
 @router.get("/g/{share_token}/zip/check", status_code=204)
 def check_public_zip(
     share_token: str,
@@ -757,40 +692,3 @@ def stream_public_zip(
         },
     )
 
-
-@router.get("/g/{share_token}/zip/{job_id}", response_model=ZipJobResponse)
-def get_public_zip(
-    share_token: str,
-    job_id: str,
-    db: Session = Depends(get_db),
-    storage: StorageProvider = Depends(get_storage),
-    gallery_id_from_token: GalleryAccess | None = Depends(get_optional_gallery_token),
-):
-    gallery, _ = gallery_service.get_public_gallery(db, share_token, storage)
-    _require_gallery_access(gallery, gallery_id_from_token)
-    job = zip_job_repo.get(db, job_id)
-    if not job or job.gallery_id != gallery.id:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Job not found")
-    return _public_zip_response(job, share_token)
-
-
-@router.get("/g/{share_token}/zip/{job_id}/download")
-def download_public_zip(
-    share_token: str,
-    job_id: str,
-    db: Session = Depends(get_db),
-    storage: StorageProvider = Depends(get_storage),
-    gallery_id_from_token: GalleryAccess | None = Depends(get_optional_gallery_token),
-):
-    gallery, _ = gallery_service.get_public_gallery(db, share_token, storage)
-    _require_gallery_access(gallery, gallery_id_from_token)
-    if not gallery_service.originals_downloadable(gallery):  # turned off / watermarked since the job was created
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Downloads are disabled for this gallery")
-    job = zip_job_repo.get(db, job_id)
-    if not job or job.gallery_id != gallery.id:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Job not found")
-    if job.status != "ready" or not job.file_path or not os.path.exists(job.file_path):
-        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="ZIP not ready")
-
-    filename = f"{safe_folder(gallery.name)}.zip"
-    return FileResponse(job.file_path, media_type="application/zip", filename=filename)

@@ -172,3 +172,28 @@ def test_delete_watermark_never_leaves_the_gallery_dir(tmp_path, monkeypatch):
     own.write_bytes(b"x")
     watermark_service.delete_watermark("g1", "mark.png")
     assert not own.exists()
+
+
+def test_og_image_from_a_photo_is_watermarked(admin_client):
+    """The link-preview fallback (no header/cover) is a gallery photo — on a watermarked gallery it
+    must carry the mark, not be a clean 1200 px copy of what the gallery only shows marked."""
+    from fastapi.testclient import TestClient
+    from app.main import app
+    from .helpers import png_bytes
+
+    g = make_gallery(admin_client, "OG")
+    admin_client.post(
+        f"/api/galleries/{g['id']}/images",
+        files=[("files", ("p.png", png_bytes(color=(200, 30, 30), size=(400, 300)), "image/png"))],
+    )
+    pub = TestClient(app)
+    url = f"/api/public/g/{g['share_token']}/og-image"
+    clean = pub.get(url)
+    assert clean.status_code == 200
+
+    ws = {"enabled": True, "mode": "text", "text": "© Studio", "opacity": 90, "size": "large", "position": "center"}
+    admin_client.patch(f"/api/galleries/{g['id']}", json={"watermark_settings": json.dumps(ws)})
+    marked = pub.get(url)
+    assert marked.status_code == 200
+    assert marked.content != clean.content
+    assert marked.headers["etag"] != clean.headers["etag"]

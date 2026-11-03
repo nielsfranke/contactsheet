@@ -716,7 +716,11 @@ def copy_image_to_gallery(
         if storage.exists(src):
             storage.copy(src, f"{target_gallery_id}/{subdir}/{new_filename}")
 
-    return image_repo.create(
+    # The copy inherits the source's real state (done / no_preview / error). A source still being
+    # rendered has no (or partial) renditions to copy, and its worker only writes the *source's*
+    # files — so the copy is queued for its own rendering instead of being marked "done" (→ 404s).
+    still_rendering = image.processing_status == "pending" and not image.is_video
+    copy = image_repo.create(
         db,
         gallery_id=target_gallery_id,
         original_filename=image.original_filename,
@@ -730,11 +734,14 @@ def copy_image_to_gallery(
         tags=image.tags,
         is_video=image.is_video,
         video_poster_filename=image.video_poster_filename,
-        processing_status="done",
+        processing_status="pending" if still_rendering else image.processing_status,
         sort_order=sort_order,
         # feedback intentionally reset (defaults): color_flag="none", likes=0,
         # uploaded_by=None, moderation_status="approved".
     )
+    if still_rendering:
+        submit_image_processing(copy.id, target_gallery_id, new_filename)
+    return copy
 
 
 def transfer_images(

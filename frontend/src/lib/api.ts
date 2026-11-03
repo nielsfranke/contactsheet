@@ -642,24 +642,6 @@ export const api = {
         body: JSON.stringify({ reviewer_name: reviewerName, rating }),
         headers: authHeaders(galleryToken),
       }),
-    createZip: (token: string, subgalleryShareTokens: string[], galleryToken?: string) =>
-      request<ZipJob>(`/api/public/g/${token}/zip`, {
-        method: "POST",
-        body: JSON.stringify({ subgallery_share_tokens: subgalleryShareTokens }),
-        headers: authHeaders(galleryToken),
-      }),
-    createFilteredZip: (token: string, imageIds: string[], galleryToken?: string) =>
-      request<ZipJob>(`/api/public/g/${token}/zip`, {
-        method: "POST",
-        body: JSON.stringify({ image_ids: imageIds }),
-        headers: authHeaders(galleryToken),
-      }),
-    getZip: (token: string, jobId: string, galleryToken?: string) =>
-      request<ZipJob>(`/api/public/g/${token}/zip/${jobId}`, {
-        headers: authHeaders(galleryToken),
-      }),
-    zipDownloadUrl: (token: string, jobId: string) =>
-      `/api/public/g/${token}/zip/${jobId}/download`,
     // Pre-flight for the streaming download: runs the same gates (token, downloads on, non-empty
     // selection) and returns 204 — so a stale token or a disabled download surfaces as an error
     // in the dialog instead of the browser navigating the gallery away to a JSON error page.
