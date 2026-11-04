@@ -12,6 +12,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.13.1] - 2026-11-04
+
+### Fixed
+
+- Long gallery titles no longer run off the screen on phones: the gallery heading and the
+  full-screen hero title scale down below the `sm` breakpoint, and very long words (e.g. German
+  compounds) hyphenate or wrap instead of overflowing.
+
 ## [1.13.0] - 2026-11-03
 
 Security and robustness fixes from a full code review. No migration. After updating, restoring a
