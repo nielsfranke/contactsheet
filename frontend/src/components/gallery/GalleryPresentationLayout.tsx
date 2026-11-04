@@ -13,17 +13,17 @@ import type { GalleryViewModel } from "./useGalleryView";
 import { withGalleryToken } from "@/lib/gridLayout";
 
 const OPENER_SIZE: Record<string, string> = {
-  small: "text-2xl",
-  medium: "text-3xl",
-  large: "text-5xl",
+  small: "text-xl sm:text-2xl",
+  medium: "text-2xl sm:text-3xl",
+  large: "text-3xl sm:text-5xl",
 };
 
 // Full-screen hero gets a larger, responsive scale than the inline header — driven by the
 // same per-gallery "Heading size" (opener_font_size) setting.
 const HERO_TITLE_SIZE: Record<string, string> = {
-  small: "text-4xl sm:text-5xl",
-  medium: "text-5xl sm:text-6xl",
-  large: "text-6xl sm:text-7xl",
+  small: "text-3xl sm:text-5xl",
+  medium: "text-4xl sm:text-6xl",
+  large: "text-5xl sm:text-7xl",
 };
 
 const HERO_SUBTITLE_SIZE: Record<string, string> = {
@@ -142,7 +142,7 @@ export function GalleryPresentationLayout({
               }`}
             >
               <h1
-                className={`${titleShadow} line-clamp-2 ${HERO_TITLE_SIZE[gallery.opener_font_size] ?? HERO_TITLE_SIZE.medium} text-white`}
+                className={`${titleShadow} line-clamp-2 hyphens-auto wrap-break-word ${HERO_TITLE_SIZE[gallery.opener_font_size] ?? HERO_TITLE_SIZE.medium} text-white`}
                 style={openerFont}
               >
                 {gallery.name}
@@ -228,9 +228,9 @@ export function GalleryPresentationLayout({
               />
             )}
             <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-              <div>
+              <div className="min-w-0">
                 <h1
-                  className={`${OPENER_SIZE[gallery.opener_font_size] ?? "text-3xl"} ${bright ? "text-zinc-900" : "text-zinc-100"}`}
+                  className={`hyphens-auto wrap-break-word ${OPENER_SIZE[gallery.opener_font_size] ?? OPENER_SIZE.medium} ${bright ? "text-zinc-900" : "text-zinc-100"}`}
                   style={openerFont}
                 >
                   {gallery.name}
