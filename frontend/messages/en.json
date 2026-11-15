@@ -728,6 +728,7 @@
       "instanceTitle": "Analytics",
       "instanceSubtitle": "Engagement across all galleries.",
       "busiestGalleries": "Busiest galleries",
+      "noActivityPeriod": "Nothing in this period",
       "noActivity": "No activity recorded yet.",
       "colGallery": "Gallery",
       "votes": "Votes",
@@ -1083,6 +1084,7 @@
     },
     "gallery": {
       "title": "Gallery settings",
+      "tabsLabel": "Settings sections",
       "description": "Choose how this gallery opens for clients and fine-tune its behaviour. <link>Edit your defaults</link>.",
       "startClientView": "Start client view in",
       "collaborationHint": "Flag, like & comment",

@@ -4,6 +4,7 @@
 "use client";
 
 import { useMemo } from "react";
+import { useTranslations } from "next-intl";
 import { chartBars, seriesTotal } from "@/lib/analytics";
 import type { TimeseriesPoint } from "@/lib/types";
 
@@ -26,6 +27,7 @@ const BAR_FILL = "bg-primary [html.accent-gradient_&]:bg-[image:var(--primary-gr
 export function BarTimeseries({ data, label, totalLabel }: Props) {
   const bars = useMemo(() => chartBars(data), [data]);
   const total = useMemo(() => seriesTotal(data), [data]);
+  const t = useTranslations("admin.analytics");
 
   return (
     <div className="rounded-lg border border-border bg-card/50 p-3">
@@ -35,7 +37,13 @@ export function BarTimeseries({ data, label, totalLabel }: Props) {
           {total} {totalLabel}
         </span>
       </div>
-      <div className="flex h-24 items-end gap-px" role="img" aria-label={`${label}: ${total}`}>
+      <div className="relative flex h-24 items-end gap-px" role="img" aria-label={`${label}: ${total}`}>
+        {/* An all-zero period is a fact worth saying, not an empty box. */}
+        {total === 0 && (
+          <span className="absolute inset-0 flex items-center justify-center text-xs text-muted-foreground">
+            {t("noActivityPeriod")}
+          </span>
+        )}
         {bars.map((b) => (
           <div
             key={b.date}

@@ -728,6 +728,7 @@
       "instanceTitle": "Statistiken",
       "instanceSubtitle": "Interaktion über alle Galerien hinweg.",
       "busiestGalleries": "Aktivste Galerien",
+      "noActivityPeriod": "Nichts in diesem Zeitraum",
       "noActivity": "Noch keine Aktivität aufgezeichnet.",
       "colGallery": "Galerie",
       "votes": "Stimmen",
@@ -1083,6 +1084,7 @@
     },
     "gallery": {
       "title": "Galerie-Einstellungen",
+      "tabsLabel": "Einstellungsbereiche",
       "description": "Wählen Sie, wie diese Galerie für Kunden geöffnet wird, und passen Sie ihr Verhalten an. <link>Standards bearbeiten</link>.",
       "startClientView": "Kundenansicht starten in",
       "collaborationHint": "Markieren, liken & kommentieren",

@@ -329,14 +329,33 @@ export function GallerySettingsModal({
         </div>
 
         {/* Tabs */}
-        <div className="flex gap-1 border-b border-border">
+        {/* A real tablist: arrow keys move between tabs (roving tabindex), screen readers hear
+            "tab, 2 of 4, selected". */}
+        <div
+          className="flex gap-1 border-b border-border"
+          role="tablist"
+          aria-label={t("tabsLabel")}
+          onKeyDown={(e) => {
+            if (e.key !== "ArrowRight" && e.key !== "ArrowLeft") return;
+            e.preventDefault();
+            const i = tabs.findIndex((x) => x.value === tab);
+            const next = tabs[(i + (e.key === "ArrowRight" ? 1 : tabs.length - 1)) % tabs.length];
+            setTab(next.value);
+            document.getElementById(`gs-tab-${next.value}`)?.focus();
+          }}
+        >
           {tabs.map((t) => {
             const Icon = t.icon;
             const active = tab === t.value;
             return (
               <button
                 key={t.value}
+                id={`gs-tab-${t.value}`}
                 type="button"
+                role="tab"
+                aria-selected={active}
+                aria-controls="gs-tabpanel"
+                tabIndex={active ? 0 : -1}
                 onClick={() => setTab(t.value)}
                 className={`flex items-center gap-1.5 px-3 py-2 text-sm -mb-px border-b-2 transition-colors ${
                   active
@@ -351,8 +370,14 @@ export function GallerySettingsModal({
           })}
         </div>
 
-        {/* Tab content */}
-        <div className="max-h-[55vh] overflow-y-auto pr-1">
+        {/* Tab content — a fixed height, so switching tabs doesn't make the dialog (and its tab
+            bar) jump; long tabs scroll inside. */}
+        <div
+          id="gs-tabpanel"
+          role="tabpanel"
+          aria-labelledby={`gs-tab-${tab}`}
+          className="h-[55vh] overflow-y-auto pr-1"
+        >
           {tab === "general" && (
             <div className="divide-y divide-border/60">
               <div className="space-y-1 py-2.5">
