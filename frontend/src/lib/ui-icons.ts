@@ -27,6 +27,7 @@ import {
   Play,
   FileImage,
   Star,
+  CalendarClock,
 } from "lucide-react";
 
 export const Icons = {
@@ -50,6 +51,8 @@ export const Icons = {
   open: ArrowUpRight,
   /** Password-protected. */
   locked: Lock,
+  /** Expiry date set / gallery expired. */
+  expires: CalendarClock,
   /** Collaboration ("Review") mode. */
   modeReview: Users,
   /** Presentation ("Showcase") mode. */

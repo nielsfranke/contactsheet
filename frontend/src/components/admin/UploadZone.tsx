@@ -16,6 +16,9 @@ interface Props {
   onFiles: (files: File[]) => void;
   onClick: () => void;
   onCancel: () => void;
+  /** The gallery already has photos: on md+ the panel shrinks to a one-line bar so it doesn't
+   *  out-weigh the grid (dropping anywhere on the page keeps working). */
+  compact?: boolean;
 }
 
 /**
@@ -24,7 +27,7 @@ interface Props {
  * collapses to a single compact button. Both share the parent's hidden file input (also used by
  * the sidebar "Add Files" button): clicking calls `onClick`.
  */
-export function UploadZone({ uploading, progress, onFiles, onClick, onCancel }: Props) {
+export function UploadZone({ uploading, progress, onFiles, onClick, onCancel, compact = false }: Props) {
   const t = useTranslations("admin.uploadZone");
   const [dragging, setDragging] = useState(false);
 
@@ -67,11 +70,49 @@ export function UploadZone({ uploading, progress, onFiles, onClick, onCancel }: 
         )}
       </div>
 
+      {/* md+, gallery already has photos: a one-line dashed bar (formats in its tooltip). */}
+      {compact && (
+        <div
+          className={cn(
+            "relative hidden items-center gap-3 overflow-hidden rounded-lg border border-dashed px-4 py-2.5 text-sm transition-colors md:flex",
+            uploading ? "cursor-default" : "cursor-pointer",
+            dragging ? "border-ring bg-accent" : "border-border hover:border-muted-foreground",
+          )}
+          title={t("formats")}
+          onDragOver={(e) => { e.preventDefault(); setDragging(true); }}
+          onDragLeave={() => setDragging(false)}
+          onDrop={onDrop}
+          onClick={uploading ? undefined : onClick}
+        >
+          <UploadCloud size={16} className="shrink-0 text-muted-foreground" />
+          {uploading ? (
+            <>
+              <span className="text-foreground tabular-nums">{t("uploading", { progress })}</span>
+              <button
+                type="button"
+                onClick={(e) => { e.stopPropagation(); onCancel(); }}
+                className="ml-auto inline-flex items-center gap-1 rounded-md border border-border bg-card px-2 py-0.5 text-xs font-medium text-foreground hover:bg-accent"
+              >
+                <X size={13} /> {t("cancel")}
+              </button>
+              <span className="absolute inset-x-0 bottom-0 h-0.5 bg-muted">
+                <span className="block h-full bg-primary transition-all" style={{ width: `${progress}%` }} />
+              </span>
+            </>
+          ) : (
+            <span className="text-muted-foreground">
+              {t("subtitle")} · <span className="font-medium text-primary underline">{t("orClick")}</span>
+            </span>
+          )}
+        </div>
+      )}
+
       {/* md+: the dashed drag-and-drop panel. While uploading, clicks no longer open the picker
           (a separate Cancel button aborts the in-flight batch). */}
       <div
         className={cn(
-          "relative hidden border-2 border-dashed rounded-xl px-6 py-12 text-center transition-colors md:block",
+          "relative hidden border-2 border-dashed rounded-xl px-6 py-12 text-center transition-colors",
+          !compact && "md:block",
           uploading ? "cursor-default" : "cursor-pointer",
           dragging ? "border-ring bg-accent" : "border-border hover:border-muted-foreground bg-card/40"
         )}

@@ -31,7 +31,10 @@ import { mosaicCovers, totalImageCount } from "@/lib/gallery-sort";
  */
 export function TopLevelZone() {
   const t = useTranslations("admin.galleries");
-  const { setNodeRef, isOver } = useDroppable({ id: `${TOPLEVEL_DROP_PREFIX}:overview`, data: { topLevel: true } });
+  const isTouch = useCoarsePointer();
+  const { setNodeRef, isOver } = useDroppable({ id: `${TOPLEVEL_DROP_PREFIX}:overview`, data: { topLevel: true }, disabled: isTouch });
+  // Dragging is mouse-only (tiles disable it on touch), so on a phone/tablet the zone is dead weight.
+  if (isTouch) return null;
   return (
     <div
       ref={setNodeRef}

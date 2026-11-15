@@ -7,13 +7,17 @@ import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import Link from "next/link";
 import { useDraggable, useDroppable } from "@dnd-kit/core";
-import { useTranslations } from "next-intl";
+import { useFormatter, useNow, useTranslations } from "next-intl";
 import { useAdminDndActive, GALLERY_DROP_PREFIX } from "@/components/admin/AdminDnd";
 import { GalleryCover } from "../overview-parts";
 import { totalImageCount } from "@/lib/gallery-sort";
 import type { ColorFlag, GalleryResponse } from "@/lib/types";
+import { MODE_LABELS } from "@/lib/types";
+import type { SettingsTab } from "@/components/admin/GallerySettingsModal";
+import { Icons } from "@/lib/ui-icons";
+import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { Send } from "lucide-react";
+import { Eye, Send } from "lucide-react";
 
 export const FLAG_GROUP_ORDER: ColorFlag[] = ["green", "red", "yellow", "blue", "none"];
 // Rating group buckets, highest first, unrated last.
@@ -140,5 +144,71 @@ export function SubGalleryRow({
         <Send size={14} />
       </button>
     </div>
+  );
+}
+
+/**
+ * The gallery page's own heading: name (+ subtitle) and the state a photographer checks before
+ * sending a link — mode, password, expiry — as chips that open the setting behind them, plus
+ * labelled Preview / Share actions. The sidebar carries the same name for navigation; this is the
+ * page title (and the only place the current gallery is named on a phone, where the shell's top
+ * bar shows the parent).
+ */
+export function GalleryPageHeader({
+  gallery, onSettings, onPreview, onShare, extra,
+}: {
+  gallery: GalleryResponse;
+  onSettings: (tab: SettingsTab) => void;
+  onPreview: () => void;
+  onShare: () => void;
+  /** Extra chips after the state chips (e.g. review progress). */
+  extra?: React.ReactNode;
+}) {
+  const t = useTranslations("admin.detail");
+  const tSide = useTranslations("admin.sidebar");
+  const format = useFormatter();
+  const now = useNow({ updateInterval: 60_000 });
+  const expires = gallery.expires_at ? new Date(gallery.expires_at) : null;
+  const expired = !!expires && expires.getTime() <= now.getTime();
+  const chip =
+    "inline-flex items-center gap-1 rounded-full border border-border px-2 py-0.5 text-xs text-muted-foreground outline-none transition-colors hover:border-muted-foreground hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring";
+  const ModeIcon = gallery.mode === "collaboration" ? Icons.modeReview : Icons.modeShowcase;
+  return (
+    <header className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+      <div className="min-w-0 space-y-1.5">
+        <h1 className="text-xl font-semibold leading-tight text-foreground text-balance break-words">{gallery.name}</h1>
+        {gallery.headline && <p className="text-sm text-muted-foreground text-pretty">{gallery.headline}</p>}
+        <div className="flex flex-wrap items-center gap-1.5">
+          <button type="button" className={chip} onClick={() => onSettings("general")} title={t("chipModeTitle")}>
+            <ModeIcon size={12} aria-hidden /> {MODE_LABELS[gallery.mode]}
+          </button>
+          {gallery.has_password && (
+            <button type="button" className={chip} onClick={() => onSettings("security")} title={t("chipPasswordTitle")}>
+              <Icons.locked size={12} aria-hidden /> {t("chipPassword")}
+            </button>
+          )}
+          {expires && (
+            <button
+              type="button"
+              className={cn(chip, expired && "border-destructive/40 text-destructive hover:text-destructive")}
+              onClick={() => onSettings("security")}
+              title={t("chipExpiryTitle")}
+            >
+              <Icons.expires size={12} aria-hidden />
+              {t(expired ? "chipExpired" : "chipExpires", { date: format.dateTime(expires, { dateStyle: "medium" }) })}
+            </button>
+          )}
+          {extra}
+        </div>
+      </div>
+      <div className="flex shrink-0 gap-2">
+        <Button variant="outline" size="sm" onClick={onPreview}>
+          <Eye size={14} className="mr-1.5" /> {t("preview")}
+        </Button>
+        <Button variant="outline" size="sm" onClick={onShare}>
+          <Send size={14} className="mr-1.5" /> {tSide("share")}
+        </Button>
+      </div>
+    </header>
   );
 }

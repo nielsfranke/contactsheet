@@ -6,7 +6,7 @@
 import { useEffect, useRef } from "react";
 import { useParams, useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { SidebarPortal, SubGalleryCard, SubGalleryRow } from "./parts";
+import { GalleryPageHeader, SidebarPortal, SubGalleryCard, SubGalleryRow } from "./parts";
 import { useBelowMd } from "@/hooks/useMediaQuery";
 import { useGalleryDetail } from "./useGalleryDetail";
 import { GalleryDetailDialogs } from "./GalleryDetailDialogs";
@@ -282,8 +282,19 @@ export default function GalleryDetailPage() {
         </button>
       ) : null}
 
+      {/* Page heading — its own padded block above the canvas, so the sticky view toolbar's
+          `-mt-6` bleed still lands flush under it. */}
+      <div className="px-6 pt-6 pb-6">
+        <GalleryPageHeader
+          gallery={gallery}
+          onSettings={openSettings}
+          onPreview={() => window.open(`/g/${gallery.share_token}`, "_blank")}
+          onShare={() => setShareOpen(true)}
+        />
+      </div>
+
       {/* Main canvas */}
-      <main className="p-6 space-y-6">
+      <main className={cn("px-6 pb-6 space-y-6", isContainer ? "pt-0" : "pt-6")}>
         {/* Client uploads awaiting approval (only when this gallery moderates uploads) */}
         <PendingReviewBanner galleryId={gallery.id} images={images} />
 
@@ -295,8 +306,20 @@ export default function GalleryDetailPage() {
 
             {/* Recessed "add photos" area — kept reachable (uploading turns this into a mixed
                 gallery), but below the sub-galleries and visually quiet. */}
-            <section className="space-y-4 border-t border-border/60 pt-5">
+            <section className="space-y-3 border-t border-border/60 pt-5">
               <h2 className="text-sm font-medium text-muted-foreground">{t("addPhotosHeading")}</h2>
+              <UploadZone
+                uploading={upload.uploading}
+                progress={upload.progress}
+                onFiles={upload.uploadFiles}
+                onClick={upload.openPicker}
+                onCancel={upload.cancelUpload}
+                compact
+              />
+            </section>
+            {/* Header / cover are about how the folder looks, not about adding photos — own row. */}
+            <section className="space-y-3">
+              <h2 className="text-sm font-medium text-muted-foreground">{t("headerCoverHeading")}</h2>
               <div className="flex flex-wrap gap-2">
                 {!gallery.header_image_url && (
                   <Button variant="outline" size="sm" onClick={() => setHeaderImageOpen(true)}>
@@ -307,13 +330,6 @@ export default function GalleryDetailPage() {
                   <ImageIcon size={14} className="mr-1.5" /> {t("setCoverImage")}
                 </Button>
               </div>
-              <UploadZone
-                uploading={upload.uploading}
-                progress={upload.progress}
-                onFiles={upload.uploadFiles}
-                onClick={upload.openPicker}
-                onCancel={upload.cancelUpload}
-              />
             </section>
           </>
         ) : (
@@ -402,16 +418,19 @@ export default function GalleryDetailPage() {
               }}
             />
 
-            {/* Upload drop zone */}
+            {/* Upload drop zone — a slim bar once there are photos to look at. */}
             <UploadZone
               uploading={upload.uploading}
               progress={upload.progress}
               onFiles={upload.uploadFiles}
               onClick={upload.openPicker}
               onCancel={upload.cancelUpload}
+              compact={images.length > 0}
             />
 
-            {subGalleriesSection}
+            {/* A leaf with photos doesn't need an empty "Sub-galleries" block (the sidebar's "New
+                sub-gallery" covers it); an empty gallery keeps it so nesting stays discoverable. */}
+            {(children.length > 0 || images.length === 0) && subGalleriesSection}
           </>
         )}
 

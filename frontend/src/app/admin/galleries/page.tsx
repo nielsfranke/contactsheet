@@ -375,7 +375,7 @@ function GalleriesBrowser() {
           {/* Permanent reparent affordance: a "move to top level" drop target (how-to in its
               tooltip). Always shown so it's discoverable and reachable even with a full grid, and
               never reflows the grid. */}
-          <div className="mb-4">
+          <div className="mb-4 empty:hidden">
             <TopLevelZone />
           </div>
 
