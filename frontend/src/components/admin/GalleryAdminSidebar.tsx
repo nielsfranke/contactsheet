@@ -16,6 +16,7 @@ import {
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
+import { totalImageCount } from "@/lib/gallery-sort";
 import {
   Settings, Eye, Send, UploadCloud, Download, MoreVertical,
   Plus, CheckSquare, Trash2, Activity, Vote,
@@ -194,7 +195,7 @@ export function GalleryAdminSidebar({
                 >
                   <Folder size={13} className="shrink-0" />
                   <span className="flex-1 truncate">{child.name}</span>
-                  <span className="text-xs text-muted-foreground tabular-nums">{child.image_count}</span>
+                  <span className="text-xs text-muted-foreground tabular-nums">{totalImageCount(child)}</span>
                 </Link>
               </GalleryDropZone>
             ))}

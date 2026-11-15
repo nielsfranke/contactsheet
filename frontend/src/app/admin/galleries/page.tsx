@@ -13,7 +13,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { CreateGalleryDialog } from "@/components/admin/CreateGalleryDialog";
 import { InputClearButton } from "@/components/chrome/InputClearButton";
 import { ToolbarBand } from "@/components/gallery/ToolbarBand";
-import { GRID_COLS, GAP } from "@/lib/gridLayout";
+import { GRID_COLS, GAP, COMPACT_GRID_COLS } from "@/lib/gridLayout";
 import { cn } from "@/lib/utils";
 import { useGalleriesBrowser } from "./useGalleriesBrowser";
 import { GalleryListRow, GalleryTile, TopLevelZone } from "./overview-parts";
@@ -32,9 +32,6 @@ const LAYOUT_OPTIONS: { value: OverviewLayout; labelKey: string; icon: typeof La
   { value: "compact", labelKey: "viewCompact", icon: Grid3x3 },
   { value: "list", labelKey: "viewList", icon: List },
 ];
-
-// The dense "compact" grid: roughly twice the columns of the medium cover grid.
-const COMPACT_COLS = "grid-cols-3 sm:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8";
 
 const PHOTO_SORT_OPTIONS: { value: "date" | "name"; labelKey: string }[] = [
   { value: "date", labelKey: "sortDate" },
@@ -109,7 +106,7 @@ function GalleriesBrowser() {
         ))}
       </div>
     ) : (
-      <div className={cn("grid items-start", compact ? cn(COMPACT_COLS, "gap-x-3 gap-y-4") : cn(GRID_COLS[size], GAP[spacing]))}>
+      <div className={cn("grid items-start", compact ? cn(COMPACT_GRID_COLS, "gap-x-3 gap-y-4") : cn(GRID_COLS[size], GAP[spacing]))}>
         {items.map((g) => (
           <GalleryTile
             key={g.id}

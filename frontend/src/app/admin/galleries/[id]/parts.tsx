@@ -9,7 +9,8 @@ import Link from "next/link";
 import { useDraggable, useDroppable } from "@dnd-kit/core";
 import { useTranslations } from "next-intl";
 import { useAdminDndActive, GALLERY_DROP_PREFIX } from "@/components/admin/AdminDnd";
-import { CoverPlaceholder } from "@/components/chrome/CoverPlaceholder";
+import { GalleryCover } from "../overview-parts";
+import { totalImageCount } from "@/lib/gallery-sort";
 import type { ColorFlag, GalleryResponse } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { Send } from "lucide-react";
@@ -55,7 +56,9 @@ export function SidebarPortal({ children }: { children: React.ReactNode }) {
  * Sub-gallery card on the detail page: a gallery drag source (to reparent) AND a drop target — for
  * photos (move into it) and for galleries (nest into it). Drag/drop handled by AdminDndProvider.
  */
-export function SubGalleryCard({ child, parentId, onShare }: { child: GalleryResponse; parentId: string; onShare: () => void }) {
+export function SubGalleryCard({
+  child, parentId, mosaic, compact = false, onShare,
+}: { child: GalleryResponse; parentId: string; mosaic: boolean; compact?: boolean; onShare: () => void }) {
   const t = useTranslations("admin.detail");
   const drag = useDraggable({ id: `${child.id}:card`, data: { reparent: true, galleryId: child.id, parentId, name: child.name } });
   const drop = useDroppable({ id: `${GALLERY_DROP_PREFIX}${child.id}:card`, data: { galleryId: child.id } });
@@ -77,17 +80,11 @@ export function SubGalleryCard({ child, parentId, onShare }: { child: GalleryRes
     >
       <Link href={`/admin/galleries/${child.id}`} className="block">
         <div className="aspect-video bg-muted">
-          {child.cover_image_url ? (
-            // alt="": the cover is decorative — the gallery name is the link text right below it.
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={child.cover_image_url} alt="" className="w-full h-full object-cover" />
-          ) : (
-            <CoverPlaceholder name={child.name} />
-          )}
+          <GalleryCover g={child} mosaic={mosaic} />
         </div>
-        <div className="p-2">
-          <p className="text-sm font-medium text-foreground truncate">{child.name}</p>
-          <p className="text-xs text-muted-foreground">{t("imagesCount", { count: child.image_count })}</p>
+        <div className={compact ? "p-1.5" : "p-2"}>
+          <p className={cn("font-medium text-foreground truncate", compact ? "text-xs" : "text-sm")}>{child.name}</p>
+          <p className={cn("text-muted-foreground", compact ? "text-[11px]" : "text-xs")}>{t("imagesCount", { count: totalImageCount(child) })}</p>
         </div>
       </Link>
       <button
@@ -103,10 +100,12 @@ export function SubGalleryCard({ child, parentId, onShare }: { child: GalleryRes
 }
 
 /**
- * Row variant of SubGalleryCard for the phone "list" layout (`overview_mobile_layout`). Same
+ * Row variant of SubGalleryCard for the "list" layout (`overview_mobile_layout` / `overview_layout`). Same
  * drag source / drop target wiring; the share button is always visible (no hover on touch).
  */
-export function SubGalleryRow({ child, parentId, onShare }: { child: GalleryResponse; parentId: string; onShare: () => void }) {
+export function SubGalleryRow({
+  child, parentId, mosaic, onShare,
+}: { child: GalleryResponse; parentId: string; mosaic: boolean; onShare: () => void }) {
   const t = useTranslations("admin.detail");
   const drag = useDraggable({ id: `${child.id}:row`, data: { reparent: true, galleryId: child.id, parentId, name: child.name } });
   const drop = useDroppable({ id: `${GALLERY_DROP_PREFIX}${child.id}:row`, data: { galleryId: child.id } });
@@ -125,17 +124,11 @@ export function SubGalleryRow({ child, parentId, onShare }: { child: GalleryResp
     >
       <Link href={`/admin/galleries/${child.id}`} className="flex min-w-0 flex-1 items-center gap-3">
         <div className="h-14 w-14 shrink-0 overflow-hidden rounded-md bg-muted">
-          {child.cover_image_url ? (
-            // alt="": decorative — the gallery name is the link text beside it.
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={child.cover_image_url} alt="" className="h-full w-full object-cover" />
-          ) : (
-            <CoverPlaceholder name={child.name} compact />
-          )}
+          <GalleryCover g={child} mosaic={mosaic} compact />
         </div>
         <div className="min-w-0 flex-1">
           <p className="truncate text-sm font-medium text-foreground">{child.name}</p>
-          <p className="text-xs text-muted-foreground">{t("imagesCount", { count: child.image_count })}</p>
+          <p className="text-xs text-muted-foreground">{t("imagesCount", { count: totalImageCount(child) })}</p>
         </div>
       </Link>
       <button

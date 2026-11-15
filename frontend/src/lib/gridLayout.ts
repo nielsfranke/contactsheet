@@ -12,6 +12,10 @@ export const GRID_COLS: Record<SizeType, string> = {
   large: "grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3",
 };
 
+// The admin overview's dense "compact" layout (overview_layout) — roughly twice the columns of the
+// medium cover grid. Shared by the overview and a gallery's sub-galleries block.
+export const COMPACT_GRID_COLS = "grid-cols-3 sm:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8";
+
 export const GAP: Record<SizeType, string> = { small: "gap-1", medium: "gap-2", large: "gap-4" };
 
 // "Masonry" renders as justified rows (JustifiedGrid): target row height per preview size,

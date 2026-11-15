@@ -11,7 +11,7 @@ import { useBelowMd } from "@/hooks/useMediaQuery";
 import { useGalleryDetail } from "./useGalleryDetail";
 import { GalleryDetailDialogs } from "./GalleryDetailDialogs";
 import type { GalleryResponse } from "@/lib/types";
-import { GRID_COLS, GAP } from "@/lib/gridLayout";
+import { GRID_COLS, GAP, COMPACT_GRID_COLS } from "@/lib/gridLayout";
 import { cn } from "@/lib/utils";
 import { UploadZone } from "@/components/admin/UploadZone";
 import { DuplicateUploadDialog } from "@/components/admin/DuplicateUploadDialog";
@@ -146,8 +146,13 @@ export default function GalleryDetailPage() {
   // its sub-galleries and lets the photo tooling recede (an empty grid + sort toolbar over zero
   // photos is noise). A leaf or a mixed gallery (has photos) stays photo-first.
   const isContainer = images.length === 0 && children.length > 0;
-  // Phone list layout for the sub-gallery block (same knob as the overview: overview_mobile_layout).
-  const subListView = belowMd && (adminSettings?.overview_mobile_layout ?? "grid") === "list";
+  // The sub-gallery block follows the overview's view (phones: overview_mobile_layout, md+:
+  // overview_layout) — one setting, no second switch on this page. "grid" keeps the photo grid's
+  // density so the cards line up with the photos below.
+  const subLayout = belowMd ? (adminSettings?.overview_mobile_layout ?? "grid") : (adminSettings?.overview_layout ?? "grid");
+  const subListView = subLayout === "list";
+  const subCompact = subLayout === "compact";
+  const mosaic = adminSettings?.overview_mosaic ?? true;
 
   // Preview the banner the client actually gets: a manual header wins, else the auto-picked photo
   // (only present when the instance opted in). Mirrors the public layouts' `?? fallback`, so the
@@ -172,13 +177,20 @@ export default function GalleryDetailPage() {
         subListView ? (
           <div className="divide-y divide-border">
             {children.map((child) => (
-              <SubGalleryRow key={child.id} child={child} parentId={id} onShare={() => setSharingSubId(child.id)} />
+              <SubGalleryRow key={child.id} child={child} parentId={id} mosaic={mosaic} onShare={() => setSharingSubId(child.id)} />
             ))}
           </div>
         ) : (
-          <div className={cn("grid", GRID_COLS[adminGrid?.presentation.previewSize ?? "medium"], GAP[adminGrid?.presentation.previewSpacing ?? "medium"])}>
+          <div
+            className={cn(
+              "grid",
+              subCompact
+                ? cn(COMPACT_GRID_COLS, "gap-2")
+                : cn(GRID_COLS[adminGrid?.presentation.previewSize ?? "medium"], GAP[adminGrid?.presentation.previewSpacing ?? "medium"]),
+            )}
+          >
             {children.map((child) => (
-              <SubGalleryCard key={child.id} child={child} parentId={id} onShare={() => setSharingSubId(child.id)} />
+              <SubGalleryCard key={child.id} child={child} parentId={id} mosaic={mosaic} compact={subCompact} onShare={() => setSharingSubId(child.id)} />
             ))}
           </div>
         )
