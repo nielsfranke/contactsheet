@@ -12,6 +12,57 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.14.0] - 2026-11-15
+
+A pass over the admin area: a switchable gallery overview, folders that show their photos, a
+"what's new since I last looked" marker, a proper gallery heading, and accessibility fixes. Two
+migrations (0051, 0052), both additive; existing galleries count as already seen, so nothing lights
+up "New" just because of the upgrade.
+
+### Added
+
+- **Overview view switch:** grid / compact / list from the overview toolbar on desktop
+  (`app_settings.overview_layout`; phones keep their own grid / list choice). A gallery page's
+  sub-galleries block follows the same setting.
+- **Folder mosaic covers:** a folder without a cover of its own shows up to four of its
+  sub-galleries' covers instead of its name on a grey tile. On by default, switchable in
+  Settings → Workspace (`overview_mosaic`).
+- **New client activity:** overview tiles, list rows and the sidebar tree mark galleries with
+  client activity (flags, ratings, likes, votes, comments, annotations, uploads, downloads,
+  collections) you haven't opened since; folders light up for their sub-galleries. Opening the
+  gallery clears it. New "Activity" sort. API: `last_client_activity_at` / `admin_seen_at` on
+  galleries, `POST /api/galleries/{id}/seen`.
+- **Gallery page heading:** name, subtitle and chips for mode, password, expiry and review
+  progress ("12 of 40 reviewed"), each opening the setting behind it, plus labelled Preview /
+  Share buttons. On phones this is now the only place the current gallery is named.
+- **Remove a gallery password** from Settings → Security (the API always allowed it; the UI
+  didn't).
+
+### Changed
+
+- Folder and subtree counts include every sub-gallery's photos (folders used to read "0"); the
+  "Photos" sort ranks folders by their whole content.
+- Pinned galleries appear only on the pinned shelf, not again in the main list.
+- Once a gallery has photos, the upload panel shrinks to a one-line bar; a leaf gallery no longer
+  shows an empty "Sub-galleries" section; the "move to top level" drop zone is hidden on touch.
+- One icon and one name per concept across the admin: mode icons from the shared registry, mode
+  names translatable, flags named Select / Reject / Maybe / Favourite everywhere, "photos"
+  instead of "images", sentence-case buttons.
+- Gallery settings dialog keeps a steady height between tabs; its tabs are a real ARIA tablist
+  with arrow-key navigation. Empty analytics charts say so.
+
+### Fixed
+
+- **Dark admin theme with the default (black) accent:** primary buttons, links and focus rings
+  were invisible. An accent with too little contrast for a theme now falls back to that theme's
+  own colour; Branding tells you when that happens.
+- The Share dialog warned "this link is easy to guess" on every freshly generated random link; it
+  now warns only for name-based or hand-picked links.
+- Several secondary texts fell below WCAG AA contrast (sidebar counts, upload hint, overview
+  subtitles, activity times, warning callouts).
+- After an autosave in the gallery settings, the auto-picked header preview disappeared until
+  the page was reloaded.
+
 ## [1.13.1] - 2026-11-04
 
 ### Fixed
@@ -1511,7 +1562,10 @@ contract are considered stable as of this release.
   caps (stricter for public uploads).
 - Docker Compose deployment (backend + frontend + nginx); SQLite + local filesystem.
 
-[Unreleased]: https://github.com/nielsfranke/contactsheet/compare/v1.12.6...HEAD
+[Unreleased]: https://github.com/nielsfranke/contactsheet/compare/v1.14.0...HEAD
+[1.14.0]: https://github.com/nielsfranke/contactsheet/compare/v1.13.1...v1.14.0
+[1.13.1]: https://github.com/nielsfranke/contactsheet/compare/v1.13.0...v1.13.1
+[1.13.0]: https://github.com/nielsfranke/contactsheet/compare/v1.12.6...v1.13.0
 [1.12.6]: https://github.com/nielsfranke/contactsheet/compare/v1.12.5...v1.12.6
 [1.12.5]: https://github.com/nielsfranke/contactsheet/compare/v1.12.4...v1.12.5
 [1.12.4]: https://github.com/nielsfranke/contactsheet/compare/v1.12.3...v1.12.4

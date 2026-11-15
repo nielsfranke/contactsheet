@@ -13,6 +13,7 @@ __pycache__/
 
 # Editor / agent tooling — local only, tool-neutral repo
 .claude/
+.impeccable/
 
 # Demo screenshot toolchain — runtime only (committed: demo/*.py, demo/assets/<group>/, CREDITS.md)
 demo/.data/

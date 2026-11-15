@@ -19,6 +19,10 @@ depends_on = None
 def upgrade() -> None:
     with op.batch_alter_table("galleries") as batch:
         batch.add_column(sa.Column("admin_seen_at", sa.DateTime(timezone=True), nullable=True))
+    # Existing galleries count as seen at upgrade time: their pre-upgrade client activity is history,
+    # not news — otherwise every older gallery would light up "New" at once and the marker would
+    # mean nothing on day one. Galleries created afterwards start unseen (NULL).
+    op.execute("UPDATE galleries SET admin_seen_at = CURRENT_TIMESTAMP")
 
 
 def downgrade() -> None:
