@@ -212,6 +212,15 @@ export function GallerySettingsModal({
     }
   }
 
+  // Removing is explicit and confirmed: `password: ""` clears the hash server-side, which reopens
+  // the gallery to anyone holding the link (outstanding gallery tokens stop matching the pw tag).
+  const [confirmRemovePwOpen, setConfirmRemovePwOpen] = useState(false);
+  function removePassword() {
+    setConfirmRemovePwOpen(false);
+    save({ password: "" });
+    setPassword("");
+  }
+
   // Explicit cascade: re-apply the current look & behaviour to the whole subtree in one PATCH (the
   // backend filters to its cascade-eligible field set). Never part of an autosave patch. Confirmed
   // first: it overwrites every descendant, and what it leaves out (mode, password, large files)
@@ -454,6 +463,16 @@ export function GallerySettingsModal({
                   <Button size="sm" variant="outline" onClick={setPasswordNow} disabled={!password}>
                     {t("passwordSet")}
                   </Button>
+                  {gallery.has_password && (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="text-destructive hover:text-destructive"
+                      onClick={() => setConfirmRemovePwOpen(true)}
+                    >
+                      {t("passwordRemove")}
+                    </Button>
+                  )}
                 </div>
               </div>
               {(gallery.parent_id || hasChildren) && (
@@ -509,6 +528,15 @@ export function GallerySettingsModal({
         description={t("applyToSubConfirmBody")}
         confirmLabel={t("applyToSubConfirm")}
         onConfirm={applyToSubgalleries}
+      />
+      <ConfirmDialog
+        open={confirmRemovePwOpen}
+        onOpenChange={setConfirmRemovePwOpen}
+        title={t("passwordRemoveConfirmTitle")}
+        description={t("passwordRemoveConfirmBody")}
+        confirmLabel={t("passwordRemove")}
+        destructive
+        onConfirm={removePassword}
       />
     </Dialog>
   );
