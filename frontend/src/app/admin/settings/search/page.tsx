@@ -161,7 +161,7 @@ export default function SearchSettingsPage() {
                         ? "text-destructive"
                         : sidecarReachable
                           ? "text-emerald-600 dark:text-emerald-400"
-                          : "text-amber-600 dark:text-amber-400"
+                          : "text-amber-700 dark:text-amber-400"
                     }
                   >
                     {sidecarStalled ? t("sidecarStalled") : sidecarReachable ? t("sidecarOnline") : t("sidecarOffline")}

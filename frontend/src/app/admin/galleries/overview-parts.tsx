@@ -227,7 +227,7 @@ export function GalleryTile({
           </Link>
         </div>
         {g.headline && !compact && (
-          <p className="mt-0.5 text-xs text-muted-foreground/80 truncate">{g.headline}</p>
+          <p className="mt-0.5 text-xs text-muted-foreground truncate">{g.headline}</p>
         )}
         <div className={cn("flex items-center gap-2 mt-0.5 text-muted-foreground", compact ? "text-[11px]" : "text-xs")}>
           <span className="truncate">{countParts.join(" · ")}</span>
@@ -308,7 +308,7 @@ export function GalleryListRow({
             <Icons.pin size={12} className="flex-shrink-0 -rotate-45 fill-current text-muted-foreground" aria-label={t("pinnedShelf")} />
           )}
         </div>
-        {g.headline && <p className="mt-0.5 truncate text-xs text-muted-foreground/80">{g.headline}</p>}
+        {g.headline && <p className="mt-0.5 truncate text-xs text-muted-foreground">{g.headline}</p>}
         <div className="mt-0.5 flex items-center gap-2 text-xs text-muted-foreground">
           <span className="inline-flex items-center gap-1" title={t("modeTitle", { mode: MODE_LABELS[g.mode] })}>
             {g.mode === "collaboration" ? <Icons.modeReview size={11} aria-hidden /> : <Icons.modeShowcase size={11} aria-hidden />}

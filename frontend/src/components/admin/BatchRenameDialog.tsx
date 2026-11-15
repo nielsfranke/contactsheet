@@ -205,7 +205,7 @@ export function BatchRenameDialog({
                   <span className="min-w-0 flex-1 truncate text-muted-foreground" title={c.old}>{c.old}</span>
                   <ArrowRight size={12} className="shrink-0 text-muted-foreground/60" />
                   <span
-                    className={cn("min-w-0 flex-1 truncate", changed ? "font-medium text-foreground" : "text-muted-foreground/60")}
+                    className={cn("min-w-0 flex-1 truncate", changed ? "font-medium text-foreground" : "text-muted-foreground")}
                     title={changed ? c.name : t("batchUnchanged")}
                   >
                     {changed ? c.name : t("batchUnchanged")}
@@ -219,7 +219,7 @@ export function BatchRenameDialog({
               </p>
             )}
           </div>
-          {hasDuplicates && <p className="text-[11px] text-amber-600 dark:text-amber-500">{t("batchDuplicateWarning")}</p>}
+          {hasDuplicates && <p className="text-[11px] text-amber-800 dark:text-amber-300">{t("batchDuplicateWarning")}</p>}
         </div>
 
         <div className="flex justify-end gap-2 pt-1">

@@ -166,7 +166,7 @@ export function ActivityFeed({ galleryId, embedded = false }: Props) {
                       </span>
                     )}
                   </div>
-                  <time className="flex-shrink-0 text-xs text-muted-foreground/70 mt-0.5">{timeAgo(item.created_at, t)}</time>
+                  <time className="flex-shrink-0 text-xs text-muted-foreground mt-0.5">{timeAgo(item.created_at, t)}</time>
                 </li>
               ))}
             </ul>

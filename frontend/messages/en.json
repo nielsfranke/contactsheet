@@ -1005,6 +1005,8 @@
       "nameColorHint": "Leave blank to use the theme's default text color.",
       "accentColor": "Accent color",
       "accentColorHint": "Buttons and highlights in the admin UI, and accent details in client galleries.",
+      "accentTooDark": "Too dark for the dark theme — buttons and focus rings there use the theme’s own colour instead.",
+      "accentTooLight": "Too light for the light theme — buttons and focus rings there use the theme’s own colour instead.",
       "accentGradient": "Gradient buttons",
       "accentGradientHint": "Render primary buttons as a subtle gradient of the accent color.",
       "logo": "Logo",

@@ -97,7 +97,7 @@ export function UploadZone({ uploading, progress, onFiles, onClick, onCancel }: 
         <span className="inline-block mt-3 text-sm font-medium text-primary underline">
           {t("orClick")}
         </span>
-        <p className="text-xs text-muted-foreground/70 mt-3">
+        <p className="text-xs text-muted-foreground mt-3">
           {t("formats")}
         </p>
 

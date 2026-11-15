@@ -1005,6 +1005,8 @@
       "nameColorHint": "Leer lassen, um die Standard-Textfarbe des Themes zu verwenden.",
       "accentColor": "Akzentfarbe",
       "accentColorHint": "Schaltflächen und Hervorhebungen in der Admin-Oberfläche sowie Akzentdetails in Kundengalerien.",
+      "accentTooDark": "Zu dunkel für das dunkle Theme – Schaltflächen und Fokusrahmen nutzen dort stattdessen die Theme-Farbe.",
+      "accentTooLight": "Zu hell für das helle Theme – Schaltflächen und Fokusrahmen nutzen dort stattdessen die Theme-Farbe.",
       "accentGradient": "Verlauf-Schaltflächen",
       "accentGradientHint": "Primäre Schaltflächen als dezenten Verlauf der Akzentfarbe darstellen.",
       "logo": "Logo",

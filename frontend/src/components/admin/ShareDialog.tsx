@@ -15,9 +15,9 @@ import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { Copy, Shuffle, Type, AlertTriangle } from "lucide-react";
 import { copyText } from "@/lib/utils";
+import { isGuessableToken } from "@/lib/share-token";
 
 // A UUIDv4 share token means the link is unguessable; anything else is a custom slug.
-const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 type Strategy = "named" | "random" | "custom";
 
@@ -56,7 +56,7 @@ export function ShareDialog({
     (typeof window !== "undefined" ? window.location.origin : "");
   const shareUrl = `${base}/g/${gallery.share_token}`;
 
-  const isGuessable = !UUID_RE.test(gallery.share_token);
+  const isGuessable = isGuessableToken(gallery.share_token);
 
   const mutation = useMutation({
     mutationFn: (body: { strategy: Strategy; value?: string }) =>
@@ -156,7 +156,7 @@ export function ShareDialog({
         </div>
 
         {isGuessable && !gallery.has_password && (
-          <div className="flex items-start gap-2 rounded-md border border-amber-500/30 bg-amber-500/10 p-3 text-xs text-amber-600 dark:text-amber-400">
+          <div className="flex items-start gap-2 rounded-md border border-amber-500/40 bg-amber-500/10 p-3 text-xs text-amber-800 dark:text-amber-300">
             <AlertTriangle size={14} className="mt-0.5 shrink-0" />
             <span>
               {t("guessableWarning")}

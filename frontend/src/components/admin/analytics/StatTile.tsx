@@ -34,7 +34,7 @@ export function StatTile({ label, value, icon, muted = false, previous, days }: 
         {icon}
         <span>{label}</span>
       </div>
-      <div className={`mt-1 text-2xl font-semibold tabular-nums ${muted ? "text-muted-foreground/50" : "text-foreground"}`}>
+      <div className={`mt-1 text-2xl font-semibold tabular-nums ${muted ? "text-muted-foreground/70" : "text-foreground"}`}>
         {value}
       </div>
       {tr && tr.kind !== "none" && (

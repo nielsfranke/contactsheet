@@ -131,7 +131,7 @@ export default function WorkspaceSettingsPage() {
               <option key={l} value={l}>{LOCALE_LABELS[l]}</option>
             ))}
           </select>
-          <p className="text-xs text-muted-foreground">{t("languageHint")}</p>
+          <p className="text-xs text-muted-foreground text-pretty">{t("languageHint")}</p>
         </div>
       </section>
 

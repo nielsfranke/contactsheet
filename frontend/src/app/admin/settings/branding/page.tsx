@@ -9,7 +9,7 @@ import { useTranslations } from "next-intl";
 import { api } from "@/lib/api";
 import { SettingsPageSkeleton } from "@/components/admin/SettingsPageSkeleton";
 import type { AppSettings, BrandDisplay } from "@/lib/types";
-import { applyAdminTheme } from "@/lib/theme";
+import { accentUsableOn, applyAdminTheme } from "@/lib/theme";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -220,6 +220,13 @@ export default function BrandingSettingsPage() {
             />
           </div>
           <p className="text-xs text-muted-foreground">{t("accentColorHint")}</p>
+          {/* One accent serves both admin themes; say where it can't, and what happens instead. */}
+          {HEX.test(effAccent) && !accentUsableOn(effAccent, "dark") && (
+            <p className="text-xs text-muted-foreground">{t("accentTooDark")}</p>
+          )}
+          {HEX.test(effAccent) && !accentUsableOn(effAccent, "light") && (
+            <p className="text-xs text-muted-foreground">{t("accentTooLight")}</p>
+          )}
         </div>
 
         <div className="flex items-center justify-between gap-4">

@@ -219,7 +219,7 @@ export default function NotificationsSettingsPage() {
                 className="text-sm"
                 spellCheck={false}
               />
-              <p className="text-[11px] text-muted-foreground/80 font-mono">
+              <p className="text-[11px] text-muted-foreground font-mono">
                 {TEMPLATE_PLACEHOLDERS[key].join("  ")}
               </p>
             </div>

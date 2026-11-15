@@ -113,10 +113,10 @@ export function GalleryTree({ galleries }: Props) {
           />
         ))}
         {galleries.length === 0 && (
-          <p className="text-xs text-muted-foreground/70 px-3 py-2">{t("noGalleries")}</p>
+          <p className="text-xs text-muted-foreground px-3 py-2">{t("noGalleries")}</p>
         )}
         {galleries.length > 0 && roots.length === 0 && (
-          <p className="text-xs text-muted-foreground/70 px-3 py-2">{t("noMatch", { query: filter.trim() })}</p>
+          <p className="text-xs text-muted-foreground px-3 py-2">{t("noMatch", { query: filter.trim() })}</p>
         )}
       </div>
 
@@ -242,7 +242,7 @@ function TreeNode({
           {g.name}
         </Link>
         {/* Whole subtree: a folder's own count is usually 0, which said nothing. */}
-        <span className="text-xs text-muted-foreground/70 tabular-nums" aria-hidden>{totalImageCount(g)}</span>
+        <span className="text-xs text-muted-foreground tabular-nums" aria-hidden>{totalImageCount(g)}</span>
         <span className="sr-only">{t("photoCount", { count: totalImageCount(g) })}</span>
         <button
           title={t("addSubGallery")}

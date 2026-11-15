@@ -83,7 +83,7 @@ export function Row({
     <div className="flex flex-col items-start gap-1.5 py-2.5 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
       <div className="min-w-0">
         <Label className="font-medium">{label}</Label>
-        {hint && <p className="text-xs text-muted-foreground mt-0.5">{hint}</p>}
+        {hint && <p className="text-xs text-muted-foreground text-pretty mt-0.5">{hint}</p>}
       </div>
       <div className="max-w-full flex-shrink-0">{children}</div>
     </div>
@@ -126,7 +126,7 @@ export function Toggle({
             </span>
           )}
         </span>
-        {hint && <p className="text-xs text-muted-foreground mt-0.5">{hint}</p>}
+        {hint && <p className="text-xs text-muted-foreground text-pretty mt-0.5">{hint}</p>}
       </div>
       <Switch
         className="flex-shrink-0"

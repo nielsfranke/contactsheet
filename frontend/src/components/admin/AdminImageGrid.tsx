@@ -98,7 +98,7 @@ export function AdminImageGrid({
         {groups.map((g) => (
           <section key={g.key}>
             <h3 className="text-xs font-medium uppercase tracking-wide text-muted-foreground mb-2">
-              {g.label} <span className="text-muted-foreground/60">({g.images.length})</span>
+              {g.label} <span className="text-muted-foreground">({g.images.length})</span>
             </h3>
             <LayoutGrid images={g.images} layout={layout} presentation={presentation} dragMode={dragMode === "sortable" ? "draggable" : dragMode} activeId={activeId} {...cardProps} />
           </section>

@@ -72,7 +72,7 @@ export function ReviewersTable({ reviewers }: Props) {
                   </td>
                 );
               })}
-              <td className="whitespace-nowrap px-3 py-1.5 text-right text-xs text-muted-foreground/70" title={new Date(r.last_active).toLocaleString()}>
+              <td className="whitespace-nowrap px-3 py-1.5 text-right text-xs text-muted-foreground" title={new Date(r.last_active).toLocaleString()}>
                 {relativeTime(r.last_active, ta)}
               </td>
             </tr>

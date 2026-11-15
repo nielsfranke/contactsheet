@@ -125,7 +125,7 @@ export function GalleryAnalyticsPanel({ galleryId }: { galleryId: string }) {
                   <Eye size={12} />
                   <span className="font-mono">{v.ip ?? "—"}</span>
                 </span>
-                <time className="text-muted-foreground/70">{new Date(v.at).toLocaleString()}</time>
+                <time className="text-muted-foreground">{new Date(v.at).toLocaleString()}</time>
               </li>
             ))}
           </ul>
