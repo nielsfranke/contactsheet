@@ -35,11 +35,7 @@ export const DEFAULT_WATERMARK: WatermarkSettings = {
   color: "#ffffff",
 };
 
-/** Client-facing names for the two gallery modes. Internal enum values are unchanged. */
-export const MODE_LABELS: Record<ModeType, string> = {
-  collaboration: "Review",
-  presentation: "Showcase",
-};
+/** Display names for the modes: `useModeLabels()` (lib/mode-labels.ts) — translatable. */
 export type ColorFlag = "none" | "green" | "red" | "yellow" | "blue";
 // Desktop review-lightbox zoom ceiling: fit-relative percent, or "original" = the photo's 1:1 size.
 export type LightboxZoomMax = "200" | "300" | "400" | "original";

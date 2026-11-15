@@ -56,19 +56,24 @@ const FLAG_WORDS = ["green", "red", "yellow", "blue"];
 
 function ActionLabel({ action, meta }: { action: string; meta: Record<string, unknown> | null }) {
   const t = useTranslations("admin.activity");
+  const tfl = useTranslations("gallery.lightbox.flagLabels");
   const flag = meta?.flag as string | undefined;
   if (action === "flagged" && flag) {
-    const colors: Record<string, string> = {
-      green: "text-green-400",
-      red: "text-red-400",
-      yellow: "text-yellow-400",
-      blue: "text-blue-400",
+    // Same vocabulary as the photo tiles and the lightbox (Select / Reject / …), with the colour as
+    // a dot — coloured *text* (green-400 on paper white) failed contrast, and meant a second name.
+    const dots: Record<string, string> = {
+      green: "bg-green-500",
+      red: "bg-red-500",
+      yellow: "bg-yellow-400",
+      blue: "bg-blue-500",
     };
+    const known = FLAG_WORDS.includes(flag);
     return (
       <span>
         {t("actions.flagged")}{" "}
-        <span className={colors[flag] ?? "text-foreground"}>
-          {FLAG_WORDS.includes(flag) ? t(`flagColors.${flag}`) : flag}
+        <span className="inline-flex items-center gap-1 text-foreground">
+          {known && <span className={`inline-block h-2 w-2 rounded-full ${dots[flag]}`} aria-hidden />}
+          {known ? tfl(flag) : flag}
         </span>
       </span>
     );

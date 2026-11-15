@@ -101,7 +101,7 @@ def test_header_and_cover_file_drop(page, frontend_url):
     page.goto(f"{frontend_url}/admin/galleries/{gid}")
 
     # ---- HEADER: small file drop -------------------------------------------------------------
-    page.get_by_role("button", name="Set Header Image").click()
+    page.get_by_role("button", name="Set header image").click()
     dropzone = '[role="dialog"] .border-dashed'
     page.wait_for_selector(dropzone, timeout=10_000)
 
@@ -132,7 +132,7 @@ def test_header_and_cover_file_drop(page, frontend_url):
     page.keyboard.press("Escape")
 
     # ---- COVER: small + large file drop -----------------------------------------------------
-    page.get_by_role("button", name="Set Cover Image").click()
+    page.get_by_role("button", name="Set cover image").click()
     page.wait_for_selector(dropzone, timeout=10_000)
     _drop_file(page, dropzone, "cover-small.jpg", small)
     page.get_by_text("Cover image updated", exact=False).wait_for(timeout=30_000)

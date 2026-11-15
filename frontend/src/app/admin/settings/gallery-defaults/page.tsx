@@ -6,9 +6,10 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
+import { useModeLabels } from "@/lib/mode-labels";
 import { api } from "@/lib/api";
 import { SettingsPageSkeleton } from "@/components/admin/SettingsPageSkeleton";
-import { MODE_LABELS, type LightboxBackdrop, type LightboxZoomMax, type ModeType, type RatingMode } from "@/lib/types";
+import { type LightboxBackdrop, type LightboxZoomMax, type ModeType, type RatingMode } from "@/lib/types";
 import { Icons } from "@/lib/ui-icons";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -16,11 +17,10 @@ import { Toggle } from "@/components/admin/gallery-settings-fields";
 import { SaveStatus } from "@/components/admin/SaveStatus";
 import { useSettingsAutosave } from "@/hooks/useSettingsAutosave";
 import { PresetEditorModal } from "@/components/admin/PresetEditorModal";
-import { MessagesSquare, Sun } from "lucide-react";
 
 const MODES: { value: ModeType; descKey: string; icon: React.ReactNode }[] = [
-  { value: "collaboration", descKey: "collaborationDesc", icon: <MessagesSquare size={18} /> },
-  { value: "presentation", descKey: "presentationDesc", icon: <Sun size={18} /> },
+  { value: "collaboration", descKey: "collaborationDesc", icon: <Icons.modeReview size={18} /> },
+  { value: "presentation", descKey: "presentationDesc", icon: <Icons.modeShowcase size={18} /> },
 ];
 
 const RATING_MODES: { value: RatingMode; labelKey: string }[] = [
@@ -45,6 +45,7 @@ const BACKDROP_OPTIONS: { value: LightboxBackdrop; labelKey: string; swatch: str
 
 export default function GalleryDefaultsPage() {
   const t = useTranslations("settings.galleryDefaults");
+  const modeLabels = useModeLabels();
   const { save, status } = useSettingsAutosave();
   const [editMode, setEditMode] = useState<ModeType | null>(null);
 
@@ -86,7 +87,7 @@ export default function GalleryDefaultsPage() {
                 <span className="text-muted-foreground flex-shrink-0">{m.icon}</span>
                 <div className="min-w-0">
                   <p className="text-sm font-medium text-foreground flex items-center gap-2">
-                    {t("modePreset", { mode: MODE_LABELS[m.value] })}
+                    {t("modePreset", { mode: modeLabels[m.value] })}
                     {presetFor(m.value) && (
                       <span className="text-[10px] font-normal text-muted-foreground border border-border rounded px-1 py-0.5">
                         {t("customized")}

@@ -5,7 +5,8 @@
 
 import { useState } from "react";
 import { useTranslations } from "next-intl";
-import { MODE_LABELS, type GalleryPreset, type ModeType } from "@/lib/types";
+import { useModeLabels } from "@/lib/mode-labels";
+import { type GalleryPreset, type ModeType } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -25,6 +26,7 @@ const MODES: ModeType[] = ["presentation", "collaboration"];
  *  each mode's template is optional and falls back to the instance preset when unset. */
 export function SubgalleryPresetsSection({ presets, onSave }: Props) {
   const t = useTranslations("settings.gallery");
+  const modeLabels = useModeLabels();
   const [editing, setEditing] = useState<ModeType | null>(null);
 
   function handleSave(mode: ModeType, value: GalleryPreset) {
@@ -53,7 +55,7 @@ export function SubgalleryPresetsSection({ presets, onSave }: Props) {
               className="flex items-center justify-between gap-3 rounded-md border border-border/60 px-3 py-2"
             >
               <div className="min-w-0">
-                <p className="text-sm font-medium">{MODE_LABELS[mode]}</p>
+                <p className="text-sm font-medium">{modeLabels[mode]}</p>
                 <p className="text-xs text-muted-foreground">
                   {has ? t("subgalleryPresetCustomized") : t("subgalleryPresetDefault")}
                 </p>
@@ -70,10 +72,10 @@ export function SubgalleryPresetsSection({ presets, onSave }: Props) {
         <Dialog open onOpenChange={(o) => !o && setEditing(null)}>
           <DialogContent className="sm:max-w-2xl">
             <DialogHeader>
-              <DialogTitle>{t("subgalleryPresetTitle", { mode: MODE_LABELS[editing] })}</DialogTitle>
+              <DialogTitle>{t("subgalleryPresetTitle", { mode: modeLabels[editing] })}</DialogTitle>
             </DialogHeader>
             <p className="text-sm text-muted-foreground">
-              {t("subgalleryPresetSubtitle", { mode: MODE_LABELS[editing] })}
+              {t("subgalleryPresetSubtitle", { mode: modeLabels[editing] })}
             </p>
             <PresetForm
               mode={editing}

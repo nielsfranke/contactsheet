@@ -8,11 +8,11 @@ import { createPortal } from "react-dom";
 import Link from "next/link";
 import { useDraggable, useDroppable } from "@dnd-kit/core";
 import { useFormatter, useNow, useTranslations } from "next-intl";
+import { useModeLabels } from "@/lib/mode-labels";
 import { useAdminDndActive, GALLERY_DROP_PREFIX } from "@/components/admin/AdminDnd";
 import { GalleryCover } from "../overview-parts";
 import { totalImageCount } from "@/lib/gallery-sort";
 import type { ColorFlag, GalleryResponse } from "@/lib/types";
-import { MODE_LABELS } from "@/lib/types";
 import type { SettingsTab } from "@/components/admin/GallerySettingsModal";
 import { Icons } from "@/lib/ui-icons";
 import { Button } from "@/components/ui/button";
@@ -165,6 +165,7 @@ export function GalleryPageHeader({
   extra?: React.ReactNode;
 }) {
   const t = useTranslations("admin.detail");
+  const modeLabels = useModeLabels();
   const tSide = useTranslations("admin.sidebar");
   const format = useFormatter();
   const now = useNow({ updateInterval: 60_000 });
@@ -180,7 +181,7 @@ export function GalleryPageHeader({
         {gallery.headline && <p className="text-sm text-muted-foreground text-pretty">{gallery.headline}</p>}
         <div className="flex flex-wrap items-center gap-1.5">
           <button type="button" className={chip} onClick={() => onSettings("general")} title={t("chipModeTitle")}>
-            <ModeIcon size={12} aria-hidden /> {MODE_LABELS[gallery.mode]}
+            <ModeIcon size={12} aria-hidden /> {modeLabels[gallery.mode]}
           </button>
           {gallery.has_password && (
             <button type="button" className={chip} onClick={() => onSettings("security")} title={t("chipPasswordTitle")}>

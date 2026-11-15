@@ -7,12 +7,14 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
+import { useModeLabels } from "@/lib/mode-labels";
 import { api } from "@/lib/api";
-import { MODE_LABELS, type ModeType } from "@/lib/types";
+import { type ModeType } from "@/lib/types";
+import { Icons } from "@/lib/ui-icons";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Info, MessagesSquare, Sun } from "lucide-react";
+import { Info } from "lucide-react";
 import { toast } from "sonner";
 
 interface Props {
@@ -24,12 +26,13 @@ interface Props {
 }
 
 const MODES: { value: ModeType; descKey: string; icon: React.ReactNode }[] = [
-  { value: "collaboration", descKey: "collaborationDesc", icon: <MessagesSquare size={22} /> },
-  { value: "presentation", descKey: "presentationDesc", icon: <Sun size={22} /> },
+  { value: "collaboration", descKey: "collaborationDesc", icon: <Icons.modeReview size={22} /> },
+  { value: "presentation", descKey: "presentationDesc", icon: <Icons.modeShowcase size={22} /> },
 ];
 
 export function CreateSubGalleryDialog({ open, onOpenChange, parentId, parentMode }: Props) {
   const t = useTranslations("admin.dialogs");
+  const modeLabels = useModeLabels();
   const tc = useTranslations("common");
   const [name, setName] = useState("");
   // Defaults to the parent's mode (the inherited default). Callers remount via `key` per open,
@@ -86,7 +89,7 @@ export function CreateSubGalleryDialog({ open, onOpenChange, parentId, parentMod
                 }`}
               >
                 {m.icon}
-                <span className="text-sm font-medium">{t("modeName", { mode: MODE_LABELS[m.value] })}</span>
+                <span className="text-sm font-medium">{t("modeName", { mode: modeLabels[m.value] })}</span>
                 <span className="text-xs text-muted-foreground">{t(m.descKey)}</span>
               </button>
             ))}

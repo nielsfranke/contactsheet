@@ -5,9 +5,9 @@
 
 import Link from "next/link";
 import { useTranslations } from "next-intl";
+import { useModeLabels } from "@/lib/mode-labels";
 import { useDraggable, useDroppable } from "@dnd-kit/core";
 import type { GalleryResponse } from "@/lib/types";
-import { MODE_LABELS } from "@/lib/types";
 import { GALLERY_DROP_PREFIX, TOPLEVEL_DROP_PREFIX } from "@/components/admin/AdminDnd";
 import { CornerDownRight, MoreVertical, Pencil, Trash2 } from "lucide-react";
 import { useCoarsePointer } from "@/hooks/useCoarsePointer";
@@ -111,6 +111,7 @@ export function GalleryTile({
   onDelete: () => void;
 }) {
   const t = useTranslations("admin.galleries");
+  const modeLabels = useModeLabels();
   const isTouch = useCoarsePointer();
   const isFolder = g.children.length > 0;
   const countParts: string[] = [];
@@ -182,11 +183,11 @@ export function GalleryTile({
           variant="control"
           shape="pill"
           className="group/mode absolute bottom-2 left-2 px-1.5 py-1"
-          title={t("modeTitle", { mode: MODE_LABELS[g.mode] })}
+          title={t("modeTitle", { mode: modeLabels[g.mode] })}
         >
           {g.mode === "collaboration" ? <Icons.modeReview size={11} /> : <Icons.modeShowcase size={11} />}
           <span className="max-w-0 overflow-hidden whitespace-nowrap text-[10px] font-medium leading-none opacity-0 transition-all duration-200 group-hover/mode:ml-1 group-hover/mode:max-w-[5rem] group-hover/mode:opacity-100">
-            {MODE_LABELS[g.mode]}
+            {modeLabels[g.mode]}
           </span>
         </OverlayPill>
         {/* Kebab → rename / delete. Base UI portals + positions the menu, escaping overflow:hidden. */}
@@ -265,6 +266,7 @@ export function GalleryListRow({
   onDelete: () => void;
 }) {
   const t = useTranslations("admin.galleries");
+  const modeLabels = useModeLabels();
   const isTouch = useCoarsePointer();
   const isFolder = g.children.length > 0;
   const countParts: string[] = [];
@@ -313,10 +315,10 @@ export function GalleryListRow({
         </div>
         {g.headline && <p className="mt-0.5 truncate text-xs text-muted-foreground">{g.headline}</p>}
         <div className="mt-0.5 flex items-center gap-2 text-xs text-muted-foreground">
-          <span className="inline-flex items-center gap-1" title={t("modeTitle", { mode: MODE_LABELS[g.mode] })}>
+          <span className="inline-flex items-center gap-1" title={t("modeTitle", { mode: modeLabels[g.mode] })}>
             {g.mode === "collaboration" ? <Icons.modeReview size={11} aria-hidden /> : <Icons.modeShowcase size={11} aria-hidden />}
             {/* Phones: icon only (narrow row). Desktop list has the room to name the mode. */}
-            <span className="sr-only md:not-sr-only">{MODE_LABELS[g.mode]}</span>
+            <span className="sr-only md:not-sr-only">{modeLabels[g.mode]}</span>
           </span>
           <span className="truncate">{countParts.join(" · ")}</span>
           {g.comment_count > 0 && (

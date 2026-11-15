@@ -1,5 +1,9 @@
 {
   "common": {
+    "modes": {
+      "collaboration": "Review",
+      "presentation": "Showcase"
+    },
     "cancel": "Abbrechen",
     "save": "Speichern",
     "saving": "Wird gespeichert…",
@@ -333,7 +337,7 @@
       "collapse": "Einklappen",
       "expand": "Ausklappen",
       "addSubGallery": "Untergalerie hinzufügen",
-      "photoCount": "{count, plural, one {# Bild} other {# Bilder}}"
+      "photoCount": "{count, plural, one {# Foto} other {# Fotos}}"
     },
     "dialogs": {
       "createGallery": "Neue Galerie erstellen",
@@ -424,7 +428,7 @@
       "noSubGalleries": "Noch keine Untergalerien in dieser Galerie. Klicken Sie auf <b>Untergalerie erstellen</b>, um eine hinzuzufügen.",
       "containerHint": "Diese Galerie enthält Untergalerien. Öffnen Sie unten eine oder fügen Sie dieser Galerie direkt Fotos hinzu.",
       "addPhotosHeading": "Fotos zu dieser Galerie hinzufügen",
-      "imagesCount": "{count, plural, one {# Bild} other {# Bilder}}",
+      "imagesCount": "{count, plural, one {# Foto} other {# Fotos}}",
       "saveCollectionTitle": "Sammlung speichern",
       "collectionNamePlaceholder": "Sammlungsname",
       "exportSelections": "Auswahl exportieren (Text)",
@@ -452,7 +456,7 @@
       "filenamePlaceholder": "Dateiname",
       "renameCollectionTitle": "Sammlung umbenennen",
       "moveTitle": "Bild verschieben",
-      "moveSelectionTitle": "{count, plural, one {# Bild} other {# Bilder}} verschieben",
+      "moveSelectionTitle": "{count, plural, one {# Foto} other {# Fotos}} verschieben",
       "batchRenameTitle": "{count, plural, one {# Foto} other {# Fotos}} umbenennen",
       "batchRenameMode": "Methode",
       "batchModeSequence": "Nummerieren",
@@ -522,8 +526,8 @@
         "coverUpdated": "Cover-Bild aktualisiert",
         "fileRenamed": "Datei umbenannt",
         "imageMoved": "Bild verschoben",
-        "imagesMoved": "{count, plural, one {# Bild} other {# Bilder}} verschoben",
-        "imagesDeleted": "{count, plural, one {# Bild} other {# Bilder}} gelöscht",
+        "imagesMoved": "{count, plural, one {# Foto} other {# Fotos}} verschoben",
+        "imagesDeleted": "{count, plural, one {# Foto} other {# Fotos}} gelöscht",
         "imagesRenamed": "{count, plural, one {# Foto} other {# Fotos}} umbenannt",
         "headerUpdated": "Header-Bild aktualisiert — legen Sie Ihren Fokuspunkt fest",
         "photoMoved": "Foto verschoben",
@@ -641,12 +645,6 @@
         "viewed": "hat die Galerie geöffnet",
         "downloaded": "hat Fotos heruntergeladen"
       },
-      "flagColors": {
-        "green": "grün",
-        "red": "rot",
-        "yellow": "gelb",
-        "blue": "blau"
-      },
       "commentedPreview": "kommentierte: „{preview}“",
       "annotatedPreview": "annotierte: „{preview}“",
       "secondsAgo": "vor {n} Sek.",
@@ -663,7 +661,7 @@
       "empty": "Noch keine Stimmen",
       "image": "Bild",
       "totals": "Gesamt",
-      "summary": "{images, plural, one {# Bild} other {# Bilder}} bewertet von {reviewers, plural, one {# Reviewer} other {# Reviewern}}"
+      "summary": "{images, plural, one {# Foto} other {# Fotos}} bewertet von {reviewers, plural, one {# Reviewer} other {# Reviewern}}"
     },
     "imageGrid": {
       "confirmDelete": "\"{name}\" löschen?",

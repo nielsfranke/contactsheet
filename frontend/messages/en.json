@@ -1,5 +1,9 @@
 {
   "common": {
+    "modes": {
+      "collaboration": "Review",
+      "presentation": "Showcase"
+    },
     "cancel": "Cancel",
     "save": "Save",
     "saving": "Saving…",
@@ -240,7 +244,7 @@
   },
   "admin": {
     "shell": {
-      "allGalleries": "All Galleries",
+      "allGalleries": "All galleries",
       "settings": "Settings",
       "signOut": "Sign out",
       "signOutEverywhere": "Sign out everywhere",
@@ -278,7 +282,7 @@
       "photoBrowseCount": "{shown} of {total} photos",
       "photoBrowseEmpty": "No photos yet.",
       "loadMore": "Load more",
-      "newGallery": "New Gallery",
+      "newGallery": "New gallery",
       "done": "Done",
       "sort": "Sort",
       "clickToReverse": "Click to reverse",
@@ -288,7 +292,7 @@
       "organizeHint": "Drag a gallery onto another to nest it, onto a folder in the left tree, or onto “Drop here to move to top level” to pull it out.",
       "emptyFilter": "No galleries match the filter.",
       "emptyFolder": "No sub-galleries here. Open this gallery to add photos.",
-      "emptyRoot": "No galleries yet. Click Create New Gallery to get started.",
+      "emptyRoot": "No galleries yet. Click New gallery to get started.",
       "breadcrumbAria": "Breadcrumb",
       "manageTitle": "Open this gallery (manage photos & settings)",
       "openThisGallery": "Open this gallery",
@@ -306,9 +310,9 @@
       "moreActions": "More actions",
       "renameAction": "Rename",
       "deleteAction": "Delete",
-      "renameTitle": "Rename Gallery",
+      "renameTitle": "Rename gallery",
       "renamePlaceholder": "Gallery name",
-      "deleteTitle": "Delete Gallery",
+      "deleteTitle": "Delete gallery",
       "deleteBody": "Permanently delete <b>{name}</b>? This cannot be undone.",
       "deleteSubWarning": "This also deletes {count, plural, one {its # sub-gallery} other {its # sub-galleries}} and all photos inside.",
       "deleting": "Deleting…",
@@ -333,11 +337,11 @@
       "collapse": "Collapse",
       "expand": "Expand",
       "addSubGallery": "Add sub-gallery",
-      "photoCount": "{count, plural, one {# image} other {# images}}"
+      "photoCount": "{count, plural, one {# photo} other {# photos}}"
     },
     "dialogs": {
-      "createGallery": "Create New Gallery",
-      "createSubGallery": "Create Sub-Gallery",
+      "createGallery": "Create new gallery",
+      "createSubGallery": "Create sub-gallery",
       "titlePrompt": "Please enter a title for your new gallery.",
       "titlePlaceholder": "Gallery title",
       "chooseMode": "Choose how you want clients to see it:",
@@ -346,7 +350,7 @@
       "presentationDesc": "Beautiful customizable galleries",
       "changeLater": "You can always change your mind later.",
       "create": "Create",
-      "createOpen": "Create & Open",
+      "createOpen": "Create & open",
       "galleryCreated": "Gallery created",
       "subGalleryCreated": "Sub-gallery created",
       "subGalleryInherit": "The sub-gallery starts with the parent's look & behaviour — adjust it any time in the sub-gallery's settings."
@@ -366,7 +370,7 @@
       "deleteGallery": "Delete gallery",
       "navigation": "Navigation",
       "newSubGallery": "New sub-gallery",
-      "uploadNewFiles": "Add Files",
+      "uploadNewFiles": "Add files",
       "download": "Download",
       "downloadCount": "{count, plural, one {Download # file} other {Download # files}}",
       "copyFilenames": "Copy filenames",
@@ -408,8 +412,8 @@
       "chipExpiryTitle": "Expiry date — change it in Settings → Security",
       "editHeaderImage": "Edit header image",
       "autoHeader": "Auto-picked",
-      "setHeaderImage": "Set Header Image",
-      "setCoverImage": "Set Cover Image",
+      "setHeaderImage": "Set header image",
+      "setCoverImage": "Set cover image",
       "emptyNoImages": "No images yet — drag photos onto the zone below.",
       "emptyFiltered": "No images match the current filter.",
       "search": {
@@ -420,39 +424,39 @@
         "noResults": "No photos match your search."
       },
       "subGalleries": "Sub-Galleries",
-      "createSubGallery": "Create Sub-Gallery",
-      "noSubGalleries": "No sub-galleries inside this gallery yet. Click <b>Create Sub-Gallery</b> to add one.",
+      "createSubGallery": "Create sub-gallery",
+      "noSubGalleries": "No sub-galleries inside this gallery yet. Click <b>Create sub-gallery</b> to add one.",
       "containerHint": "This gallery holds sub-galleries. Open one below, or add photos to this gallery itself.",
       "addPhotosHeading": "Add photos to this gallery",
-      "imagesCount": "{count, plural, one {# image} other {# images}}",
+      "imagesCount": "{count, plural, one {# photo} other {# photos}}",
       "saveCollectionTitle": "Save collection",
       "collectionNamePlaceholder": "Collection name",
       "exportSelections": "Export selections (text)",
       "exportHint": "{count, plural, =0 {No flagged images yet} one {# flagged image} other {# flagged images}} — filenames for Lightroom / Capture One.",
       "filenames": "Filenames",
       "withFlags": "With flags",
-      "activityLog": "Activity Log",
-      "votingSummary": "Team Voting Summary",
-      "deleteGalleryTitle": "Delete Gallery",
+      "activityLog": "Activity log",
+      "votingSummary": "Team voting summary",
+      "deleteGalleryTitle": "Delete gallery",
       "deleteGalleryBody": "Permanently delete <b>{name}</b>? This cannot be undone.",
-      "deleteCollectionTitle": "Delete Collection",
+      "deleteCollectionTitle": "Delete collection",
       "deleteCollectionBody": "Delete collection <b>{name}</b>? The photos themselves stay in the gallery — only this saved selection is removed.",
       "emptyTitle": "Clear gallery?",
       "emptyBody": "All files and sub-galleries will be deleted. The empty gallery and its settings will remain.",
-      "clearGallery": "Clear Gallery",
+      "clearGallery": "Clear gallery",
       "clearing": "Clearing…",
       "deleteSelectionTitle": "Delete selected photos?",
       "deleteSelectionBody": "{count, plural, one {# selected photo will be} other {# selected photos will be}} permanently deleted. This cannot be undone.",
       "deleteSelectionConfirm": "Delete",
       "deletingSelection": "Deleting…",
-      "renameTitle": "Rename Gallery",
+      "renameTitle": "Rename gallery",
       "renamePlaceholder": "Gallery name",
       "rename": "Rename",
-      "renameFileTitle": "Rename File",
+      "renameFileTitle": "Rename file",
       "filenamePlaceholder": "Filename",
-      "renameCollectionTitle": "Rename Collection",
-      "moveTitle": "Move Image",
-      "moveSelectionTitle": "Move {count, plural, one {# image} other {# images}}",
+      "renameCollectionTitle": "Rename collection",
+      "moveTitle": "Move image",
+      "moveSelectionTitle": "Move {count, plural, one {# photo} other {# photos}}",
       "batchRenameTitle": "Rename {count, plural, one {# photo} other {# photos}}",
       "batchRenameMode": "Method",
       "batchModeSequence": "Number",
@@ -522,8 +526,8 @@
         "coverUpdated": "Cover image updated",
         "fileRenamed": "File renamed",
         "imageMoved": "Image moved",
-        "imagesMoved": "{count, plural, one {# image} other {# images}} moved",
-        "imagesDeleted": "{count, plural, one {# image} other {# images}} deleted",
+        "imagesMoved": "{count, plural, one {# photo} other {# photos}} moved",
+        "imagesDeleted": "{count, plural, one {# photo} other {# photos}} deleted",
         "imagesRenamed": "{count, plural, one {# photo} other {# photos}} renamed",
         "headerUpdated": "Header image updated — set your focus point",
         "photoMoved": "Photo moved",
@@ -574,7 +578,7 @@
       "downloadedToast": "{count, plural, one {Downloaded # filename} other {Downloaded # filenames}}"
     },
     "headerImage": {
-      "title": "Edit Header Image",
+      "title": "Edit header image",
       "setFocusPoint": "Click to set focus point",
       "removeImage": "Remove header image",
       "focusHint": "Click the image to set the focus point (red dot). The most important part of your photo will stay in frame when cropped.",
@@ -582,7 +586,7 @@
       "uploading": "Uploading…",
       "replace": "Drop or click to replace",
       "dropToUpload": "Drop or click to upload",
-      "uploadNew": "Add Image",
+      "uploadNew": "Add image",
       "done": "Done",
       "updated": "Header image updated",
       "removed": "Header image removed",
@@ -609,7 +613,7 @@
       "confirm": "Upload"
     },
     "coverImage": {
-      "title": "Cover Image",
+      "title": "Cover image",
       "removeImage": "Remove cover image",
       "pickFromGallery": "Or choose a photo from this gallery",
       "resetCover": "Use first photo",
@@ -617,7 +621,7 @@
       "uploading": "Uploading…",
       "replace": "Drop or click to replace",
       "dropToUpload": "Drop or click to upload",
-      "uploadNew": "Add Image",
+      "uploadNew": "Add image",
       "done": "Done",
       "updated": "Cover image updated",
       "removed": "Cover image removed",
@@ -625,7 +629,7 @@
       "dropNeedsFile": "Drag an image file from your computer here, or use the file picker."
     },
     "activity": {
-      "title": "Activity Log",
+      "title": "Activity log",
       "empty": "No activity yet",
       "previous": "Previous",
       "loadMore": "Load more",
@@ -641,12 +645,6 @@
         "viewed": "opened the gallery",
         "downloaded": "downloaded photos"
       },
-      "flagColors": {
-        "green": "green",
-        "red": "red",
-        "yellow": "yellow",
-        "blue": "blue"
-      },
       "commentedPreview": "commented: “{preview}”",
       "annotatedPreview": "annotated: “{preview}”",
       "secondsAgo": "{n}s ago",
@@ -658,12 +656,12 @@
       "ipTitle": "Visitor IP address"
     },
     "voting": {
-      "title": "Team Voting Summary",
+      "title": "Team voting summary",
       "reviewerCount": "{count, plural, one {# reviewer} other {# reviewers}}",
       "empty": "No votes yet",
       "image": "Image",
       "totals": "Totals",
-      "summary": "{images, plural, one {# image} other {# images}} voted on by {reviewers, plural, one {# reviewer} other {# reviewers}}"
+      "summary": "{images, plural, one {# photo} other {# photos}} voted on by {reviewers, plural, one {# reviewer} other {# reviewers}}"
     },
     "imageGrid": {
       "confirmDelete": "Delete \"{name}\"?",
@@ -766,9 +764,9 @@
       "workspaceGroup": "Workspace",
       "branding": "Branding",
       "footer": "Footer",
-      "galleryDefaults": "Gallery Defaults",
+      "galleryDefaults": "Gallery defaults",
       "workspace": "Workspace",
-      "search": "Content Search",
+      "search": "Content search",
       "account": "Account",
       "apiTokens": "API tokens",
       "general": "General",
@@ -822,7 +820,7 @@
       "revokeDescription": "“{name}” will stop working immediately. Any tool using it will need a new token."
     },
     "search": {
-      "title": "Content Search",
+      "title": "Content search",
       "intro": "Find photos by what's actually in them — \"car at sunset\", \"team photo with trophy\" — instead of by filename. Photos are indexed once by an on-device AI model; nothing leaves your server.",
       "enable": "Enable content search",
       "enableHint": "Indexes your library so you can search photos by their visual content.",
@@ -893,7 +891,7 @@
       "round": "Round",
       "square": "Square",
       "overview": "Gallery overview",
-      "overviewHint": "The cover grid on the All Galleries page.",
+      "overviewHint": "How galleries are shown on the All galleries page.",
       "thumbnailSize": "Thumbnail size",
       "coverShape": "Cover shape",
       "aspect": "Aspect",
@@ -1042,7 +1040,7 @@
       "saved": "Footer saved"
     },
     "galleryDefaults": {
-      "title": "Gallery Defaults",
+      "title": "Gallery defaults",
       "presetsTitle": "Default gallery presets",
       "presetsHint": "Adjust the default look & behaviour for newly created galleries, per mode. Existing galleries are not affected. Sub-galleries always start with their parent's settings instead.",
       "modePreset": "{mode} Mode Preset",
@@ -1077,7 +1075,7 @@
       "ratingModeBoth": "Both"
     },
     "gallery": {
-      "title": "Gallery Settings",
+      "title": "Gallery settings",
       "description": "Choose how this gallery opens for clients and fine-tune its behaviour. <link>Edit your defaults</link>.",
       "startClientView": "Start client view in",
       "collaborationHint": "Flag, like & comment",

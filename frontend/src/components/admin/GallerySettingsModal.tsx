@@ -6,7 +6,8 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
-import { MODE_LABELS, DEFAULT_WATERMARK, type GalleryResponse, type ModeType, type WatermarkSettings } from "@/lib/types";
+import { useModeLabels } from "@/lib/mode-labels";
+import { DEFAULT_WATERMARK, type GalleryResponse, type ModeType, type WatermarkSettings } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -32,13 +33,13 @@ import { SubgalleryPresetsSection } from "./SubgalleryPresetsSection";
 import { SaveStatus } from "./SaveStatus";
 import { ConfirmDialog } from "@/components/chrome/ConfirmDialog";
 import { useGallerySettingsAutosave } from "@/hooks/useGallerySettingsAutosave";
+import { Icons } from "@/lib/ui-icons";
 import {
   ImageIcon,
-  MessagesSquare,
   Shield,
   SlidersHorizontal,
   Sparkles,
-  Zap,
+  type LucideIcon,
 } from "lucide-react";
 
 export type SettingsTab = "general" | "look" | "review" | "security";
@@ -58,6 +59,7 @@ export function GallerySettingsModal({
 }: Props) {
   const { save, status } = useGallerySettingsAutosave(gallery.id);
   const t = useTranslations("settings.gallery");
+  const modeLabels = useModeLabels();
   const tNotif = useTranslations("settings.notifications");
   const tc = useTranslations("common");
   const [tab, setTab] = useState<SettingsTab>(initialTab ?? "general");
@@ -242,19 +244,19 @@ export function GallerySettingsModal({
     });
   }
 
-  const MODE_CARDS: { value: ModeType; label: string; icon: typeof Zap; hint: string }[] = [
-    { value: "collaboration", label: MODE_LABELS.collaboration, icon: Zap, hint: t("collaborationHint") },
-    { value: "presentation", label: MODE_LABELS.presentation, icon: ImageIcon, hint: t("presentationHint") },
+  const MODE_CARDS: { value: ModeType; label: string; icon: LucideIcon; hint: string }[] = [
+    { value: "collaboration", label: modeLabels.collaboration, icon: Icons.modeReview, hint: t("collaborationHint") },
+    { value: "presentation", label: modeLabels.presentation, icon: Icons.modeShowcase, hint: t("presentationHint") },
   ];
 
   // The Review tab applies in Review mode — and for Showcase galleries whose clients may
   // switch to review (the photographer still configures the review features there).
   const reviewConfigurable = mode === "collaboration" || clientModeSwitch;
-  const tabs: { value: SettingsTab; label: string; icon: typeof Zap }[] = [
+  const tabs: { value: SettingsTab; label: string; icon: LucideIcon }[] = [
     { value: "general", label: t("tabGeneral"), icon: SlidersHorizontal },
     { value: "look", label: t("tabLook"), icon: ImageIcon },
     ...(reviewConfigurable
-      ? [{ value: "review" as const, label: MODE_LABELS.collaboration, icon: MessagesSquare }]
+      ? [{ value: "review" as const, label: modeLabels.collaboration, icon: Icons.modeReview }]
       : []),
     { value: "security", label: t("tabSecurity"), icon: Shield },
   ];
@@ -424,7 +426,7 @@ export function GallerySettingsModal({
               {mode === "presentation" && (
                 <div className="space-y-2 py-2.5">
                   <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                    <Sparkles size={13} /> {t("openerIntro", { mode: MODE_LABELS.presentation })}
+                    <Sparkles size={13} /> {t("openerIntro", { mode: modeLabels.presentation })}
                   </p>
                   <Label className="font-medium">{t("openerHeaderImage")}</Label>
                   <HeaderImageUpload galleryId={gallery.id} headerImageUrl={gallery.header_image_url} />
@@ -440,7 +442,7 @@ export function GallerySettingsModal({
           {tab === "review" && reviewConfigurable && (
             <div className="divide-y divide-border/60">
               <p className="flex items-center gap-1.5 py-2.5 text-xs text-muted-foreground">
-                <MessagesSquare size={13} /> {t("reviewIntro", { mode: MODE_LABELS.collaboration })}
+                <Icons.modeReview size={13} /> {t("reviewIntro", { mode: modeLabels.collaboration })}
               </p>
               <div className="pb-1">
                 <ReviewFields value={review} onChange={patchReview} />

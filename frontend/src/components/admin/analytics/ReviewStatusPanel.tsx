@@ -33,7 +33,7 @@ const BAR_FILL = "bg-primary [html.accent-gradient_&]:bg-[image:var(--primary-gr
  */
 export function ReviewStatusPanel({ status, ratingMode }: Props) {
   const t = useTranslations("admin.analytics");
-  const ta = useTranslations("admin.activity");
+  const tfl = useTranslations("gallery.lightbox.flagLabels");
   const { images, reviewed } = status;
   const reviewedPct = pctOf(reviewed, images);
   const flagged = images - status.flags.none;
@@ -76,7 +76,7 @@ export function ReviewStatusPanel({ status, ratingMode }: Props) {
               {FLAG_ORDER.map((f) => {
                 const n = status.flags[f.value];
                 return n > 0 ? (
-                  <div key={f.value} className={f.bg} style={{ width: `${(n / images) * 100}%` }} title={`${f.value === "none" ? t("unflagged") : ta(`flagColors.${f.value}`)} · ${n}`} />
+                  <div key={f.value} className={f.bg} style={{ width: `${(n / images) * 100}%` }} title={`${f.value === "none" ? t("unflagged") : tfl(f.value)} · ${n}`} />
                 ) : null;
               })}
             </div>
@@ -84,7 +84,7 @@ export function ReviewStatusPanel({ status, ratingMode }: Props) {
               {FLAG_ORDER.map((f) => (
                 <li key={f.value} className="inline-flex items-center gap-1">
                   <span className={cn("inline-block h-2 w-2 rounded-full", f.bg)} aria-hidden />
-                  <span className="capitalize">{f.value === "none" ? t("unflagged") : ta(`flagColors.${f.value}`)}</span>
+                  <span>{f.value === "none" ? t("unflagged") : tfl(f.value)}</span>
                   <span className="tabular-nums text-foreground">{status.flags[f.value]}</span>
                 </li>
               ))}

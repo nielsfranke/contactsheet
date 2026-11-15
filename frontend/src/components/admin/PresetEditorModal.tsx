@@ -5,8 +5,9 @@
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
+import { useModeLabels } from "@/lib/mode-labels";
 import { api } from "@/lib/api";
-import { MODE_LABELS, type GalleryPreset, type ModeType } from "@/lib/types";
+import { type GalleryPreset, type ModeType } from "@/lib/types";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { PresetForm } from "./PresetForm";
 import { toast } from "sonner";
@@ -22,6 +23,7 @@ interface Props {
  *  preset_collaboration) — the starting point for new top-level galleries of that mode. */
 export function PresetEditorModal({ open, onOpenChange, mode, preset }: Props) {
   const t = useTranslations("settings.preset");
+  const modeLabels = useModeLabels();
   const qc = useQueryClient();
   const settingsKey = mode === "collaboration" ? "preset_collaboration" : "preset_presentation";
 
@@ -39,9 +41,9 @@ export function PresetEditorModal({ open, onOpenChange, mode, preset }: Props) {
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-2xl">
         <DialogHeader>
-          <DialogTitle>{t("title", { mode: MODE_LABELS[mode] })}</DialogTitle>
+          <DialogTitle>{t("title", { mode: modeLabels[mode] })}</DialogTitle>
         </DialogHeader>
-        <p className="text-sm text-muted-foreground">{t("subtitle", { mode: MODE_LABELS[mode] })}</p>
+        <p className="text-sm text-muted-foreground">{t("subtitle", { mode: modeLabels[mode] })}</p>
         {open && (
           <PresetForm
             mode={mode}
