@@ -283,6 +283,9 @@
       "photoBrowseEmpty": "No photos yet.",
       "loadMore": "Load more",
       "newGallery": "New gallery",
+      "newActivity": "New",
+      "newActivityTitle": "Client activity since you last opened it",
+      "sortActivity": "Activity",
       "done": "Done",
       "sort": "Sort",
       "clickToReverse": "Click to reverse",
@@ -337,7 +340,8 @@
       "collapse": "Collapse",
       "expand": "Expand",
       "addSubGallery": "Add sub-gallery",
-      "photoCount": "{count, plural, one {# photo} other {# photos}}"
+      "photoCount": "{count, plural, one {# photo} other {# photos}}",
+      "newActivityTitle": "Client activity since you last opened it"
     },
     "dialogs": {
       "createGallery": "Create new gallery",
@@ -410,6 +414,8 @@
       "chipExpires": "Expires {date}",
       "chipExpired": "Expired {date}",
       "chipExpiryTitle": "Expiry date — change it in Settings → Security",
+      "chipReviewed": "{reviewed} of {total} reviewed",
+      "chipReviewedTitle": "Photos with any client feedback — open Insights",
       "editHeaderImage": "Edit header image",
       "autoHeader": "Auto-picked",
       "setHeaderImage": "Set header image",
@@ -899,6 +905,7 @@
       "newest": "Newest",
       "name": "Name",
       "photos": "Photos",
+      "activity": "Activity",
       "desktopLayout": "On larger screens",
       "desktopLayoutHint": "Cover grid (sized by thumbnail size above), a dense compact grid, or rows. Also switchable from the overview toolbar.",
       "compact": "Compact",

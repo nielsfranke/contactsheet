@@ -43,6 +43,9 @@ class Gallery(Base):
     # Admin-only favorite flag: pinned galleries surface in a shelf atop the overview. Never
     # cascades to sub-galleries, never affects the public gallery.
     pinned: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    # When the photographer last opened this gallery in the admin (POST /galleries/{id}/seen).
+    # Client activity newer than this shows as "new" on the overview and in the tree.
+    admin_seen_at: Mapped[datetime | None] = mapped_column(UTCDateTime, nullable=True)
 
     tags: Mapped[str] = mapped_column(Text, nullable=False, default="[]")               # JSON array
     watermark_settings: Mapped[str | None] = mapped_column(Text, nullable=True)         # JSON object

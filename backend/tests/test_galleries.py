@@ -422,3 +422,58 @@ def test_create_with_empty_string_parent_is_top_level(admin_client):
     r = admin_client.post("/api/galleries", json={"name": "Loose", "parent_id": ""})
     assert r.status_code == 201, r.text
     assert r.json()["parent_id"] is None
+
+
+def _tree_node(admin_client, gallery_id):
+    def walk(nodes):
+        for n in nodes:
+            if n["id"] == gallery_id:
+                return n
+            hit = walk(n["children"])
+            if hit:
+                return hit
+        return None
+    return walk(admin_client.get("/api/galleries").json())
+
+
+def test_client_activity_and_seen_marker(admin_client):
+    from fastapi.testclient import TestClient
+    from app.main import app
+    from .helpers import add_image
+
+    g = make_gallery(admin_client, "Review me", mode="collaboration")
+    img = add_image(g["id"])
+    node = _tree_node(admin_client, g["id"])
+    assert node["last_client_activity_at"] is None and node["admin_seen_at"] is None
+
+    # A client flag is client activity; the photographer's own approve/comment rows are not.
+    # No `with`: entering the client would run the app lifespan again (spool dir, startup jobs).
+    pub = TestClient(app)
+    assert pub.post(f"/api/public/g/{g['share_token']}/images/{img}/flag", json={"flag": "green"}).status_code == 200
+    node = _tree_node(admin_client, g["id"])
+    assert node["last_client_activity_at"] is not None
+    assert node["last_client_activity_at"].endswith("Z") or "+00:00" in node["last_client_activity_at"]
+
+    before = admin_client.get(f"/api/galleries/{g['id']}").json()["updated_at"]
+    assert admin_client.post(f"/api/galleries/{g['id']}/seen").status_code == 204
+    node = _tree_node(admin_client, g["id"])
+    assert node["admin_seen_at"] >= node["last_client_activity_at"]
+    # Opening a gallery isn't an edit.
+    assert admin_client.get(f"/api/galleries/{g['id']}").json()["updated_at"] == before
+
+    assert admin_client.post("/api/galleries/does-not-exist/seen").status_code == 404
+
+
+def test_detail_carries_review_progress(admin_client):
+    from fastapi.testclient import TestClient
+    from app.main import app
+    from .helpers import add_image
+
+    g = make_gallery(admin_client, "Progress", mode="collaboration")
+    a = add_image(g["id"])
+    add_image(g["id"], filename="b.jpg", sort_order=1)
+    assert admin_client.get(f"/api/galleries/{g['id']}").json()["reviewed_count"] == 0
+    TestClient(app).post(f"/api/public/g/{g['share_token']}/images/{a}/flag", json={"flag": "red"})
+    assert admin_client.get(f"/api/galleries/{g['id']}").json()["reviewed_count"] == 1
+    # The tree list doesn't pay for it.
+    assert _tree_node(admin_client, g["id"])["reviewed_count"] is None

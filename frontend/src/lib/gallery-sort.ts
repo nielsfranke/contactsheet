@@ -11,6 +11,7 @@ export const NATURAL_SORT_DIR: Record<OverviewSort, SortDir> = {
   created: "asc",
   name: "asc",
   photos: "desc",
+  activity: "desc",
 };
 
 /**
@@ -25,8 +26,36 @@ export function sortGalleries(list: GalleryResponse[], sort: OverviewSort, dir: 
   // A folder's own image_count is usually 0 — rank by the whole subtree so containers sort by
   // what they actually hold.
   else if (sort === "photos") out = [...list].sort((a, b) => totalImageCount(a) - totalImageCount(b));
+  // Most recent client activity anywhere in the subtree; galleries nobody touched yet sort as the
+  // oldest, among themselves by creation date.
+  else if (sort === "activity")
+    out = [...list].sort(
+      (a, b) =>
+        (lastClientActivity(a) ?? "").localeCompare(lastClientActivity(b) ?? "") ||
+        a.created_at.localeCompare(b.created_at),
+    );
   else out = [...list].sort((a, b) => a.created_at.localeCompare(b.created_at));
   return dir === "desc" ? out.reverse() : out;
+}
+
+/** Newest client activity in a gallery or any descendant (ISO string), or null. */
+export function lastClientActivity(g: GalleryResponse): string | null {
+  return g.children.reduce<string | null>((best, c) => {
+    const v = lastClientActivity(c);
+    return v && (!best || v > best) ? v : best;
+  }, g.last_client_activity_at ?? null);
+}
+
+/** Client activity the photographer hasn't seen yet — on this gallery itself. */
+export function hasNewActivity(g: GalleryResponse): boolean {
+  const last = g.last_client_activity_at;
+  if (!last) return false;
+  return !g.admin_seen_at || new Date(last).getTime() > new Date(g.admin_seen_at).getTime();
+}
+
+/** Unseen client activity on this gallery or anywhere below it (a folder lights up for its children). */
+export function subtreeHasNewActivity(g: GalleryResponse): boolean {
+  return hasNewActivity(g) || g.children.some(subtreeHasNewActivity);
 }
 
 /** Photos in a gallery plus all its descendants — the count a folder tile / tree row shows. */

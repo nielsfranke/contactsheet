@@ -292,6 +292,14 @@ class GalleryResponse(BaseModel):
     image_count: int = 0
     comment_count: int = 0
     cover_image_url: str | None = None
+    # Newest client-side activity (flag, rating, like, vote, comment, annotation, upload, download,
+    # collection) — admin actions and anonymous opens excluded. Compared with admin_seen_at for the
+    # overview's "new activity" marker.
+    last_client_activity_at: datetime | None = None
+    admin_seen_at: datetime | None = None
+    # Photos carrying any client mark (same definition as analytics' review status). Detail
+    # endpoint only — the tree list leaves it null.
+    reviewed_count: int | None = None
     created_at: datetime
     updated_at: datetime
     children: list[GalleryResponse] = []

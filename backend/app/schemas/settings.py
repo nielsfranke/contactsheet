@@ -134,7 +134,7 @@ class AppSettingsUpdate(BaseModel):
     overview_shape: Literal["square", "aspect"] | None = None
     overview_spacing: SizeType | None = None
     overview_corners: Literal["round", "square"] | None = None
-    overview_sort: Literal["created", "name", "photos"] | None = None
+    overview_sort: Literal["created", "name", "photos", "activity"] | None = None
     overview_sort_dir: Literal["asc", "desc"] | None = None
     overview_mobile_layout: Literal["grid", "list"] | None = None
     overview_layout: Literal["grid", "compact", "list"] | None = None

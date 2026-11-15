@@ -239,6 +239,7 @@ export default function WorkspaceSettingsPage() {
               { value: "created", label: t("newest") },
               { value: "name", label: t("name") },
               { value: "photos", label: t("photos") },
+              { value: "activity", label: t("activity") },
             ]}
           />
         </Row>

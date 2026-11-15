@@ -23,6 +23,7 @@ const SORT_OPTIONS: { value: OverviewSort; labelKey: string }[] = [
   { value: "created", labelKey: "sortDate" },
   { value: "name", labelKey: "sortName" },
   { value: "photos", labelKey: "sortPhotos" },
+  { value: "activity", labelKey: "sortActivity" },
 ];
 
 // "All Photos" browse sort (date added / filename) — a separate axis from the gallery sort.

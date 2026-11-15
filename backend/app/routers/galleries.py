@@ -106,6 +106,16 @@ def update_gallery(
     return gallery_service.update_gallery(db, gallery_id, body, storage)
 
 
+@router.post("/{gallery_id}/seen", status_code=204)
+def mark_gallery_seen(
+    gallery_id: str,
+    db: Session = Depends(get_db),
+    _admin: str = Depends(get_current_admin),
+):
+    """The photographer opened the gallery — clears its "new client activity" marker."""
+    gallery_service.mark_gallery_seen(db, gallery_id)
+
+
 @router.post("/{gallery_id}/move", response_model=GalleryResponse)
 def move_gallery(
     gallery_id: str,

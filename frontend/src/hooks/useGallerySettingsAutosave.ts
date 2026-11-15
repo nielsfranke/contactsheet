@@ -65,7 +65,16 @@ export function useGallerySettingsAutosave(galleryId: string) {
       // Two toggles flipped quickly: the first response still carries the second's *old* value,
       // and writing it over the cache would visibly revert that toggle for one round-trip. Only
       // the last in-flight save reconciles the cache (its response reflects every patch so far).
-      if (qc.isMutating({ mutationKey }) <= 1) qc.setQueryData(galleryKey, data);
+      // The PATCH response is built like a tree node: detail-only fields (auto-header fallback,
+      // review progress) come back null — keep the detail values instead of blanking them.
+      if (qc.isMutating({ mutationKey }) <= 1) {
+        const prev = qc.getQueryData<GalleryResponse>(galleryKey);
+        qc.setQueryData<GalleryResponse>(galleryKey, {
+          ...data,
+          header_image_fallback_url: data.header_image_fallback_url ?? prev?.header_image_fallback_url ?? null,
+          reviewed_count: data.reviewed_count ?? prev?.reviewed_count ?? null,
+        });
+      }
       const touchesTree =
         !!patch.apply_to_subgalleries ||
         Object.keys(patch).some((k) => TREE_FIELDS.has(k as keyof GalleryUpdate));

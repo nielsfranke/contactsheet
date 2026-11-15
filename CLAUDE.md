@@ -188,6 +188,7 @@ Migrations live in `backend/alembic/versions/`. Always create a new file — nev
 0049 — overview_mobile_layout on app_settings (grid | list for the admin gallery overview on phones)
 0050 — client upload large files: galleries.client_upload_large_files
 0051 — overview view switch + folder mosaic: app_settings.overview_layout (grid | compact | list, md+) + overview_mosaic
+0052 — galleries.admin_seen_at ("new client activity" marker)
 ```
 
 ## Feature invariants
@@ -357,6 +358,10 @@ Key non-obvious constraints — full details in `docs/architecture/`.
 - Every request carries a `request_id` (inbound `X-Request-ID` or fresh), bound via a `contextvar` + log filter and echoed back as a header — the correlation key across log lines.
 - **Sentry is a no-op unless `SENTRY_DSN` is set.** `send_default_pii=False` + a `before_send` scrubber drop request bodies (photos/passwords) and redact auth headers/cookies. Only unhandled/5xx escalate — `CodedHTTPException`/4xx don't.
 - Health is split: `GET /api/health` (liveness + version) and `GET /api/health/ready` (per-component `database`/`migrations`/`ml_sidecar`/`storage`; **503 only if the DB is down**, `migrations: behind` flags an un-migrated image). See `docs/architecture/observability.md`.
+
+### New client activity marker
+- `GalleryResponse.last_client_activity_at` = newest `activities` row for the gallery whose action is client-originated (`gallery_repo.CLIENT_ACTIVITY_ACTIONS`: flag/rate/like/vote/comment/annotate/upload/download/collection — **not** anonymous `viewed`) and whose author isn't `Admin`/`admin`; batched in the tree list (one grouped query). `admin_seen_at` is stamped by `POST /api/galleries/{id}/seen` (fired when the gallery page opens **and** when it's left; never bumps `updated_at`). New = activity newer than seen (`lib/gallery-sort.hasNewActivity`); folders light up for any descendant (`subtreeHasNewActivity`). The overview `activity` sort uses the subtree's newest activity. No live push yet — the overview catches up on refetch.
+- `reviewed_count` (photos with any client mark, same definition as analytics' review status) is filled by the **detail** endpoint only; the settings autosave keeps the detail-only fields when it writes the PATCH response into the cache.
 
 ### Analytics dashboard
 - **Pure read-model over `activities`** — no migration, no new writes. `analytics_repo` (aggregation SQL) → `analytics_service` (zero-fill, totals mapping, hydrate top photos via the normal `image_service` serializer) → `analytics.py` router. Admin-only: `GET /api/galleries/{id}/analytics` (per-gallery) + `GET /api/admin/analytics` (instance rollup).

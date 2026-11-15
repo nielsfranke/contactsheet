@@ -3,7 +3,7 @@
 
 import { describe, it, expect } from "vitest";
 
-import { sortGalleries, flattenTree, galleryPath, mosaicCovers, totalImageCount } from "./gallery-sort";
+import { sortGalleries, flattenTree, galleryPath, mosaicCovers, totalImageCount, hasNewActivity, subtreeHasNewActivity } from "./gallery-sort";
 import type { GalleryResponse } from "./types";
 
 function g(partial: Partial<GalleryResponse> & { id: string }): GalleryResponse {
@@ -96,6 +96,31 @@ describe("mosaicCovers", () => {
 
   it("is empty for a gallery without children", () => {
     expect(mosaicCovers(g({ id: "leaf", cover_image_url: "/x.jpg" }))).toEqual([]);
+  });
+});
+
+describe("activity", () => {
+  const t1 = "2026-11-01T10:00:00Z";
+  const t2 = "2026-11-02T10:00:00Z";
+
+  it("is new when client activity is newer than the last admin visit (or never visited)", () => {
+    expect(hasNewActivity(g({ id: "a", last_client_activity_at: t2, admin_seen_at: t1 }))).toBe(true);
+    expect(hasNewActivity(g({ id: "b", last_client_activity_at: t1, admin_seen_at: t2 }))).toBe(false);
+    expect(hasNewActivity(g({ id: "c", last_client_activity_at: t1, admin_seen_at: null }))).toBe(true);
+    expect(hasNewActivity(g({ id: "d", last_client_activity_at: null, admin_seen_at: null }))).toBe(false);
+  });
+
+  it("lights a folder up for a child's unseen activity", () => {
+    const folder = g({ id: "f", children: [g({ id: "c", last_client_activity_at: t2, admin_seen_at: t1 })] });
+    expect(hasNewActivity(folder)).toBe(false);
+    expect(subtreeHasNewActivity(folder)).toBe(true);
+  });
+
+  it("sorts by the newest activity in the subtree, untouched galleries last", () => {
+    const quiet = g({ id: "quiet", created_at: "2026-10-01T00:00:00Z" });
+    const folder = g({ id: "folder", children: [g({ id: "kid", last_client_activity_at: t2 })] });
+    const leaf = g({ id: "leaf", last_client_activity_at: t1 });
+    expect(sortGalleries([quiet, leaf, folder], "activity", "desc").map((x) => x.id)).toEqual(["folder", "leaf", "quiet"]);
   });
 });
 

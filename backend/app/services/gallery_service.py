@@ -22,6 +22,7 @@ from app.models.gallery import Gallery
 from app.realtime import publish_admin as realtime_publish_admin
 from app.repositories import gallery_repo
 from app.repositories import activity_repo
+from app.repositories import analytics_repo
 from app.repositories import comment_repo
 from app.repositories import image_repo
 from app.repositories import settings_repo
@@ -324,6 +325,8 @@ def _build_response(
     cover_images: dict[str, object] | None = None,
     comment_counts: dict[str, int] | None = None,
     include_auto_header: bool = False,
+    last_activity: dict[str, datetime] | None = None,
+    reviewed_count: int | None = None,
 ) -> GalleryResponse:
     image_count = image_counts.get(gallery.id, 0) if image_counts is not None else gallery_repo.count_images(db, gallery.id)
     cover = cover_images.get(gallery.id) if cover_images is not None else gallery_repo.get_cover_image(db, gallery)
@@ -342,6 +345,11 @@ def _build_response(
         "cover_image_url": cover_url,
         "header_image_url": _header_image_url(gallery),
         "header_image_fallback_url": fallback_url,
+        "last_client_activity_at": (
+            last_activity.get(gallery.id) if last_activity is not None
+            else gallery_repo.batch_last_client_activity(db, [gallery.id]).get(gallery.id)
+        ),
+        "reviewed_count": reviewed_count,
         "children": [],
     })
 
@@ -354,14 +362,16 @@ def _build_tree(
     image_counts: dict[str, int] | None = None,
     cover_images: dict[str, object] | None = None,
     comment_counts: dict[str, int] | None = None,
+    last_activity: dict[str, datetime] | None = None,
 ) -> list[GalleryResponse]:
     result = []
     for g in galleries:
         if g.parent_id == parent_id:
-            node = _build_response(g, db, storage, image_counts, cover_images, comment_counts)
+            node = _build_response(g, db, storage, image_counts, cover_images, comment_counts,
+                                   last_activity=last_activity)
             node.children = _build_tree(galleries, db, storage, parent_id=g.id,
                                         image_counts=image_counts, cover_images=cover_images,
-                                        comment_counts=comment_counts)
+                                        comment_counts=comment_counts, last_activity=last_activity)
             result.append(node)
     return result
 
@@ -372,16 +382,26 @@ def list_gallery_tree(db: Session, storage: StorageProvider) -> list[GalleryResp
     image_counts = gallery_repo.batch_image_counts(db, ids)
     cover_images = gallery_repo.batch_cover_images(db, galleries)
     comment_counts = gallery_repo.batch_comment_counts(db, ids)
+    last_activity = gallery_repo.batch_last_client_activity(db, ids)
     return _build_tree(galleries, db, storage,
                        image_counts=image_counts, cover_images=cover_images,
-                       comment_counts=comment_counts)
+                       comment_counts=comment_counts, last_activity=last_activity)
 
 
 def get_gallery(db: Session, gallery_id: str, storage: StorageProvider) -> GalleryResponse:
     gallery = gallery_repo.get_by_id(db, gallery_id)
     if not gallery:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Gallery not found")
-    return _build_response(gallery, db, storage, include_auto_header=True)
+    reviewed = analytics_repo.review_status(db, gallery.id)["reviewed"]
+    return _build_response(gallery, db, storage, include_auto_header=True, reviewed_count=reviewed)
+
+
+def mark_gallery_seen(db: Session, gallery_id: str) -> None:
+    """The photographer opened this gallery: client activity up to now is no longer "new"."""
+    gallery = gallery_repo.get_by_id(db, gallery_id)
+    if not gallery:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Gallery not found")
+    gallery_repo.mark_seen(db, gallery)
 
 
 def create_gallery(db: Session, data: GalleryCreate, storage: StorageProvider) -> GalleryResponse:

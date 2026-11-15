@@ -21,7 +21,7 @@ import {
   DropdownMenuItem,
 } from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
-import { mosaicCovers, totalImageCount } from "@/lib/gallery-sort";
+import { mosaicCovers, subtreeHasNewActivity, totalImageCount } from "@/lib/gallery-sort";
 
 /**
  * Permanent "move to top level" drop target shown above the overview grid. Always visible (so it's
@@ -47,6 +47,21 @@ export function TopLevelZone() {
     >
       <CornerDownRight size={13} /> {t("dropTopLevel")}
     </div>
+  );
+}
+
+/**
+ * "New" marker for client activity the photographer hasn't opened yet (a folder shows it for any
+ * descendant). Achromatic on purpose: the accent stays the page's one primary action, and a dot +
+ * word reads without relying on colour.
+ */
+export function NewActivityMark() {
+  const t = useTranslations("admin.galleries");
+  return (
+    <span className="inline-flex shrink-0 items-center gap-1 font-medium text-foreground" title={t("newActivityTitle")}>
+      <span className="h-1.5 w-1.5 rounded-full bg-foreground" aria-hidden />
+      {t("newActivity")}
+    </span>
   );
 }
 
@@ -234,6 +249,7 @@ export function GalleryTile({
           <p className="mt-0.5 text-xs text-muted-foreground truncate">{g.headline}</p>
         )}
         <div className={cn("flex items-center gap-2 mt-0.5 text-muted-foreground", compact ? "text-[11px]" : "text-xs")}>
+          {subtreeHasNewActivity(g) && <NewActivityMark />}
           <span className="truncate">{countParts.join(" · ")}</span>
           {g.comment_count > 0 && !compact && (
             <span className="flex items-center gap-0.5">
@@ -320,6 +336,7 @@ export function GalleryListRow({
             {/* Phones: icon only (narrow row). Desktop list has the room to name the mode. */}
             <span className="sr-only md:not-sr-only">{modeLabels[g.mode]}</span>
           </span>
+          {subtreeHasNewActivity(g) && <NewActivityMark />}
           <span className="truncate">{countParts.join(" · ")}</span>
           {g.comment_count > 0 && (
             <span className="flex items-center gap-0.5">

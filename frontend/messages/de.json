@@ -283,6 +283,9 @@
       "photoBrowseEmpty": "Noch keine Fotos.",
       "loadMore": "Mehr laden",
       "newGallery": "Neue Galerie",
+      "newActivity": "Neu",
+      "newActivityTitle": "Kundenaktivität seit deinem letzten Besuch",
+      "sortActivity": "Aktivität",
       "done": "Fertig",
       "sort": "Sortieren",
       "clickToReverse": "Klicken zum Umkehren",
@@ -337,7 +340,8 @@
       "collapse": "Einklappen",
       "expand": "Ausklappen",
       "addSubGallery": "Untergalerie hinzufügen",
-      "photoCount": "{count, plural, one {# Foto} other {# Fotos}}"
+      "photoCount": "{count, plural, one {# Foto} other {# Fotos}}",
+      "newActivityTitle": "Kundenaktivität seit deinem letzten Besuch"
     },
     "dialogs": {
       "createGallery": "Neue Galerie erstellen",
@@ -410,6 +414,8 @@
       "chipExpires": "Läuft ab am {date}",
       "chipExpired": "Abgelaufen am {date}",
       "chipExpiryTitle": "Ablaufdatum – unter Einstellungen → Sicherheit änderbar",
+      "chipReviewed": "{reviewed} von {total} bewertet",
+      "chipReviewedTitle": "Fotos mit Rückmeldung der Kunden – Insights öffnen",
       "editHeaderImage": "Header-Bild bearbeiten",
       "autoHeader": "Automatisch gewählt",
       "setHeaderImage": "Header-Bild festlegen",
@@ -899,6 +905,7 @@
       "newest": "Neueste",
       "name": "Name",
       "photos": "Fotos",
+      "activity": "Aktivität",
       "desktopLayout": "Auf größeren Bildschirmen",
       "desktopLayoutHint": "Cover-Raster (Größe wie oben eingestellt), ein dichtes kompaktes Raster oder Zeilen. Auch direkt in der Übersicht umschaltbar.",
       "compact": "Kompakt",

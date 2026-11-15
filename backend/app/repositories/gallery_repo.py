@@ -7,6 +7,7 @@ from sqlalchemy import func, select
 from sqlalchemy import update as sa_update
 from sqlalchemy.orm import Session
 
+from app.models.activity import Activity
 from app.models.comment import Comment
 from app.models.gallery import Gallery
 from app.models.image import Image
@@ -288,6 +289,49 @@ def batch_comment_counts(db: Session, gallery_ids: list[str]) -> dict[str, int]:
         .group_by(Image.gallery_id)
     ).all()
     return {row[0]: row[1] for row in rows}
+
+
+# What counts as "the client did something" for the overview's new-activity marker: every
+# client-originated action except anonymous gallery opens (a view isn't feedback, and is only
+# logged with IP logging on). Admin-authored rows are excluded by author.
+CLIENT_ACTIVITY_ACTIONS = (
+    "flagged", "rated", "liked", "voted", "commented", "annotated", "uploaded", "downloaded", "collection",
+)
+_ADMIN_AUTHORS = ("Admin", "admin")
+
+
+def batch_last_client_activity(db: Session, gallery_ids: list[str]) -> dict[str, datetime]:
+    """Newest client activity per gallery (one grouped query over the activities index)."""
+    if not gallery_ids:
+        return {}
+    rows = db.execute(
+        select(Activity.gallery_id, func.max(Activity.created_at))
+        .where(
+            Activity.gallery_id.in_(gallery_ids),
+            Activity.action.in_(CLIENT_ACTIVITY_ACTIONS),
+            Activity.author.not_in(_ADMIN_AUTHORS),
+        )
+        .group_by(Activity.gallery_id)
+    ).all()
+    # func.max bypasses the UTCDateTime decorator → SQLite hands back a naive string/datetime.
+    out: dict[str, datetime] = {}
+    for gid, ts in rows:
+        if ts is None:
+            continue
+        if isinstance(ts, str):
+            ts = datetime.fromisoformat(ts)
+        out[gid] = ts if ts.tzinfo else ts.replace(tzinfo=timezone.utc)
+    return out
+
+
+def mark_seen(db: Session, gallery: Gallery) -> None:
+    """Stamp admin_seen_at without bumping updated_at (opening a gallery isn't an edit)."""
+    db.execute(
+        sa_update(Gallery)
+        .where(Gallery.id == gallery.id)
+        .values(admin_seen_at=datetime.now(timezone.utc), updated_at=Gallery.updated_at)
+    )
+    db.commit()
 
 
 def get_flagged_images(db: Session, gallery_id: str, flag: str | None = None) -> list[Image]:

@@ -281,6 +281,8 @@ export const api = {
         method: "POST",
         body: JSON.stringify({ image_ids: imageIds }),
       }),
+    // The photographer opened this gallery: clears its "new client activity" marker.
+    markSeen: (id: string) => request<void>(`/api/galleries/${id}/seen`, { method: "POST" }),
     // Reparent a gallery: targetParentId = null moves it to the top level.
     move: (id: string, targetParentId: string | null) =>
       request<GalleryResponse>(`/api/galleries/${id}/move`, {

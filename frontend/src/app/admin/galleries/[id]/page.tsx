@@ -4,6 +4,8 @@
 "use client";
 
 import { useEffect, useRef } from "react";
+import { useQueryClient } from "@tanstack/react-query";
+import { api } from "@/lib/api";
 import { useParams, useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { GalleryPageHeader, SidebarPortal, SubGalleryCard, SubGalleryRow } from "./parts";
@@ -108,6 +110,21 @@ export default function GalleryDetailPage() {
     return () => setMobileHeaderNav(null);
     // Primitive deps (not the translator/objects) so this only re-runs on a real context change.
   }, [gallery, upLabel, upHref, setMobileHeaderNav]);
+
+  // Opening a gallery marks its client activity as seen (the overview's "New" mark), and so does
+  // leaving it — whatever arrived while the photographer was looking at it has been seen too.
+  const qc = useQueryClient();
+  const galleryLoaded = !!gallery;
+  useEffect(() => {
+    if (!galleryLoaded) return;
+    const mark = () =>
+      api.galleries.markSeen(id).then(
+        () => qc.invalidateQueries({ queryKey: ["galleries"] }),
+        () => {}, // best effort: a missed stamp only leaves the marker up
+      );
+    mark();
+    return () => { mark(); };
+  }, [id, galleryLoaded, qc]);
 
   // Deep-link from cross-gallery photo search (?image=…): once this gallery's photos load, open the
   // lightbox straight at the linked image. Consumed once, so paging/closing won't reopen it.
@@ -290,6 +307,19 @@ export default function GalleryDetailPage() {
           onSettings={openSettings}
           onPreview={() => window.open(`/g/${gallery.share_token}`, "_blank")}
           onShare={() => setShareOpen(true)}
+          extra={
+            (gallery.mode === "collaboration" || gallery.client_mode_switch_enabled) &&
+            gallery.reviewed_count != null && images.length > 0 ? (
+              <button
+                type="button"
+                onClick={() => setActivityOpen(true)}
+                title={t("chipReviewedTitle")}
+                className="inline-flex items-center gap-1 rounded-full border border-border px-2 py-0.5 text-xs text-muted-foreground tabular-nums outline-none transition-colors hover:border-muted-foreground hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring"
+              >
+                {t("chipReviewed", { reviewed: gallery.reviewed_count, total: images.length })}
+              </button>
+            ) : null
+          }
         />
       </div>
 

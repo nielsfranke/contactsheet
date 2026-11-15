@@ -121,6 +121,12 @@ export interface GalleryResponse extends GallerySettings {
   image_count: number;
   comment_count: number;
   cover_image_url: string | null;
+  /** Newest client activity (feedback, uploads, downloads — not anonymous opens). */
+  last_client_activity_at: string | null;
+  /** When the photographer last opened the gallery in the admin. */
+  admin_seen_at: string | null;
+  /** Photos with any client mark — detail endpoint only (null in the tree list). */
+  reviewed_count: number | null;
   created_at: string;
   updated_at: string;
   children: GalleryResponse[];
@@ -296,7 +302,7 @@ export interface AdminGridView {
 
 export type AdminGridMode = "mirror" | "custom";
 export type OverviewShape = "square" | "aspect";
-export type OverviewSort = "created" | "name" | "photos";
+export type OverviewSort = "created" | "name" | "photos" | "activity";
 export type SortDir = "asc" | "desc";
 /** Gallery overview below `md` (phones): cover grid or compact rows. md+ uses OverviewLayout. */
 export type OverviewMobileLayout = "grid" | "list";
