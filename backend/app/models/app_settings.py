@@ -92,8 +92,14 @@ class AppSettings(Base):
     # Direction of overview_sort / left-tree order: "asc" or "desc". Default newest-first.
     overview_sort_dir: Mapped[str] = mapped_column(String(4), nullable=False, default="desc")
     # How galleries render below the md breakpoint (phones): the cover "grid" or a compact "list"
-    # of rows. Applies to the overview + a gallery's sub-galleries; desktop always uses the grid.
+    # of rows. Applies to the overview + a gallery's sub-galleries; md+ uses overview_layout.
     overview_mobile_layout: Mapped[str] = mapped_column(String(10), nullable=False, default="grid")
+    # How the overview renders at md and up: the cover "grid" (sized by overview_size), a dense
+    # "compact" grid, or "list" rows. Switched from the overview toolbar.
+    overview_layout: Mapped[str] = mapped_column(String(10), nullable=False, default="grid")
+    # A folder with no cover of its own shows a mosaic of its sub-galleries' covers instead of the
+    # name placeholder. Display-only (computed client-side from the tree).
+    overview_mosaic: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
     # Instance-wide default photo sort for galleries (sticky: the admin in-gallery view writes
     # this back on change; the client gallery seeds its initial sort from it). Keys mirror the
     # toolbar: manual / filename / date / captured.

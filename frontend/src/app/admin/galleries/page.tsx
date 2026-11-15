@@ -5,8 +5,8 @@
 
 import { Suspense, useEffect, useRef } from "react";
 import { useTranslations } from "next-intl";
-import type { GlobalSearchResult, OverviewSort } from "@/lib/types";
-import { Search, Plus, ArrowUp, ArrowDown, Pin, ScanSearch, Loader2, LayoutGrid, List } from "lucide-react";
+import type { GlobalSearchResult, OverviewLayout, OverviewSort } from "@/lib/types";
+import { Search, Plus, ArrowUp, ArrowDown, Pin, ScanSearch, Loader2, LayoutGrid, Grid3x3, List } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -26,6 +26,16 @@ const SORT_OPTIONS: { value: OverviewSort; labelKey: string }[] = [
 ];
 
 // "All Photos" browse sort (date added / filename) — a separate axis from the gallery sort.
+// Desktop view switch (overview_layout). Phones keep their own grid ⇄ list toggle.
+const LAYOUT_OPTIONS: { value: OverviewLayout; labelKey: string; icon: typeof LayoutGrid }[] = [
+  { value: "grid", labelKey: "viewGrid", icon: LayoutGrid },
+  { value: "compact", labelKey: "viewCompact", icon: Grid3x3 },
+  { value: "list", labelKey: "viewList", icon: List },
+];
+
+// The dense "compact" grid: roughly twice the columns of the medium cover grid.
+const COMPACT_COLS = "grid-cols-3 sm:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8";
+
 const PHOTO_SORT_OPTIONS: { value: "date" | "name"; labelKey: string }[] = [
   { value: "date", labelKey: "sortDate" },
   { value: "name", labelKey: "sortName" },
@@ -50,7 +60,7 @@ function GalleriesBrowser() {
     sort, dir, pickSort, togglePin, openRename, setDeleteTarget,
     renameTarget, setRenameTarget, renameValue, setRenameValue, submitRename, renameMutation,
     deleteTarget, deleteMutation,
-    size, spacing, tileShape, tileCorners, mobileLayout, setMobileLayout,
+    size, spacing, tileShape, tileCorners, mobileLayout, setMobileLayout, desktopLayout, setDesktopLayout, mosaic,
     searchEnabled, searchMode, setSearchMode,
     photoQuery, setPhotoQuery, semanticActive, browseFiltered, photoResults, photoLoading, photoError, openResult,
     photoSort, photoDir, pickPhotoSort,
@@ -74,9 +84,12 @@ function GalleriesBrowser() {
   }, [hasMore, browseFetchingMore, loadMore]);
 
   const photoMode = searchMode === "photos";
-  // Phone list layout: only below md — desktop always gets the cover grid. The SSR snapshot is
-  // "not mobile", so the first paint is the grid and a phone swaps to rows on hydration.
-  const listView = useBelowMd() && mobileLayout === "list";
+  // Phones use overview_mobile_layout (grid | list), md+ uses overview_layout (grid | compact |
+  // list). The SSR snapshot is "not mobile", so a phone may swap layouts on hydration.
+  const belowMd = useBelowMd();
+  const layout: OverviewLayout = belowMd ? mobileLayout : desktopLayout;
+  const listView = layout === "list";
+  const compact = layout === "compact";
 
   const renderGalleries = (items: typeof visible) =>
     listView ? (
@@ -86,6 +99,7 @@ function GalleriesBrowser() {
             key={g.id}
             g={g}
             tileCorners={tileCorners}
+            mosaic={mosaic}
             dimmed={g.id === dimId}
             onOpen={() => openGallery(g)}
             onTogglePin={() => togglePin(g)}
@@ -95,13 +109,15 @@ function GalleriesBrowser() {
         ))}
       </div>
     ) : (
-      <div className={cn("grid items-start", GRID_COLS[size], GAP[spacing])}>
+      <div className={cn("grid items-start", compact ? cn(COMPACT_COLS, "gap-x-3 gap-y-4") : cn(GRID_COLS[size], GAP[spacing]))}>
         {items.map((g) => (
           <GalleryTile
             key={g.id}
             g={g}
             tileShape={tileShape}
             tileCorners={tileCorners}
+            mosaic={mosaic}
+            compact={compact}
             dimmed={g.id === dimId}
             onOpen={() => openGallery(g)}
             onTogglePin={() => togglePin(g)}
@@ -225,6 +241,31 @@ function GalleriesBrowser() {
           <Button size="sm" onClick={() => setCreateOpen(true)}>
             <Plus size={15} className="mr-1.5" /> {t("newGallery")}
           </Button>
+          {/* View switch, md+: grid / compact / list, persisted as overview_layout. */}
+          {!photoMode && (
+            <div className="hidden md:inline-flex gap-0.5 rounded-lg bg-muted p-0.5" role="group" aria-label={t("viewSwitch")}>
+              {LAYOUT_OPTIONS.map((o) => {
+                const isActive = o.value === desktopLayout;
+                const Icon = o.icon;
+                return (
+                  <button
+                    key={o.value}
+                    type="button"
+                    onClick={() => setDesktopLayout(o.value)}
+                    title={t(o.labelKey)}
+                    aria-label={t(o.labelKey)}
+                    aria-pressed={isActive}
+                    className={cn(
+                      "inline-flex h-7 w-8 items-center justify-center rounded-md outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring",
+                      isActive ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground",
+                    )}
+                  >
+                    <Icon size={15} />
+                  </button>
+                );
+              })}
+            </div>
+          )}
           {/* Grid ⇄ list, phones only (md:hidden): persisted as overview_mobile_layout. */}
           {!photoMode && (
             <button
@@ -334,11 +375,11 @@ function GalleriesBrowser() {
         )
       ) : (
         <>
-          {/* Permanent reparent affordance: a "move to top level" drop target + how-to. Always shown
-              so it's discoverable and reachable even with a full grid, and never reflows the grid. */}
-          <div className="mb-4 flex flex-wrap items-center gap-3">
+          {/* Permanent reparent affordance: a "move to top level" drop target (how-to in its
+              tooltip). Always shown so it's discoverable and reachable even with a full grid, and
+              never reflows the grid. */}
+          <div className="mb-4">
             <TopLevelZone />
-            <p className="text-xs text-muted-foreground">{t("organizeHint")}</p>
           </div>
 
           {/* Favorites shelf: every pinned gallery tree-wide, one click from the home view (hidden
@@ -352,12 +393,23 @@ function GalleriesBrowser() {
             </section>
           )}
 
+          {/* Pinned galleries are left out of the main list, so a list that's empty only because
+              everything is pinned isn't the "no galleries yet" state. */}
           {visible.length === 0 ? (
-            <p className="text-muted-foreground text-sm">
-              {q ? t("emptyFilter") : t("emptyRoot")}
-            </p>
+            (q || pinned.length === 0) && (
+              <p className="text-muted-foreground text-sm">
+                {q ? t("emptyFilter") : t("emptyRoot")}
+              </p>
+            )
           ) : (
-            renderGalleries(visible)
+            <section>
+              {!q && pinned.length > 0 && (
+                <h2 className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                  {t("allGalleries")}
+                </h2>
+              )}
+              {renderGalleries(visible)}
+            </section>
           )}
         </>
       )}

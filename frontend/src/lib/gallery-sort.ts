@@ -22,9 +22,39 @@ export const NATURAL_SORT_DIR: Record<OverviewSort, SortDir> = {
 export function sortGalleries(list: GalleryResponse[], sort: OverviewSort, dir: SortDir): GalleryResponse[] {
   let out: GalleryResponse[];
   if (sort === "name") out = [...list].sort((a, b) => a.name.localeCompare(b.name));
-  else if (sort === "photos") out = [...list].sort((a, b) => a.image_count - b.image_count);
+  // A folder's own image_count is usually 0 — rank by the whole subtree so containers sort by
+  // what they actually hold.
+  else if (sort === "photos") out = [...list].sort((a, b) => totalImageCount(a) - totalImageCount(b));
   else out = [...list].sort((a, b) => a.created_at.localeCompare(b.created_at));
   return dir === "desc" ? out.reverse() : out;
+}
+
+/** Photos in a gallery plus all its descendants — the count a folder tile / tree row shows. */
+export function totalImageCount(g: GalleryResponse): number {
+  return g.children.reduce((n, c) => n + totalImageCount(c), g.image_count);
+}
+
+/**
+ * Up to `max` cover URLs for a folder's mosaic: one per direct child, in tree order. A child with
+ * no cover of its own contributes the first cover found in its own subtree, so nested folders
+ * still show a photo. Duplicates are skipped (a cover can't appear twice in one mosaic).
+ */
+export function mosaicCovers(g: GalleryResponse, max = 4): string[] {
+  const firstCover = (n: GalleryResponse): string | null => {
+    if (n.cover_image_url) return n.cover_image_url;
+    for (const c of n.children) {
+      const u = firstCover(c);
+      if (u) return u;
+    }
+    return null;
+  };
+  const out: string[] = [];
+  for (const c of g.children) {
+    const u = firstCover(c);
+    if (u && !out.includes(u)) out.push(u);
+    if (out.length >= max) break;
+  }
+  return out;
 }
 
 /**

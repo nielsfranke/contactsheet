@@ -316,7 +316,10 @@
       "deleted": "„{name}“ gelöscht",
       "commentCount": "{count, plural, one {# Kommentar} other {# Kommentare}}",
       "viewList": "Als Liste anzeigen",
-      "viewGrid": "Als Raster anzeigen"
+      "viewGrid": "Als Raster anzeigen",
+      "viewCompact": "Als kompaktes Raster anzeigen",
+      "viewSwitch": "Ansicht",
+      "allGalleries": "Alle Galerien"
     },
     "tree": {
       "showAll": "Alle Galerien anzeigen",
@@ -890,8 +893,13 @@
       "newest": "Neueste",
       "name": "Name",
       "photos": "Fotos",
+      "desktopLayout": "Auf größeren Bildschirmen",
+      "desktopLayoutHint": "Cover-Raster (Größe wie oben eingestellt), ein dichtes kompaktes Raster oder Zeilen. Auch direkt in der Übersicht umschaltbar.",
+      "compact": "Kompakt",
+      "mosaic": "Ordner-Mosaik",
+      "mosaicHint": "Ein Ordner ohne eigenes Cover zeigt die Cover seiner Unter-Galerien statt seines Namens.",
       "mobileLayout": "Auf dem Smartphone",
-      "mobileLayoutHint": "Wie Galerien auf kleinen Bildschirmen aufgelistet werden — als Cover-Raster oder als kompakte Zeilen. Am Desktop bleibt es beim Raster."
+      "mobileLayoutHint": "Wie Galerien auf kleinen Bildschirmen aufgelistet werden — als Cover-Raster oder als kompakte Zeilen."
     },
     "general": {
       "title": "Allgemein",

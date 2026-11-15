@@ -16,13 +16,14 @@ import type {
   AppSettings,
   CornersType,
   LayoutType,
+  OverviewLayout,
   OverviewMobileLayout,
   OverviewShape,
   OverviewSort,
   SizeType,
 } from "@/lib/types";
 import { applyAdminTheme, type AdminTheme } from "@/lib/theme";
-import { Row, Segmented, SIZE_OPTS } from "@/components/admin/gallery-settings-fields";
+import { Row, Segmented, SIZE_OPTS, Toggle } from "@/components/admin/gallery-settings-fields";
 import { SaveStatus } from "@/components/admin/SaveStatus";
 import { useSettingsAutosave } from "@/hooks/useSettingsAutosave";
 import { Label } from "@/components/ui/label";
@@ -241,6 +242,23 @@ export default function WorkspaceSettingsPage() {
             ]}
           />
         </Row>
+        <Row label={t("desktopLayout")} hint={t("desktopLayoutHint")}>
+          <Segmented<OverviewLayout>
+            value={settings.overview_layout ?? "grid"}
+            onChange={(v) => save({ overview_layout: v })}
+            options={[
+              { value: "grid", label: t("grid") },
+              { value: "compact", label: t("compact") },
+              { value: "list", label: t("list") },
+            ]}
+          />
+        </Row>
+        <Toggle
+          label={t("mosaic")}
+          hint={t("mosaicHint")}
+          checked={settings.overview_mosaic ?? true}
+          onChange={(v) => save({ overview_mosaic: v })}
+        />
         <Row label={t("mobileLayout")} hint={t("mobileLayoutHint")}>
           <Segmented<OverviewMobileLayout>
             value={settings.overview_mobile_layout ?? "grid"}

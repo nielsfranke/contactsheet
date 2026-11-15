@@ -405,6 +405,17 @@ def test_overview_mobile_layout_roundtrip(admin_client):
     assert admin_client.patch("/api/admin/settings", json={"overview_mobile_layout": "tiles"}).status_code == 422
 
 
+def test_overview_layout_and_mosaic_roundtrip(admin_client):
+    s = admin_client.get("/api/admin/settings").json()
+    assert s["overview_layout"] == "grid" and s["overview_mosaic"] is True
+    r = admin_client.patch("/api/admin/settings", json={"overview_layout": "compact", "overview_mosaic": False})
+    assert r.status_code == 200
+    assert r.json()["overview_layout"] == "compact" and r.json()["overview_mosaic"] is False
+    # Desktop and phone layouts are independent knobs.
+    assert r.json()["overview_mobile_layout"] == "grid"
+    assert admin_client.patch("/api/admin/settings", json={"overview_layout": "tiles"}).status_code == 422
+
+
 def test_create_with_empty_string_parent_is_top_level(admin_client):
     """An API client that serialises an unset parent as "" must get a top-level gallery, not a
     500 from the FK constraint on parent_id=""."""

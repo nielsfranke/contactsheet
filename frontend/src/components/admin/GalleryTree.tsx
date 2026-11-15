@@ -11,7 +11,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useDraggable, useDroppable } from "@dnd-kit/core";
 import type { GalleryResponse, OverviewSort, SortDir } from "@/lib/types";
 import { api } from "@/lib/api";
-import { sortGalleries, galleryPath } from "@/lib/gallery-sort";
+import { sortGalleries, galleryPath, totalImageCount } from "@/lib/gallery-sort";
 import { Button } from "@/components/ui/button";
 import { CreateGalleryDialog } from "./CreateGalleryDialog";
 import { CreateSubGalleryDialog } from "./CreateSubGalleryDialog";
@@ -241,8 +241,9 @@ function TreeNode({
         >
           {g.name}
         </Link>
-        <span className="text-xs text-muted-foreground/70" aria-hidden>{g.image_count}</span>
-        <span className="sr-only">{t("photoCount", { count: g.image_count })}</span>
+        {/* Whole subtree: a folder's own count is usually 0, which said nothing. */}
+        <span className="text-xs text-muted-foreground/70 tabular-nums" aria-hidden>{totalImageCount(g)}</span>
+        <span className="sr-only">{t("photoCount", { count: totalImageCount(g) })}</span>
         <button
           title={t("addSubGallery")}
           aria-label={t("addSubGallery")}

@@ -302,8 +302,10 @@ export type AdminGridMode = "mirror" | "custom";
 export type OverviewShape = "square" | "aspect";
 export type OverviewSort = "created" | "name" | "photos";
 export type SortDir = "asc" | "desc";
-/** Gallery overview below `md` (phones): cover grid or compact rows. Desktop always uses the grid. */
+/** Gallery overview below `md` (phones): cover grid or compact rows. md+ uses OverviewLayout. */
 export type OverviewMobileLayout = "grid" | "list";
+/** Gallery overview at `md` and up: cover grid (sized by overview_size), dense grid, or rows. */
+export type OverviewLayout = "grid" | "compact" | "list";
 /** In-gallery photo sort keys (mirrors GalleryAdminSidebar's SortKey). */
 export type GallerySortKey = "manual" | "filename" | "date" | "captured";
 
@@ -411,6 +413,8 @@ export interface AppSettings {
   overview_sort: OverviewSort;
   overview_sort_dir: SortDir;
   overview_mobile_layout: OverviewMobileLayout;
+  overview_layout: OverviewLayout;
+  overview_mosaic: boolean;
   gallery_sort: GallerySortKey;
   gallery_sort_dir: SortDir;
   footer_enabled: boolean;
@@ -491,6 +495,8 @@ export interface AppSettingsUpdate {
   overview_sort?: OverviewSort;
   overview_sort_dir?: SortDir;
   overview_mobile_layout?: OverviewMobileLayout;
+  overview_layout?: OverviewLayout;
+  overview_mosaic?: boolean;
   gallery_sort?: GallerySortKey;
   gallery_sort_dir?: SortDir;
   footer_enabled?: boolean;

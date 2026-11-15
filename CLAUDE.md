@@ -187,6 +187,7 @@ Migrations live in `backend/alembic/versions/`. Always create a new file — nev
 0048 — galleries.header_focus_x/y NOT NULL (aligns 0012 with the model; drift caught by tests/test_migrations_match_models.py)
 0049 — overview_mobile_layout on app_settings (grid | list for the admin gallery overview on phones)
 0050 — client upload large files: galleries.client_upload_large_files
+0051 — overview view switch + folder mosaic: app_settings.overview_layout (grid | compact | list, md+) + overview_mosaic
 ```
 
 ## Feature invariants
@@ -363,8 +364,9 @@ Key non-obvious constraints — full details in `docs/architecture/`.
 - Frontend: hand-rolled SVG/CSS charts (no chart dep) in `components/admin/analytics/` (`BarTimeseries`, `StatTile`, scaling helper `lib/analytics.ts`). Per-gallery shows in the gallery Insights dialog (Analytics · Activity tabs); instance page at `/admin/analytics`. See `docs/architecture/photographer-analytics.md`.
 - **The `days` window applies to everything activity-derived** (totals, timeseries, top photos, reviewers, busiest galleries) and `previous_totals` covers the equally long window before it (tile trends via `lib/analytics.trend`). `review_status` is the one **snapshot** block: it reads `images`/`image_votes`/`image_likes`/`comments` directly (a flag set-then-cleared logs two activity rows but ends at `none`). `top_reviewers` drops anonymous authors (`Guest`, the shared-flag `client`, `Admin`/`admin`) — a shared-flags-only gallery honestly lists no reviewers.
 
-### Admin gallery overview on phones (`app_settings.overview_mobile_layout`)
-- `grid` (default) | `list`. Below `md` (`useBelowMd`) the overview's pinned shelf + main list and a gallery's sub-galleries block render compact rows (`GalleryListRow` / `SubGalleryRow`) instead of cover tiles; **desktop always uses the grid** regardless of the setting. Toggle lives in the overview toolbar (`md:hidden`) and Settings → Workspace; persisted like the other `overview_*` knobs (optimistic flip on the `["admin-settings"]` cache). Row placeholders use `CoverPlaceholder compact` (a monogram — the full name doesn't fit 56 px).
+### Admin gallery overview layout (`overview_mobile_layout` / `overview_layout` / `overview_mosaic`)
+- `grid` (default) | `list`. Below `md` (`useBelowMd`) the overview's pinned shelf + main list and a gallery's sub-galleries block render compact rows (`GalleryListRow` / `SubGalleryRow`) instead of cover tiles; from `md` up the overview follows `overview_layout` (`grid` sized by `overview_size` | dense `compact` grid | `list` rows), switched from the toolbar's view toggle (the sub-galleries block on a gallery page still uses the grid on desktop). Toggle lives in the overview toolbar (`md:hidden`) and Settings → Workspace; persisted like the other `overview_*` knobs (optimistic flip on the `["admin-settings"]` cache). Row placeholders use `CoverPlaceholder compact` (a monogram — the full name doesn't fit 56 px).
+- **Folder mosaic** (`overview_mosaic`, on by default): an overview tile/row with no cover of its own shows up to 4 sub-gallery covers (`lib/gallery-sort.mosaicCovers` — a coverless child contributes its first nested cover). Display-only, computed from the `/api/galleries` tree. Folder counts and the `photos` sort use the **subtree total** (`totalImageCount`) — a container's own `image_count` is 0. Pinned galleries show only on the pinned shelf, not again in the main list (except while filtering, when the shelf is hidden).
 
 ## Error Logging
 - Log mistakes in MISTAKES.md (what happened, root cause, prevention). Newest first.

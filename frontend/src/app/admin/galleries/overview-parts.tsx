@@ -21,11 +21,13 @@ import {
   DropdownMenuItem,
 } from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
+import { mosaicCovers, totalImageCount } from "@/lib/gallery-sort";
 
 /**
  * Permanent "move to top level" drop target shown above the overview grid. Always visible (so it's
  * discoverable and reachable even when the grid is full — no reflow, since it never appears/vanishes
- * on drag). Drop a sub-gallery here to un-nest it; highlights on `isOver`.
+ * on drag). Drop a sub-gallery here to un-nest it; highlights on `isOver`. The drag how-to is its
+ * tooltip.
  */
 export function TopLevelZone() {
   const t = useTranslations("admin.galleries");
@@ -33,12 +35,51 @@ export function TopLevelZone() {
   return (
     <div
       ref={setNodeRef}
+      // The how-to lives in the tooltip: a permanent sentence above the grid cost a row on every visit.
+      title={t("organizeHint")}
       className={cn(
-        "flex items-center gap-1.5 rounded-md border border-dashed px-3 py-1.5 text-xs transition-colors",
+        "flex w-fit items-center gap-1.5 rounded-md border border-dashed px-3 py-1.5 text-xs transition-colors",
         isOver ? "border-primary bg-accent text-foreground" : "border-border text-muted-foreground",
       )}
     >
       <CornerDownRight size={13} /> {t("dropTopLevel")}
+    </div>
+  );
+}
+
+/**
+ * A gallery's cover: its own (uploaded or picked) cover, else — for a folder, when `mosaic` is on —
+ * a 1/2/3/4-up mosaic of its sub-galleries' covers, else the name placeholder. `compact` is the
+ * thumbnail-sized variant used by list rows (monogram placeholder).
+ */
+export function GalleryCover({ g, mosaic, compact = false }: { g: GalleryResponse; mosaic: boolean; compact?: boolean }) {
+  // alt="": decorative everywhere — the gallery name is the link text next to / below the cover.
+  if (g.cover_image_url) {
+    // eslint-disable-next-line @next/next/no-img-element
+    return <img src={g.cover_image_url} alt="" className="h-full w-full object-cover" />;
+  }
+  const urls = mosaic ? mosaicCovers(g) : [];
+  if (urls.length === 0) return <CoverPlaceholder name={g.name} compact={compact} />;
+  return (
+    <div
+      className={cn(
+        "grid h-full w-full gap-px bg-background",
+        urls.length === 1 && "grid-cols-1",
+        urls.length === 2 && "grid-cols-2",
+        urls.length === 3 && "grid-cols-[2fr_1fr] grid-rows-2",
+        urls.length === 4 && "grid-cols-2 grid-rows-2",
+      )}
+    >
+      {urls.map((u, i) => (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          key={u}
+          src={u}
+          alt=""
+          loading="lazy"
+          className={cn("h-full w-full min-h-0 min-w-0 object-cover", urls.length === 3 && i === 0 && "row-span-2")}
+        />
+      ))}
     </div>
   );
 }
@@ -51,10 +92,14 @@ export function TopLevelZone() {
  * dialog covers reparenting. A sub-gallery count badge marks containers; it's also a nest drop target.
  */
 export function GalleryTile({
-  g, tileShape, tileCorners, dimmed, onOpen, onTogglePin, onRename, onDelete,
+  g, tileShape, tileCorners, mosaic, compact = false, dimmed, onOpen, onTogglePin, onRename, onDelete,
 }: {
   g: GalleryResponse;
   tileShape: string;
+  /** Folders without a cover show their sub-galleries' covers (`overview_mosaic`). */
+  mosaic: boolean;
+  /** Dense "compact" overview: smaller type, no subtitle / comment count under the tile. */
+  compact?: boolean;
   tileCorners: string;
   dimmed: boolean;
   onOpen: () => void;
@@ -67,7 +112,8 @@ export function GalleryTile({
   const isFolder = g.children.length > 0;
   const countParts: string[] = [];
   if (isFolder) countParts.push(t("galleryCount", { count: g.children.length }));
-  if (g.image_count > 0 || countParts.length === 0) countParts.push(t("photoCount", { count: g.image_count }));
+  const photos = totalImageCount(g);
+  if (photos > 0 || countParts.length === 0) countParts.push(t("photoCount", { count: photos }));
   const drag = useDraggable({ id: `${g.id}:tile`, data: { reparent: true, galleryId: g.id, parentId: g.parent_id, name: g.name }, disabled: isTouch });
   const drop = useDroppable({ id: `${GALLERY_DROP_PREFIX}${g.id}:tile`, data: { galleryId: g.id }, disabled: isTouch });
   const setRef = (el: HTMLElement | null) => {
@@ -97,13 +143,7 @@ export function GalleryTile({
           drop.isOver ? "ring-2 ring-primary" : "group-hover:ring-2 group-hover:ring-ring",
         )}
       >
-        {g.cover_image_url ? (
-          // alt="": the cover is decorative — the gallery name is the link text below the tile.
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={g.cover_image_url} alt="" className="w-full h-full object-cover" />
-        ) : (
-          <CoverPlaceholder name={g.name} />
-        )}
+        <GalleryCover g={g} mosaic={mosaic} />
         {/* Pin toggle (top-left). Shows on hover, and stays visible when pinned (gold) or on
             touch (no hover). */}
         <OverlayPill
@@ -172,23 +212,26 @@ export function GalleryTile({
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
-      <div className="mt-2 min-w-0">
+      <div className={cn("min-w-0", compact ? "mt-1.5" : "mt-2")}>
         <div className="flex items-center gap-1">
           {g.has_password && <Icons.locked size={12} className="text-muted-foreground flex-shrink-0" />}
           <Link
             href={`/admin/galleries/${g.id}`}
             onClick={(e) => e.stopPropagation()}
-            className="min-w-0 truncate rounded text-sm font-medium text-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            className={cn(
+              "min-w-0 truncate rounded font-medium text-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring",
+              compact ? "text-xs" : "text-sm",
+            )}
           >
             {g.name}
           </Link>
         </div>
-        {g.headline && (
+        {g.headline && !compact && (
           <p className="mt-0.5 text-xs text-muted-foreground/80 truncate">{g.headline}</p>
         )}
-        <div className="flex items-center gap-2 mt-0.5 text-xs text-muted-foreground">
-          <span>{countParts.join(" · ")}</span>
-          {g.comment_count > 0 && (
+        <div className={cn("flex items-center gap-2 mt-0.5 text-muted-foreground", compact ? "text-[11px]" : "text-xs")}>
+          <span className="truncate">{countParts.join(" · ")}</span>
+          {g.comment_count > 0 && !compact && (
             <span className="flex items-center gap-0.5">
               <Icons.comment size={10} aria-hidden /> <span aria-hidden>{g.comment_count}</span>
               <span className="sr-only">{t("commentCount", { count: g.comment_count })}</span>
@@ -207,10 +250,11 @@ export function GalleryTile({
  * off on touch (as on the tile); the row stays a nest drop target for a mouse-driven narrow window.
  */
 export function GalleryListRow({
-  g, tileCorners, dimmed, onOpen, onTogglePin, onRename, onDelete,
+  g, tileCorners, mosaic, dimmed, onOpen, onTogglePin, onRename, onDelete,
 }: {
   g: GalleryResponse;
   tileCorners: string;
+  mosaic: boolean;
   dimmed: boolean;
   onOpen: () => void;
   onTogglePin: () => void;
@@ -222,7 +266,8 @@ export function GalleryListRow({
   const isFolder = g.children.length > 0;
   const countParts: string[] = [];
   if (isFolder) countParts.push(t("galleryCount", { count: g.children.length }));
-  if (g.image_count > 0 || countParts.length === 0) countParts.push(t("photoCount", { count: g.image_count }));
+  const photos = totalImageCount(g);
+  if (photos > 0 || countParts.length === 0) countParts.push(t("photoCount", { count: photos }));
   const drag = useDraggable({ id: `${g.id}:row`, data: { reparent: true, galleryId: g.id, parentId: g.parent_id, name: g.name }, disabled: isTouch });
   const drop = useDroppable({ id: `${GALLERY_DROP_PREFIX}${g.id}:row`, data: { galleryId: g.id }, disabled: isTouch });
   const setRef = (el: HTMLElement | null) => {
@@ -241,13 +286,7 @@ export function GalleryListRow({
       )}
     >
       <div className={cn("relative h-14 w-14 shrink-0 overflow-hidden bg-muted", tileCorners)}>
-        {g.cover_image_url ? (
-          // alt="": decorative — the gallery name is the link text beside it.
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={g.cover_image_url} alt="" className="h-full w-full object-cover" />
-        ) : (
-          <CoverPlaceholder name={g.name} compact />
-        )}
+        <GalleryCover g={g} mosaic={mosaic} compact />
         {isFolder && (
           <OverlayPill variant="badge" size="xs" className="absolute bottom-1 right-1 gap-0.5" title={t("subGalleryCount", { count: g.children.length })}>
             <Icons.subGallery size={10} aria-hidden /> <span className="tabular-nums" aria-hidden>{g.children.length}</span>
@@ -273,7 +312,8 @@ export function GalleryListRow({
         <div className="mt-0.5 flex items-center gap-2 text-xs text-muted-foreground">
           <span className="inline-flex items-center gap-1" title={t("modeTitle", { mode: MODE_LABELS[g.mode] })}>
             {g.mode === "collaboration" ? <Icons.modeReview size={11} aria-hidden /> : <Icons.modeShowcase size={11} aria-hidden />}
-            <span className="sr-only">{MODE_LABELS[g.mode]}</span>
+            {/* Phones: icon only (narrow row). Desktop list has the room to name the mode. */}
+            <span className="sr-only md:not-sr-only">{MODE_LABELS[g.mode]}</span>
           </span>
           <span className="truncate">{countParts.join(" · ")}</span>
           {g.comment_count > 0 && (

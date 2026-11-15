@@ -8,7 +8,7 @@ import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from "@tansta
 import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import { api } from "@/lib/api";
-import type { AppSettings, GalleryResponse, GlobalSearchResult, OverviewMobileLayout, OverviewSort, SortDir } from "@/lib/types";
+import type { AppSettings, AppSettingsUpdate, GalleryResponse, GlobalSearchResult, OverviewLayout, OverviewMobileLayout, OverviewSort, SortDir } from "@/lib/types";
 import { sortGalleries, NATURAL_SORT_DIR, flattenTree } from "@/lib/gallery-sort";
 import { useAdminDndActive } from "@/components/admin/AdminDnd";
 import { toast } from "sonner";
@@ -59,6 +59,8 @@ export function useGalleriesBrowser() {
   const sort = settings?.overview_sort ?? "created";
   const dir: SortDir = settings?.overview_sort_dir ?? "asc";
   const mobileLayout: OverviewMobileLayout = settings?.overview_mobile_layout ?? "grid";
+  const desktopLayout: OverviewLayout = settings?.overview_layout ?? "grid";
+  const mosaic = settings?.overview_mosaic ?? true;
 
   // Persist the sort choice instance-wide (shared with the left nav tree + admin-view settings).
   const sortMutation = useMutation({
@@ -74,16 +76,18 @@ export function useGalleriesBrowser() {
         : { overview_sort: field, overview_sort_dir: NATURAL_SORT_DIR[field] },
     );
 
-  // Phone layout (grid of covers vs compact rows) — persisted like the other overview knobs,
-  // with an optimistic flip so the toggle feels instant on a slow mobile connection.
+  // View switch — phone layout (grid | list) and desktop layout (grid | compact | list) are separate
+  // knobs, persisted like the other overview settings, with an optimistic flip so the toggle feels
+  // instant on a slow connection.
   const layoutMutation = useMutation({
-    mutationFn: (next: OverviewMobileLayout) => api.adminSettings.update({ overview_mobile_layout: next }),
+    mutationFn: (next: Pick<AppSettingsUpdate, "overview_mobile_layout" | "overview_layout">) => api.adminSettings.update(next),
     onMutate: (next) => {
-      qc.setQueryData<AppSettings | undefined>(["admin-settings"], (s) => (s ? { ...s, overview_mobile_layout: next } : s));
+      qc.setQueryData<AppSettings | undefined>(["admin-settings"], (s) => (s ? { ...s, ...next } : s));
     },
     onSettled: () => qc.invalidateQueries({ queryKey: ["admin-settings"] }),
   });
-  const setMobileLayout = (next: OverviewMobileLayout) => layoutMutation.mutate(next);
+  const setMobileLayout = (next: OverviewMobileLayout) => layoutMutation.mutate({ overview_mobile_layout: next });
+  const setDesktopLayout = (next: OverviewLayout) => layoutMutation.mutate({ overview_layout: next });
 
   // Pin/unpin a gallery (admin favorite). Rides PATCH /api/galleries/{id}; refreshes the tree.
   const pinMutation = useMutation({
@@ -133,9 +137,11 @@ export function useGalleriesBrowser() {
     dir,
   );
 
+  // The main list skips galleries already on the pinned shelf (they'd show twice). While filtering
+  // the shelf is hidden, so every match stays in the list.
   const q = filter.trim().toLowerCase();
   const visible = sortGalleries(
-    q ? galleries.filter((g) => g.name.toLowerCase().includes(q)) : galleries,
+    q ? galleries.filter((g) => g.name.toLowerCase().includes(q)) : galleries.filter((g) => !g.pinned),
     sort,
     dir,
   );
@@ -254,5 +260,8 @@ export function useGalleriesBrowser() {
     tileCorners,
     mobileLayout,
     setMobileLayout,
+    desktopLayout,
+    setDesktopLayout,
+    mosaic,
   };
 }

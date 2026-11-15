@@ -3,7 +3,7 @@
 
 import { describe, it, expect } from "vitest";
 
-import { sortGalleries, flattenTree, galleryPath } from "./gallery-sort";
+import { sortGalleries, flattenTree, galleryPath, mosaicCovers, totalImageCount } from "./gallery-sort";
 import type { GalleryResponse } from "./types";
 
 function g(partial: Partial<GalleryResponse> & { id: string }): GalleryResponse {
@@ -27,6 +27,12 @@ describe("sortGalleries", () => {
     const list = [g({ id: "x", image_count: 5 }), g({ id: "y", image_count: 1 }), g({ id: "z", image_count: 9 })];
     expect(sortGalleries(list, "photos", "asc").map((x) => x.id)).toEqual(["y", "x", "z"]);
     expect(sortGalleries(list, "photos", "desc").map((x) => x.id)).toEqual(["z", "x", "y"]);
+  });
+
+  it("ranks folders by their whole subtree when sorting by photos", () => {
+    const folder = g({ id: "folder", image_count: 0, children: [g({ id: "a", image_count: 7 }), g({ id: "b", image_count: 4 })] });
+    const list = [g({ id: "flat", image_count: 10 }), folder];
+    expect(sortGalleries(list, "photos", "desc").map((x) => x.id)).toEqual(["folder", "flat"]);
   });
 
   it("sorts by created_at, newest-first when desc", () => {
@@ -56,6 +62,40 @@ describe("flattenTree", () => {
       ["grandchild", 2],
       ["root2", 0],
     ]);
+  });
+});
+
+describe("totalImageCount", () => {
+  it("sums the gallery and every descendant", () => {
+    const tree = g({ id: "r", image_count: 1, children: [g({ id: "c", image_count: 2, children: [g({ id: "gc", image_count: 3 })] })] });
+    expect(totalImageCount(tree)).toBe(6);
+  });
+});
+
+describe("mosaicCovers", () => {
+  it("takes one cover per child, in order, capped at max", () => {
+    const folder = g({
+      id: "f",
+      children: ["a", "b", "c", "d", "e"].map((id) => g({ id, cover_image_url: `/${id}.jpg` })),
+    });
+    expect(mosaicCovers(folder)).toEqual(["/a.jpg", "/b.jpg", "/c.jpg", "/d.jpg"]);
+    expect(mosaicCovers(folder, 2)).toEqual(["/a.jpg", "/b.jpg"]);
+  });
+
+  it("falls back to a nested cover for a coverless child and skips empty ones + duplicates", () => {
+    const folder = g({
+      id: "f",
+      children: [
+        g({ id: "empty", cover_image_url: null }),
+        g({ id: "nested", cover_image_url: null, children: [g({ id: "deep", cover_image_url: "/deep.jpg" })] }),
+        g({ id: "dup", cover_image_url: "/deep.jpg" }),
+      ],
+    });
+    expect(mosaicCovers(folder)).toEqual(["/deep.jpg"]);
+  });
+
+  it("is empty for a gallery without children", () => {
+    expect(mosaicCovers(g({ id: "leaf", cover_image_url: "/x.jpg" }))).toEqual([]);
   });
 });
 
