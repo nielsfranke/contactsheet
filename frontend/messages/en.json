@@ -23,16 +23,16 @@
       "body": "The photographer has set an expiration date on this gallery. Contact them if you need access."
     },
     "password": {
-      "title": "Protected Gallery",
+      "title": "Protected gallery",
       "label": "Password",
       "placeholder": "Enter gallery password",
-      "submit": "Enter Gallery",
+      "submit": "Enter gallery",
       "verifying": "Verifying…",
       "wrong": "Wrong password",
       "error": "Something went wrong — please try again"
     },
     "reviewer": {
-      "title": "Team Review",
+      "title": "Team review",
       "body": "Enter your name so the photographer can see your selections.",
       "placeholder": "Your name",
       "submit": "Start reviewing"
@@ -60,7 +60,7 @@
       "reviewingAs": "Reviewing as <b>{name}</b>",
       "download": "Download",
       "downloadFiles": "Download {count, plural, one {# file} other {# files}}",
-      "downloadAll": "Download All Files",
+      "downloadAll": "Download all files",
       "preparing": "Preparing…",
       "menu": "Menu",
       "scrollToPhotos": "Scroll to photos",
@@ -153,9 +153,9 @@
       "resultCount": "{shown} of {total}",
       "sort": {
         "manual": "Manual",
-        "filename": "File Name",
-        "date": "Date Added",
-        "captured": "Capture Date",
+        "filename": "File name",
+        "date": "Date added",
+        "captured": "Capture date",
         "rating": "Rating"
       },
       "group": {
@@ -207,7 +207,7 @@
       "cancelled": "Upload cancelled"
     },
     "downloadDialog": {
-      "title": "Download Gallery",
+      "title": "Download gallery",
       "bodyWithSubs": "This gallery contains sub-galleries. Choose whether to include them in the download, then start the download.",
       "bodyNoSubs": "Start the download of this gallery.",
       "includeAll": "Include all sub-galleries in the download",
@@ -215,7 +215,7 @@
       "filesCount": "{count, plural, one {# file} other {# files}}",
       "noFilesWarning": "Your current selection does not hold any files. Include galleries with files to enable the download.",
       "preparing": "Preparing…",
-      "start": "Start Download"
+      "start": "Start download"
     },
     "legal": {
       "aria": "Legal and project links",
@@ -247,7 +247,6 @@
       "allGalleries": "All galleries",
       "settings": "Settings",
       "signOut": "Sign out",
-      "signOutEverywhere": "Sign out everywhere",
       "loggedOut": "Logged out",
       "loggedOutEverywhere": "Signed out on all devices",
       "signOutBody": "End your session on this device, or sign out on all devices to revoke every active session (other browsers, devices, or a leaked login).",
@@ -270,7 +269,6 @@
       "pinned": "Pinned “{name}”",
       "unpinned": "Unpinned “{name}”",
       "undo": "Undo",
-      "filterFolder": "Filter this folder",
       "filterGalleries": "Filter galleries",
       "tabGalleries": "Galleries",
       "tabPhotos": "Photos",
@@ -294,13 +292,7 @@
       "dropTopLevel": "Drop here to move to top level",
       "organizeHint": "Drag a gallery onto another to nest it, onto a folder in the left tree, or onto “Drop here to move to top level” to pull it out.",
       "emptyFilter": "No galleries match the filter.",
-      "emptyFolder": "No sub-galleries here. Open this gallery to add photos.",
       "emptyRoot": "No galleries yet. Click New gallery to get started.",
-      "breadcrumbAria": "Breadcrumb",
-      "manageTitle": "Open this gallery (manage photos & settings)",
-      "openThisGallery": "Open this gallery",
-      "viewPhotos": "View photos →",
-      "inThisGallery": "in this gallery",
       "photoCount": "{count, plural, one {# photo} other {# photos}}",
       "galleryCount": "{count, plural, one {# gallery} other {# galleries}}",
       "subGalleryCount": "{count, plural, one {# sub-gallery} other {# sub-galleries}}",
@@ -368,7 +360,6 @@
       "moveGallery": "Move gallery",
       "setHeaderImage": "Set header image",
       "setGalleryImage": "Set cover image",
-      "activityLog": "Activity log",
       "teamVoting": "Team voting",
       "emptyGallery": "Empty gallery",
       "deleteGallery": "Delete gallery",
@@ -429,7 +420,7 @@
         "resultCount": "{n, plural, =1 {1 match} other {# matches}}",
         "noResults": "No photos match your search."
       },
-      "subGalleries": "Sub-Galleries",
+      "subGalleries": "Sub-galleries",
       "createSubGallery": "Create sub-gallery",
       "noSubGalleries": "No sub-galleries inside this gallery yet. Click <b>Create sub-gallery</b> to add one.",
       "containerHint": "This gallery holds sub-galleries. Open one below, or add photos to this gallery itself.",
@@ -441,7 +432,6 @@
       "exportHint": "{count, plural, =0 {No flagged images yet} one {# flagged image} other {# flagged images}} — filenames for Lightroom / Capture One.",
       "filenames": "Filenames",
       "withFlags": "With flags",
-      "activityLog": "Activity log",
       "votingSummary": "Team voting summary",
       "deleteGalleryTitle": "Delete gallery",
       "deleteGalleryBody": "Permanently delete <b>{name}</b>? This cannot be undone.",
@@ -464,7 +454,6 @@
       "moveTitle": "Move image",
       "moveSelectionTitle": "Move {count, plural, one {# photo} other {# photos}}",
       "batchRenameTitle": "Rename {count, plural, one {# photo} other {# photos}}",
-      "batchRenameMode": "Method",
       "batchModeSequence": "Number",
       "batchModeFind": "Find & replace",
       "batchModeAffix": "Prefix / suffix",
@@ -523,7 +512,6 @@
       "toast": {
         "collectionSaved": "Collection \"{name}\" saved ({count})",
         "collectionDeleted": "Collection deleted",
-        "collectionRenamed": "Collection renamed",
         "collectionLastImage": "A collection must keep at least one photo",
         "galleryUpdated": "Gallery updated",
         "galleryDeleted": "Gallery deleted",
