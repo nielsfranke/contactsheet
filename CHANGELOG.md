@@ -12,6 +12,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.14.1] - 2026-11-16
+
+Lightbox fix and refreshed documentation. No migration.
+
+### Fixed
+
+- **The flag and star badge in the lightbox is no longer hidden behind the photo.** In Review
+  galleries and the admin view, a wide landscape photo reaching the top-right corner covered the
+  current photo's flag dot and stars.
+
+### Changed
+
+- README and documentation screenshots show the current interface, with new ones for analytics,
+  the review lightbox and the list overview.
+
 ## [1.14.0] - 2026-11-15
 
 A pass over the admin area: a switchable gallery overview, folders that show their photos, a
@@ -1562,7 +1577,8 @@ contract are considered stable as of this release.
   caps (stricter for public uploads).
 - Docker Compose deployment (backend + frontend + nginx); SQLite + local filesystem.
 
-[Unreleased]: https://github.com/nielsfranke/contactsheet/compare/v1.14.0...HEAD
+[Unreleased]: https://github.com/nielsfranke/contactsheet/compare/v1.14.1...HEAD
+[1.14.1]: https://github.com/nielsfranke/contactsheet/compare/v1.14.0...v1.14.1
 [1.14.0]: https://github.com/nielsfranke/contactsheet/compare/v1.13.1...v1.14.0
 [1.13.1]: https://github.com/nielsfranke/contactsheet/compare/v1.13.0...v1.13.1
 [1.13.0]: https://github.com/nielsfranke/contactsheet/compare/v1.12.6...v1.13.0
