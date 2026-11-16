@@ -9,6 +9,7 @@ Everything runs against an **isolated** backend on port 8099 with its own data d
 from __future__ import annotations
 
 import os
+import signal
 import subprocess
 import time
 import urllib.request
@@ -25,8 +26,9 @@ DATA = DEMO_DIR / ".data"          # runtime DB + uploads (gitignored)
 STATE_FILE = DATA / "state.json"
 
 API_HOST = "127.0.0.1"
-API_PORT = 8099
-WEB_PORT = 3099
+# Override with DEMO_API_PORT / DEMO_WEB_PORT when 8099/3099 are taken on this machine.
+API_PORT = int(os.environ.get("DEMO_API_PORT", "8099"))
+WEB_PORT = int(os.environ.get("DEMO_WEB_PORT", "3099"))
 API_BASE = f"http://{API_HOST}:{API_PORT}"
 WEB_BASE = f"http://{API_HOST}:{WEB_PORT}"
 
@@ -114,6 +116,7 @@ def start_frontend() -> subprocess.Popen:
         ["npm", "run", "dev", "--", "--port", str(WEB_PORT)],
         cwd=WEBDIR,
         env=env,
+        start_new_session=True,  # own process group → stop() can take `next dev` down with npm
     )
     _wait_http(f"{WEB_BASE}/login", "frontend", timeout=180)
     return proc
@@ -136,8 +139,16 @@ def _wait_http(url: str, name: str, timeout: int = 45) -> None:
 def stop(proc: subprocess.Popen | None) -> None:
     if proc is None:
         return
-    proc.terminate()
+    # `npm run dev` doesn't forward SIGTERM to `next dev`; signal the whole group when it has one.
     try:
+        pgid = os.getpgid(proc.pid)
+    except ProcessLookupError:
+        return
+    own_group = pgid == proc.pid
+    try:
+        os.killpg(pgid, signal.SIGTERM) if own_group else proc.terminate()
         proc.wait(timeout=10)
     except subprocess.TimeoutExpired:
-        proc.kill()
+        os.killpg(pgid, signal.SIGKILL) if own_group else proc.kill()
+    except ProcessLookupError:
+        pass

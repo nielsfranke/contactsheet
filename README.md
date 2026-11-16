@@ -52,13 +52,15 @@ are very welcome.
 - **Client feedback** — color flags, 1–5 star ratings, or **both side by side** (an instance-wide choice), per-person likes, comments, and **freehand annotations** drawn right on a photo — with a zoom slider in the review lightbox so clients can check detail before deciding.
 - **Collections** — multi-select photos into named, downloadable sets; admin *and* clients can build them.
 - **Content search** *(optional)* — find photos by what's *in* them ("car at sunset"), in a gallery or across your whole library, via an opt-in on-device AI model. Without it, **All Photos** still browses everything and filters by name, gallery, and IPTC keywords.
-- **Client uploads** — optionally let visitors contribute photos, with an optional **approval queue**.
+- **Client uploads** — optionally let visitors contribute photos, with an optional **approval queue**; opt in per gallery to accept large originals and PSD/PSB/TIFF working files.
 - **Nested galleries** — organize shoots to any depth, with drag-and-drop reparenting and photo moves.
+- **An admin that tells you what changed** — galleries with client activity since your last visit are marked *New*; the overview switches between grid, compact and list, and folders show a mosaic of their sub-galleries' covers.
+- **Safe re-uploads** — uploading a filename that's already in the gallery asks *Replace / Keep both / Skip*; *Replace* keeps the photo's comments, ratings and cover status.
 - **Sharing controls** — friendly URL slugs, optional per-gallery passwords, and expiry dates.
 - **Downloads** — original-file download and gallery **ZIP** export (with a sub-gallery picker).
-- **Watermarks** — image or text overlays composited onto delivered photos.
+- **Watermarks** — image or text overlays composited onto delivered photos; while one is active, clean originals can't be downloaded (ZIPs included).
 - **Live updates** — comments, flags, likes, and new uploads appear in every open viewer in real time.
-- **Analytics** — a per-gallery and instance-wide dashboard for views, downloads, and client engagement over time.
+- **Analytics** — a per-gallery and instance-wide dashboard for views, downloads, and client engagement over 7 / 30 / 90 days, with trends, a reviewers table, and each gallery's review status.
 - **Notifications** — email, Pushover, ntfy, Discord, Telegram, Slack, or any [Apprise](https://github.com/caronc/apprise) URL.
 - **Video** — browser-playable MP4/MOV/WebM, streamed with seek support (no transcoding).
 - **Branding & PWA** — your logo, accent color, and a public footer; installable with a branding-aware app icon.

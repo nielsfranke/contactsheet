@@ -12,6 +12,7 @@ the [Unsplash License](https://unsplash.com/license)); see `assets/CREDITS.md`.
 Everything runs on **ports 8099 (backend) / 3099 (frontend)** against **`demo/.data/`** (its own
 SQLite DB + uploads) and a throwaway frontend copy in **`demo/.web/`** (its own `.next`). It never
 reads or writes the developer's real instance on `:8000`/`:3000` or `frontend/.next`.
+If those ports are taken, override them: `DEMO_API_PORT=8399 DEMO_WEB_PORT=3399 bash demo/run.sh`.
 
 ## Regenerate the screenshots
 
@@ -30,7 +31,7 @@ Output overwrites `docs/screenshots/*.jpg` (desktop 2880×1800, mobile 1170×253
 | `fetch_assets.py` | Download a candidate photo pool from Lorem Picsum into `assets/_pool/` (+ review montage). |
 | `select_assets.py` | Promote the hand-picked candidates into `assets/<group>/` and regenerate `assets/CREDITS.md`. |
 | `seed_demo.py` | Wipe `demo/.data`, migrate, launch the demo backend, and build the instance via the REST API. Writes `demo/.data/state.json`. |
-| `capture_screenshots.py` | Launch the demo backend + an isolated frontend, then drive Playwright (chromium) through the 12 scenes. |
+| `capture_screenshots.py` | Launch the demo backend + an isolated frontend, then drive Playwright (chromium) through the 15 scenes. |
 | `run.sh` | Orchestrates seed → capture. |
 
 ## Requirements

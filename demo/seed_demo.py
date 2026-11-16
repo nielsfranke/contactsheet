@@ -13,9 +13,14 @@ Run:  backend/.venv/bin/python demo/seed_demo.py
 from __future__ import annotations
 
 import json
+import math
+import random
 import shutil
+import sqlite3
 import sys
 import time
+import uuid
+from datetime import datetime, timedelta, timezone
 
 import httpx
 
@@ -37,7 +42,12 @@ from _common import (  # noqa: E402
 
 def _assets(folder: str) -> list:
     files = sorted((ASSETS / folder).glob("*.jpg"))
-    return [("files", (f.name, f.read_bytes(), "image/jpeg")) for f in files]
+    prefix = manifest.FILENAME_PREFIX.get(folder, "IMG_")
+    start = 1000 + 37 * len(folder)  # arbitrary but stable "frame counter" per shoot
+    return [
+        ("files", (f"{prefix}{start + 3 * i:04d}.jpg", f.read_bytes(), "image/jpeg"))
+        for i, f in enumerate(files)
+    ]
 
 
 def _wait_for_processing(client: httpx.Client, gid: str, expected: int) -> None:
@@ -102,6 +112,8 @@ def _seed_collab(client: httpx.Client, spec: dict, state: dict) -> None:
     base = f"/api/public/g/{token}/images"
     for i, flag in collab.get("flags", {}).items():
         client.post(f"{base}/{img(i)}/flag", json={"flag": flag}).raise_for_status()
+    for i, stars in collab.get("ratings", {}).items():
+        client.post(f"{base}/{img(i)}/rate", json={"rating": stars}).raise_for_status()
     for reviewer, idxs in collab.get("likes", {}).items():
         for i in idxs:
             client.post(f"{base}/{img(i)}/like", json={"reviewer": reviewer}).raise_for_status()
@@ -110,7 +122,67 @@ def _seed_collab(client: httpx.Client, spec: dict, state: dict) -> None:
             f"{base}/{img(c['image'])}/comments",
             json={"author_name": c["author"], "text": c["text"]},
         ).raise_for_status()
+    for a in collab.get("annotations", []):
+        e = a["ellipse"]
+        points = [
+            {"x": round(e["cx"] + e["rx"] * math.cos(t), 4), "y": round(e["cy"] + e["ry"] * math.sin(t), 4)}
+            for t in (2 * math.pi * k / 48 for k in range(49))
+        ]
+        client.post(
+            f"{base}/{img(a['image'])}/comments",
+            json={
+                "author_name": a["author"],
+                "text": a["text"],
+                "anchor": {"type": "freehand", "points": points, "color": "#ef4444"},
+            },
+        ).raise_for_status()
     print(f"  collaboration seeded on '{spec['name']}'")
+
+
+def _seed_history(state: dict) -> None:
+    """Backdate a couple of months of plausible client activity straight into the demo DB (backend stopped),
+    so the analytics charts show a trend instead of a single spike on seed day. Deterministic."""
+    rng = random.Random(2024)
+    now = datetime.now(timezone.utc).replace(tzinfo=None)
+    rows = []
+    for key in manifest.HISTORY_GALLERIES:
+        g = state["galleries"][key]
+        weight = 3 if key == "editorial" else 1
+        for day in range(1, manifest.HISTORY_DAYS + 1):
+            # A slow upward drift plus a delivery spike ~10 days ago, with day-to-day noise.
+            drift = 0.9 + 0.4 * (1 - day / manifest.HISTORY_DAYS)
+            base = weight * (drift + 0.9 * math.exp(-((day - 10) ** 2) / 30))
+            for action, scale, author_pool in (
+                ("viewed", 2.0, ["Guest"]),
+                ("downloaded", 0.25, ["Guest"]),
+                ("flagged", 0.5, manifest.HISTORY_REVIEWERS),
+                ("liked", 0.6, manifest.HISTORY_REVIEWERS),
+                ("rated", 0.4, manifest.HISTORY_REVIEWERS),
+                ("commented", 0.15, manifest.HISTORY_REVIEWERS),
+            ):
+                if action not in ("viewed", "downloaded") and key != "editorial":
+                    continue
+                for _ in range(max(0, round(rng.gauss(base * scale, base * scale / 3)))):
+                    ts = now - timedelta(days=day, seconds=rng.randint(0, 86399))
+                    image_id = (
+                        rng.choice(g["image_ids"]) if action not in ("viewed", "downloaded") and g["image_ids"] else None
+                    )
+                    ip = f"198.51.100.{rng.randint(2, 250)}" if action in ("viewed", "downloaded") else None
+                    rows.append((str(uuid.uuid4()), g["id"], image_id, action, rng.choice(author_pool), None, ip,
+                                 ts.strftime("%Y-%m-%d %H:%M:%S.%f")))
+    con = sqlite3.connect(DATA / "demo.db")
+    with con:
+        con.executemany(
+            "INSERT INTO activities (id, gallery_id, image_id, action, author, meta, ip, created_at)"
+            " VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+            rows,
+        )
+        # Mark everything but the review gallery as already opened, so only it shows "New".
+        seen = (datetime.now(timezone.utc).replace(tzinfo=None) + timedelta(seconds=1)).strftime("%Y-%m-%d %H:%M:%S.%f")
+        ids = [state["galleries"][k]["id"] for k in manifest.SEEN_GALLERIES]
+        con.executemany("UPDATE galleries SET admin_seen_at = ? WHERE id = ?", [(seen, i) for i in ids])
+    con.close()
+    print(f"  {len(rows)} backdated activity rows written")
 
 
 def seed() -> None:
@@ -155,6 +227,7 @@ def main() -> None:
         seed()
     finally:
         stop(backend)
+    _seed_history(json.loads(STATE_FILE.read_text()))
     print("Seed complete; backend stopped.")
 
 

@@ -19,6 +19,10 @@ SETTINGS = {
     "brand_display": "name_only",
     "accent_color": "#4f46e5",
     "accent_gradient": True,
+    # Show colour flags and 1–5 stars side by side in the review screenshots.
+    "rating_mode": "both",
+    # Views only count (and the analytics view tiles only light up) with IP logging on.
+    "activity_ip_logging": True,
     "footer_enabled": True,
     "footer": {
         "business_name": "Aperture Studio",
@@ -59,16 +63,25 @@ GALLERIES = [
             "color_flags_enabled": True,
             "likes_enabled": True,
             "comments_enabled": True,
+            "annotations_enabled": True,
         },
         # Collaboration content (references images by upload index). 3 comments total → matches
         # the comment badge on the gallery card.
         "collab": {
             "flags": {0: "green", 1: "red", 2: "yellow", 4: "green", 6: "blue"},
-            "likes": {"Mara Voss": [0, 2, 5, 7], "Jon Adler": [0, 1, 3]},
+            "ratings": {0: 5, 1: 3, 2: 4, 3: 2, 4: 5, 5: 4},
+            "likes": {"Mara Voss": [0, 2, 5], "Jon Adler": [0, 1, 3]},
             "comments": [
                 {"image": 0, "author": "Mara Voss", "text": "Love the contrast here — this is the select."},
                 {"image": 1, "author": "Jon Adler", "text": "Crop a touch tighter on the next pass?"},
                 {"image": 2, "author": "Mara Voss", "text": "Final pick for the cover."},
+            ],
+            # Freehand annotations: (image index, author, text, [(x, y), ...] in 0..1 fractions).
+            "annotations": [
+                {
+                    "image": 0, "author": "Jon Adler", "text": "Can we lift the shadows a little here?",
+                    "ellipse": {"cx": 0.32, "cy": 0.62, "rx": 0.12, "ry": 0.09},
+                },
             ],
         },
     },
@@ -94,4 +107,18 @@ SCENES = {
     "collaboration": "editorial",      # 09 collaboration review
     "footer": "coastal",               # 11 public footer
     "mobile": "coastal",               # 12 mobile gallery
+    "analytics": "editorial",          # 13 per-gallery analytics (+ 30 days of synthetic history)
+    "review_lightbox": "editorial",    # 14 review lightbox: flags + stars, annotation, zoom
 }
+
+# Synthetic, backdated activity history so the analytics charts have a shape. Written straight
+# into the demo DB after the API seed (the API only ever stamps "now"). Deterministic.
+# 60 days so the 30-day window has a previous period to compare against (plausible trend %).
+HISTORY_DAYS = 60
+HISTORY_GALLERIES = ["editorial", "coastal", "iceland", "studio"]
+HISTORY_REVIEWERS = REVIEWERS + ["Lena Brandt"]
+# Galleries the photographer has "opened" since their last client activity (no "New" marker).
+SEEN_GALLERIES = ["coastal", "iceland", "sessions", "studio", "location"]
+
+# Uploaded file names: camera-style instead of the asset pool's 00.jpg, 01.jpg, …
+FILENAME_PREFIX = {"editorial": "ED24_", "coastal": "CL_", "iceland": "ISL_", "studio": "STU_", "location": "LOC_"}

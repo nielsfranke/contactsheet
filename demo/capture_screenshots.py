@@ -1,10 +1,10 @@
 # SPDX-FileCopyrightText: 2026 Niels Franke
 # SPDX-License-Identifier: AGPL-3.0-or-later
-"""Recapture the 12 documentation screenshots against the seeded demo instance.
+"""Recapture the 15 documentation screenshots against the seeded demo instance.
 
 Launches the demo backend (:8099, against the already-seeded demo/.data) and a demo Next dev
 server (:3099, proxied to the demo backend via NEXT_PUBLIC_API_BASE), then drives Playwright
-(chromium) through the 12 scenes and writes docs/screenshots/*.jpg. Run `seed_demo.py` first.
+(chromium) through the 15 scenes and writes docs/screenshots/*.jpg. Run `seed_demo.py` first.
 
 Run:  backend/.venv/bin/python demo/capture_screenshots.py
 """
@@ -111,6 +111,16 @@ def run(state: dict) -> None:
             except Exception as e:
                 print(f"  ! 02: {e}")
 
+            # 15 — overview as list rows (the view switch persists as a setting → flip back after)
+            try:
+                page.get_by_role("button", name="Show as list").first.click()
+                page.wait_for_timeout(1200)
+                shot(page, "15-overview-list")
+                page.get_by_role("button", name="Show as grid").first.click()
+                page.wait_for_timeout(800)
+            except Exception as e:
+                print(f"  ! 15: {e}")
+
             # 03 — create gallery dialog
             try:
                 page.get_by_role("button", name="New Gallery").first.click()
@@ -137,6 +147,15 @@ def run(state: dict) -> None:
                 page.keyboard.press("Escape")
             except Exception as e:
                 print(f"  ! 10: {e}")
+
+            # 13 — instance analytics (30-day window over the seeded history)
+            try:
+                go("/admin/analytics")
+                page.get_by_text("Busiest galleries").first.wait_for()
+                page.wait_for_timeout(800)
+                shot(page, "13-analytics")
+            except Exception as e:
+                print(f"  ! 13: {e}")
 
             # 07 — admin settings (branding)
             try:
@@ -178,6 +197,18 @@ def run(state: dict) -> None:
             shot(page, "09-collaboration-review")
         except Exception as e:
             print(f"  ! 09: {e}")
+
+        # 14 — review lightbox: flags + stars, an annotation, the comment thread and the zoom slider
+        try:
+            page.locator("button:has(img)").first.click()
+            page.wait_for_timeout(1200)
+            page.get_by_role("button", name="Show annotations").first.click()
+            page.get_by_role("button", name="Comments").last.click()
+            page.wait_for_timeout(1200)
+            shot(page, "14-review-lightbox")
+            page.keyboard.press("Escape")
+        except Exception as e:
+            print(f"  ! 14: {e}")
 
         # 11 — branding footer (scroll to bottom, clip the footer)
         try:
