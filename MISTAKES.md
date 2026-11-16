@@ -3,6 +3,22 @@
 Log of what broke and why. The agent appends entries here (newest first) when it
 breaks something or is corrected. Repeat entries graduate into hard rules in CLAUDE.md.
 
+## 2026-11-16 — Lightbox rating badge painted under the photo
+
+**What happened.** While refreshing the documentation screenshots, Niels spotted that the flag dot
+and star row in the Review/admin lightbox were half hidden: a wide landscape photo reached into the
+top-right corner and covered the badge. Present since star ratings (June).
+
+**Root cause.** The badge was `absolute top-3 right-16` on the slide with no z-index, while the
+photo is `relative z-10` (to sit above its thumbnail underlay) and the annotation layer `z-20`.
+Positioned siblings without a z-index paint below those, so the photo won wherever it overlapped.
+It only shows with photos wide enough to reach the corner, which the portrait-ish test photos never
+were.
+
+**Prevention.** Any chrome overlaid on a lightbox slide (badges, counters) needs an explicit z-index
+above the photo/annotation layers (`z-30` now). When adding a `z-*` to one layer of a stack, check
+its positioned siblings. Eyeball lightbox UI with a wide landscape photo, not just one that fits.
+
 ## 2026-10-26 — Client links ignored the "Capture Date" sort when EXIF display was off
 
 **What happened.** An external operator sorted a gallery by capture date in the admin; the client

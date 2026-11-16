@@ -883,10 +883,12 @@ export function Lightbox({
         )}
         </div>
         {/* Rating badge: flag dot and/or star row ("both" mode: dot left of stars) — the flag ring
-            flips to black on a light/white backdrop so it stays visible. */}
+            flips to black on a light/white backdrop so it stays visible. z-30 keeps it above the
+            photo (`z-10`) and the annotation layer (`z-20`): a wide photo reaches this corner and
+            used to paint over the badge. */}
         {isCurrent && (collabMode || adminGalleryId) && flagsEnabled &&
           ((flagUI && effectiveFlag !== "none" && !!activeFlagColor) || (starsUI && effectiveRating > 0)) && (
-          <div key="rating-badge" className="absolute top-3 right-16 flex items-center gap-1.5">
+          <div key="rating-badge" className="absolute top-3 right-16 z-30 flex items-center gap-1.5 pointer-events-none">
             {flagUI && effectiveFlag !== "none" && activeFlagColor && (
               <div className={`w-4 h-4 rounded-full ring-2 ${light ? "ring-black/70" : "ring-white"} shadow-[0_0_3px_rgba(0,0,0,0.4)] ${activeFlagColor.bg}`} />
             )}
